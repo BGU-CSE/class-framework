@@ -39,8 +39,14 @@ summing to the hour, assessment items that test something nobody was asked to le
 
 ## Status
 
-**Phase 0.** Schemas, templates, scaffolding, and the validator are working and tested.
-The agent layer is Phase 1 and not built yet. Nothing here is stable.
+**Phase 1.** Schemas, templates, scaffolding and the validator are working and tested. The agent
+layer — agents, skills and the teacher-facing commands — is in place and has not yet been used to
+build a real course. Nothing here is stable.
+
+Not built: PPTX export, Moodle sync.
+
+**Teachers start at [GETTING-STARTED.md](GETTING-STARTED.md).** The rest of this file is about the
+framework itself.
 
 ## Starting a course
 
@@ -72,6 +78,28 @@ git fetch framework && git merge framework/main
 > `git merge framework/main` will then conflict on exactly those files. If you want painless
 > updates, add new files rather than editing existing ones. If you never plan to pull, edit freely.
 
+## Who does the work
+
+The design work is done by **agents running in the teacher's own Claude Code**, inside their course
+repo. The tooling exists to give those agents a target format and to catch them when they get it
+wrong.
+
+| Agent | Responsible for |
+|---|---|
+| `curriculum-architect` | The semester map — units, objectives, sequencing |
+| `study-session-designer` | Home study: guiding questions and study paths. Implements the methodology |
+| `lesson-planner` | The 50-minute meeting, built from activities |
+| `assessment-writer` | Items with diagnostic distractors and real rubrics |
+| `topic-researcher` | Finding **real**, verified study resources |
+| `gem-builder` | The class Gem bundle |
+| `course-critic` | Adversarial review of what the validator can't see |
+
+Teacher-facing commands: `/ingest`, `/plan-units`, `/design-unit N`, `/write-items N`,
+`/review-unit N`, `/build-gem N`.
+
+Shared craft lives in skills — `writing-guiding-questions`, `estimating-study-time` — so the
+designer, the critic and the assessment writer apply the same standard.
+
 ## Commands
 
 | Command | What it does |
@@ -88,13 +116,16 @@ everything you wrote. Skipped files are reported.
 ## Layout
 
 ```
-schemas/          JSON Schema for every content type — the contract
-methodologies/    pluggable study-session designs; question-driven-25 is the default
-defaults/         time constants used to estimate how long a study path takes
-templates/        what scaffold copies into a course repo
-src/classkit/     the tooling
-tests/            scaffold → validate round-trip
-_devlog/          temporary build log; deleted before release
+.claude/agents/     the agents that do the design work
+.claude/skills/     shared craft: writing guiding questions, estimating study time
+.claude/commands/   teacher-facing workflow: /ingest, /design-unit, /review-unit ...
+schemas/            JSON Schema for every content type — the contract
+methodologies/      pluggable study-session designs; question-driven-25 is the default
+defaults/           time constants used to estimate how long a study path takes
+templates/          what scaffold copies into a course repo
+src/classkit/       the tooling
+tests/              scaffold → validate round-trip
+_devlog/            temporary build log; deleted before release
 ```
 
 There is deliberately **no `course/` directory here**. Course content lives only in course

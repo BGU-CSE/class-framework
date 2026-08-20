@@ -111,7 +111,37 @@ canonical glossary.
 
 ---
 
-## Q-016 — Repo visibility: public or private?
+## Q-020 — Personal account or a GitHub Organization?
+**Raised 2026-08-20 when sharing came up. Blocks proper implementation of D-014.**
+
+A repo owned by a **personal account** has exactly one collaborator permission level: **write**.
+Read-only, triage and maintain are organization features. Two consequences:
+
+1. **D-014 cannot be implemented as written.** "Permission-controlled, only developers may update"
+   is not expressible — adding someone *is* granting push access to `main`.
+2. **The D-009 clone flow has no read-only tier.** A teacher who only wants to clone the framework
+   and start a course must be given write access to get any access at all.
+
+Additionally, on the free plan **branch protection is unavailable for private repos** (it is
+available for public ones), so `main` currently cannot require PRs or block force-pushes.
+
+**Recommendation:** fine as-is for 2–4 trusted co-developers with a convention that `main` changes
+go through a PR. Move to a **free GitHub Organization** as soon as consuming-only teachers appear —
+free orgs give real roles (Read for teachers, Write for developers), which is what D-014 actually
+describes. Transfer preserves history and redirects existing clones.
+
+Interacts with Q-016: going public would also solve read access and restore branch protection, at
+the cost of exposing `_devlog/`.
+
+---
+
+## ~~Q-016 — Repo visibility: public or private?~~ RESOLVED (with a correction)
+**Resolved 2026-08-20 → private.** Avin chose private. **Note:** the repo was initially created
+public and pushed; caught by an unauthenticated API check (`private: false`) during verification and
+flipped afterwards. Nothing sensitive was exposed — `_devlog/` holds design notes only, no
+credentials, student data, or exam content. Original analysis below.
+
+### (superseded) Q-016
 **Open — Avin asked for a recommendation. Blocks the first push only.** Account confirmed as
 personal (`chenavin`); Avin is open to public.
 

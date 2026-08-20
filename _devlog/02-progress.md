@@ -258,3 +258,76 @@ tests/            14 tests, all passing
 2. **Q-005** — real time constants.
 3. **Q-004** — pilot course materials (format + location), which gates ingest design.
 4. Phase 1 — the agent layer and the flip pipeline.
+
+---
+
+## Session 7 — 2026-08-20 — PHASE 1: AGENT LAYER
+
+### What happened
+
+Avin, reasonably: *"I got a bit lost. Where are the skills we discussed — the main work of building
+the class should be done by Claude Code of the teacher. Where is all this information?"*
+
+Fair. Phase 0 built the plumbing and left the visible product missing. The ordering was defensible
+(agents need a target format and a validator, or you can't tell a good unit from a plausible one)
+but it was never going to *feel* like progress to the person who wants the agents.
+
+### Built
+
+**Teacher entry point** — `GETTING-STARTED.md`. Answers the question directly: where materials go
+(`course/materials/source/`), what settings exist (`course.yaml`), which commands to run in what
+order, and what the teacher still has to do themselves.
+
+**Agents** (`.claude/agents/`):
+
+| Agent | Job |
+|---|---|
+| `curriculum-architect` | Semester map, unit objectives, sequencing |
+| `study-session-designer` | Guiding questions + study paths; reads the methodology |
+| `lesson-planner` | The 50-min meeting |
+| `assessment-writer` | Items with diagnostic distractors, rubrics |
+| `topic-researcher` | Real, verified resources — read-only tools |
+| `gem-builder` | Gem bundles, with exclusion rules |
+| `course-critic` | Adversarial review, read-only |
+
+**Skills** (`.claude/skills/`): `writing-guiding-questions`, `estimating-study-time`. Both are craft
+used by more than one agent — putting them in skills stops the designer and the critic drifting to
+different standards.
+
+**Commands** (`.claude/commands/`): `/ingest`, `/plan-units`, `/design-unit N`, `/write-items N`,
+`/review-unit N`, `/build-gem N`.
+
+**Scaffold**: now creates `course/materials/source/` with a README explaining what to drop there —
+an unexplained empty directory gets ignored, and it is the primary input to `/ingest`.
+
+### Positions encoded in the agent prompts
+
+- **No fabricated resources.** Stated in `topic-researcher` and `study-session-designer`. A made-up
+  URL passes every check and fails a student mid-session.
+- **Referencing ≠ depending on.** The critic's sharpest test: *which activities would still work if
+  the students had done no prework?* The validator can enforce the reference; only a reader can
+  judge the dependency.
+- **Never shave estimates to fit the budget.** Called out in `estimating-study-time` as the one move
+  that turns the feasibility check into theatre.
+- **The Gem tutors toward the answer**, and must exclude assessment items, teacher misconception
+  notes, and homework solutions — with exclusions stated out loud, since silence isn't assurance.
+- **Design one unit at a time.** Agents infer subject and level from what's in the repo, so a
+  reviewed unit 1 improves unit 2 and an unreviewed bad one propagates.
+
+### Verified
+
+`scaffold course` now creates the source README; fresh scaffold still validates with **0 errors**;
+14 tests still pass.
+
+### Honest status
+
+The agent layer is **written but unexercised** — no real course has been built with it. Expect the
+prompts to need revision after the first genuine unit. That is the next thing that will teach us
+something.
+
+### Next
+
+1. Run `/ingest` then `/design-unit 1` on the real Intro to Data Structures materials (Q-004 —
+   still need to know where they are and what format).
+2. **Q-005** — real time constants. The feasibility check is placeholder-backed until then.
+3. Revise agent prompts based on what unit 1 exposes.

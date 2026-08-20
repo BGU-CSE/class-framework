@@ -84,6 +84,11 @@ COURSE_DIRECTORIES = [
     "policies",
 ]
 
+# `materials/source/` is where the teacher drops their existing course materials. It is the
+# primary input to /ingest and the curriculum-architect, so it ships with a README explaining
+# what belongs there — an empty unexplained directory gets ignored.
+SOURCE_README = "materials/source/README.md"
+
 
 def scaffold_course(
     course_root: Path,
@@ -100,6 +105,12 @@ def scaffold_course(
 
     for directory in COURSE_DIRECTORIES:
         write_new(course_root / directory / ".gitkeep", "", result)
+
+    write_new(
+        course_root / SOURCE_README,
+        _template(framework_root, "course", "materials-source-README.md"),
+        result,
+    )
 
     write_new(
         course_root / "course.yaml",

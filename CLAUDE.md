@@ -58,6 +58,8 @@ schemas/*.schema.json     the content contract (JSON Schema draft 2020-12)
 methodologies/*.yaml      pluggable study-session designs
 defaults/time-constants.yaml   how long a study path is assumed to take
 templates/                what scaffold copies into a course repo
+.claude/                  agents, skills, teacher-facing commands
+GETTING-STARTED.md        the teacher's entry point — materials, settings, workflow
 src/classkit/
   frontmatter.py          Markdown + YAML front-matter parsing
   model.py                locating and loading a course tree
@@ -91,7 +93,29 @@ pytest
 `classkit validate` needs a course, so it does nothing useful in this repo. Test against a
 throwaway scaffold in a temp directory.
 
-## Not built yet (Phase 1+)
+## The agent layer
 
-The agent layer, the flip pipeline (`ingest → plan-flip → author-prework → author-session →
-qa-review`), PPTX export, and Gem export. Do not assume any of it exists.
+The design work is done by agents in `.claude/`, running in the *teacher's* Claude Code inside
+their course repo. They ship to course repos through the clone (D-009), so an agent improvement
+made here reaches every course on the next `git merge framework/main`.
+
+```
+.claude/agents/     curriculum-architect, study-session-designer, lesson-planner,
+                    assessment-writer, topic-researcher, gem-builder, course-critic
+.claude/skills/     writing-guiding-questions, estimating-study-time
+.claude/commands/   /ingest /plan-units /design-unit /write-items /review-unit /build-gem
+```
+
+When editing agents:
+
+- **Read the methodology, never hardcode it.** An agent that assumes 4 sessions of 25 minutes
+  breaks every other teacher's course (D-011, invariant 2).
+- **Craft shared by more than one agent belongs in a skill**, so the designer and the critic judge
+  by the same standard rather than drifting apart.
+- **Agents must not fabricate resources.** No invented URLs, page numbers, or video titles. A
+  fabricated study path validates cleanly and fails a student mid-session.
+- **Agents finish by running `classkit validate`** and fixing what it reports.
+
+## Not built yet
+
+PPTX export (D-006) and Moodle sync (D-004). Do not assume either exists.
