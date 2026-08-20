@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/chenavin/class-framework/schemas/in-class-session.schema.json",
+  "title": "InClassSession",
+  "description": "YAML front matter of course/units/NN-slug/in-class.md. The weekly 50-minute meeting, a.k.a. the Lesson Plan. One per unit (D-012).",
+  "type": "object",
+  "required": ["id", "unit", "duration_minutes", "activities"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^U\\d{2}-IC$" },
+    "unit": { "type": "string", "pattern": "^U\\d{2}$" },
+    "title": { "type": "string" },
+    "duration_minutes": { "type": "integer", "minimum": 1 },
+    "activities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "duration_minutes", "guiding_questions"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^U\\d{2}-A\\d+$" },
+          "type": {
+            "enum": ["quiz", "discussion", "critical-thinking", "worked-example", "group-work", "synthesis"]
+          },
+          "title": { "type": "string" },
+          "duration_minutes": { "type": "integer", "minimum": 1 },
+          "guiding_questions": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "pattern": "^U\\d{2}-S\\d{2}-G\\d+$" },
+            "description": "The home-study goals this activity builds on. REQUIRED and non-empty: this is what structurally prevents the class hour from re-lecturing the prework (D-010)."
+          },
+          "items": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^U\\d{2}-I\\d{2}$" },
+            "description": "Assessment items used by this activity (typically the opening quiz)."
+          },
+          "grouping": { "enum": ["individual", "pairs", "small-group", "plenary"] },
+          "materials": { "type": "array", "items": { "type": "string" } },
+          "notes": { "type": "string" }
+        }
+      }
+    }
+  }
+}

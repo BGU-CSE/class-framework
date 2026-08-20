@@ -1,0 +1,21 @@
+# Time-budget constants used to estimate how long a study path takes.
+#
+# STATUS: PROVISIONAL — these are placeholders, not researched values (Q-005 is open).
+# They are what makes the 25-minute session feasibility check real rather than theatre,
+# so they need defensible numbers before anyone trusts a green validator run.
+#
+# A course overrides any of these in course.yaml under `time_constants:`.
+
+# Reading. Technical CS prose with notation and proofs is far slower than general reading.
+textbook_pages_per_minute: 0.5        # ~2 min per page
+article_words_per_minute: 180
+
+# Video. Assumes students pause and rewind rather than watching straight through.
+video_realtime_multiplier: 1.3        # a 10-min video costs ~13 min
+
+# Interactive paths.
+gem_minutes_per_goal: 6               # one guiding question tutored via the class Gem
+exercise_default_minutes: 10
+
+# Overhead added once per study session (opening the material, orienting, closing).
+session_overhead_minutes: 2

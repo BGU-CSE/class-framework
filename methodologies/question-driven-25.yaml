@@ -1,0 +1,54 @@
+# Methodology: question-driven-25
+#
+# The DEFAULT study-session methodology (D-010). It is one implementation of the
+# methodology contract (D-011) — not the framework's only option. A course selects
+# its methodology in course.yaml; other teachers may ship their own file here.
+#
+# No agent or tool may hardcode the numbers below. They are read from this file.
+
+id: question-driven-25
+name: Question-driven 25-minute study sessions
+summary: >
+  Home study is divided into four ~25-minute study sessions per unit. Each session
+  declares 3-5 goals, each phrased as a guiding question the student is expected to
+  be able to answer. Each question carries candidate study paths (class Gem, video,
+  textbook, exercise) and the student chooses their own route to the answer.
+
+unit:
+  total_minutes: 150
+  objectives: { min: 2, max: 4 }
+
+home_study:
+  total_minutes: 100          # 2 x 50-min academic hours
+  sessions_per_unit: 4
+  session_minutes: 25
+  goals_per_session: { min: 3, max: 5 }
+  default_goal_type: question
+  allowed_goal_types: [question]
+
+in_class:
+  scope: unit                 # one meeting per unit, not per study session (D-012 / Q-010)
+  minutes: 50
+  activities: { min: 3, max: 6 }
+  duration_tolerance_minutes: 5
+  require_opening_quiz: true  # the entry quiz is what makes the class hour depend on the prework
+  allowed_activity_types:
+    - quiz
+    - discussion
+    - critical-thinking
+    - worked-example
+    - group-work
+    - synthesis
+
+study_paths:
+  allowed_kinds: [gem, video, textbook, article, exercise, other]
+  min_paths_per_goal: 1
+
+# Validator rule severities. `error` fails the build; `warn` reports only.
+rules:
+  session_path_feasibility: error      # >=1 complete path per session within session_minutes
+  activity_references_guiding_question: error
+  objective_coverage: error            # every unit objective has >=1 guiding question
+  goal_maps_to_objective: error
+  in_class_duration_match: error
+  guiding_question_assessed: warn      # every guiding question reaches a quiz/homework/exam item

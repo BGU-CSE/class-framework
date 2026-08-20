@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/chenavin/class-framework/schemas/study-session.schema.json",
+  "title": "StudySession",
+  "description": "YAML front matter of course/units/NN-slug/sessions/NN-slug.md. The ~25-minute at-home unit (D-012). THIS IS THE METHODOLOGY CONTRACT (D-011) — downstream agents consume `goals`, never the methodology that produced them.",
+  "type": "object",
+  "required": ["id", "unit", "number", "title", "duration_minutes", "goals"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^U\\d{2}-S\\d{2}$", "description": "e.g. 'U01-S02'." },
+    "unit": { "type": "string", "pattern": "^U\\d{2}$" },
+    "number": { "type": "integer", "minimum": 1, "description": "Position within the unit." },
+    "title": { "type": "string" },
+    "duration_minutes": { "type": "integer", "minimum": 1 },
+    "goals": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Session goals. Under question-driven-25 these are 3-5 Guiding Questions. Other methodologies emit other item types — hence `type`.",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "prompt", "objectives", "paths"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^U\\d{2}-S\\d{2}-G\\d+$",
+            "description": "e.g. 'U01-S02-G1'. THE atomic addressable unit — referenced by activities, assessment items and the Gem."
+          },
+          "type": {
+            "enum": ["question", "task", "reading", "exercise"],
+            "description": "question-driven-25 emits only 'question'. Other methodologies may emit the rest."
+          },
+          "prompt": {
+            "type": "string",
+            "description": "The guiding question, phrased as a question the student should be able to answer. For non-question types, the task statement."
+          },
+          "objectives": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "pattern": "^U\\d{2}-O\\d+$" },
+            "description": "Unit Objectives this goal rolls up to."
+          },
+          "paths": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Candidate routes to the answer. None is mandatory — the student chooses (D-010).",
+            "items": {
+              "type": "object",
+              "required": ["kind", "ref"],
+              "additionalProperties": false,
+              "properties": {
+                "kind": { "enum": ["gem", "video", "textbook", "article", "exercise", "other"] },
+                "ref": {
+                  "type": "string",
+                  "description": "URL, or a textbook key with locator, e.g. 'CLRS ch.3 pp.45-52'."
+                },
+                "est_minutes": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Estimated time. If omitted, derived from defaults/time-constants.yaml."
+                },
+                "note": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/chenavin/class-framework/schemas/assessment-item.schema.json",
+  "title": "AssessmentItem",
+  "description": "YAML front matter of course/assessments/items/UNN-INN.md. One quiz/homework/exam question. Never called just 'question' (D-012).",
+  "type": "object",
+  "required": ["id", "unit", "format", "guiding_questions", "stem"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^U\\d{2}-I\\d{2}$" },
+    "unit": { "type": "string", "pattern": "^U\\d{2}$" },
+    "format": {
+      "enum": ["multiple-choice", "multiple-select", "open", "numeric", "true-false", "code"]
+    },
+    "guiding_questions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^U\\d{2}-S\\d{2}-G\\d+$" },
+      "description": "What this item actually tests. Required — an item that maps to no guiding question is testing something students were never asked to learn."
+    },
+    "usage": {
+      "type": "array",
+      "items": { "enum": ["in-class-quiz", "homework", "exam", "self-check", "gem-practice"] },
+      "description": "Where this item may be used. Items marked 'exam' are subject to the confidentiality decision still open in Q-002."
+    },
+    "difficulty": { "enum": ["easy", "medium", "hard"] },
+    "bloom": {
+      "enum": ["remember", "understand", "apply", "analyze", "evaluate", "create"]
+    },
+    "est_minutes": { "type": "number", "minimum": 0 },
+    "stem": { "type": "string", "description": "The question as presented to the student." },
+    "choices": {
+      "type": "array",
+      "description": "Required for multiple-choice / multiple-select. Every distractor needs a rationale — a distractor nobody can justify is noise.",
+      "items": {
+        "type": "object",
+        "required": ["label", "text", "correct"],
+        "additionalProperties": false,
+        "properties": {
+          "label": { "type": "string", "pattern": "^[A-Za-z]$" },
+          "text": { "type": "string" },
+          "correct": { "type": "boolean" },
+          "rationale": {
+            "type": "string",
+            "description": "Why a student would pick this. For distractors: the specific misconception it detects."
+          }
+        }
+      }
+    },
+    "answer": { "type": "string", "description": "Model answer, for open/numeric/code formats." },
+    "rubric": {
+      "type": "array",
+      "description": "Required in practice for open-format items.",
+      "items": {
+        "type": "object",
+        "required": ["criterion", "points"],
+        "additionalProperties": false,
+        "properties": {
+          "criterion": { "type": "string" },
+          "points": { "type": "number" },
+          "notes": { "type": "string" }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "format": { "enum": ["multiple-choice", "multiple-select"] } } },
+      "then": { "required": ["choices"] }
+    },
+    {
+      "if": { "properties": { "format": { "const": "open" } } },
+      "then": { "required": ["rubric"] }
+    }
+  ]
+}

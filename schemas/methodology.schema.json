@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/chenavin/class-framework/schemas/methodology.schema.json",
+  "title": "Methodology",
+  "description": "methodologies/*.yaml — the pluggable study-session design contract (D-011). question-driven-25 is the default implementation, not the only one. Add a file here to add a methodology.",
+  "type": "object",
+  "required": ["id", "name", "unit", "home_study", "in_class"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "name": { "type": "string" },
+    "summary": { "type": "string" },
+    "designer_agent": {
+      "type": "string",
+      "description": "The agent that implements this methodology's session design."
+    },
+    "unit": {
+      "type": "object",
+      "required": ["total_minutes", "objectives"],
+      "additionalProperties": false,
+      "properties": {
+        "total_minutes": { "type": "integer", "minimum": 1 },
+        "objectives": { "$ref": "#/$defs/range" }
+      }
+    },
+    "home_study": {
+      "type": "object",
+      "required": ["total_minutes", "sessions_per_unit", "session_minutes", "goals_per_session"],
+      "additionalProperties": false,
+      "properties": {
+        "total_minutes": { "type": "integer", "minimum": 1 },
+        "sessions_per_unit": { "type": "integer", "minimum": 1 },
+        "session_minutes": { "type": "integer", "minimum": 1 },
+        "goals_per_session": { "$ref": "#/$defs/range" },
+        "default_goal_type": { "enum": ["question", "task", "reading", "exercise"] },
+        "allowed_goal_types": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "enum": ["question", "task", "reading", "exercise"] }
+        }
+      }
+    },
+    "in_class": {
+      "type": "object",
+      "required": ["scope", "minutes"],
+      "additionalProperties": false,
+      "properties": {
+        "scope": { "enum": ["unit", "session"] },
+        "minutes": { "type": "integer", "minimum": 1 },
+        "activities": { "$ref": "#/$defs/range" },
+        "duration_tolerance_minutes": { "type": "integer", "minimum": 0, "default": 5 },
+        "require_opening_quiz": { "type": "boolean", "default": false },
+        "allowed_activity_types": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "study_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allowed_kinds": { "type": "array", "items": { "type": "string" } },
+        "min_paths_per_goal": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "description": "Validator rule severities. Unlisted rules default to 'error'.",
+      "additionalProperties": { "enum": ["error", "warn", "off"] }
+    }
+  },
+  "$defs": {
+    "range": {
+      "type": "object",
+      "required": ["min", "max"],
+      "additionalProperties": false,
+      "properties": {
+        "min": { "type": "integer", "minimum": 0 },
+        "max": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

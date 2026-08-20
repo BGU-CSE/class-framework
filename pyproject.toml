@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "classkit"
+version = "0.1.0"
+description = "Tooling for the class-framework: scaffold and validate a flipped-classroom course."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Chen Avin", email = "avin@bgu.ac.il" }]
+dependencies = [
+    "PyYAML>=6.0",
+    "jsonschema>=4.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+classkit = "classkit.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/classkit"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

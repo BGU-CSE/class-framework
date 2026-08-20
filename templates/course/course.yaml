@@ -1,0 +1,27 @@
+# Course configuration. Validated against schemas/course.schema.json.
+code: "{{code}}"
+title: "{{title}}"
+institution: "{{institution}}"
+instructors:
+  - "{{instructor}}"
+language: en
+
+# Selects the study-session design contract (D-011). See methodologies/.
+methodology: "{{methodology}}"
+
+units: {{units}}
+
+# Keys here are what study paths cite, e.g. ref: "CLRS ch.3 pp.45-52".
+textbooks: []
+  # - key: CLRS
+  #   citation: "Cormen, Leiserson, Rivest, Stein — Introduction to Algorithms, 4th ed."
+
+gem:
+  scope: unit
+  tutoring_stance: socratic
+
+# Per-course overrides of defaults/time-constants.yaml. Any subset.
+time_constants: {}
+
+# Course-local agent overrides: framework role -> your replacement agent name.
+agents: {}

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/chenavin/class-framework/schemas/unit.schema.json",
+  "title": "Unit",
+  "description": "YAML front matter of course/units/NN-slug/unit.md. One week's subject (D-012).",
+  "type": "object",
+  "required": ["id", "number", "title", "objectives"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^U\\d{2}$", "description": "e.g. 'U01'." },
+    "number": { "type": "integer", "minimum": 1, "maximum": 20 },
+    "title": { "type": "string", "description": "The week's subject." },
+    "summary": { "type": "string" },
+    "prerequisites": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^U\\d{2}$" },
+      "description": "Units that must precede this one."
+    },
+    "objectives": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Unit Objectives — the thin abstract layer above Guiding Questions (D-012/Q-011). Teacher-facing: syllabus text, accreditation, prerequisite tracking.",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^U\\d{2}-O\\d+$", "description": "e.g. 'U01-O1'." },
+          "statement": { "type": "string" },
+          "bloom": {
+            "enum": ["remember", "understand", "apply", "analyze", "evaluate", "create"],
+            "description": "Optional Bloom level."
+          }
+        }
+      }
+    }
+  }
+}

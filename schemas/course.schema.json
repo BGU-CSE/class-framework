@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/chenavin/class-framework/schemas/course.schema.json",
+  "title": "Course",
+  "description": "course/course.yaml — the root configuration of a single course. One per course repo.",
+  "type": "object",
+  "required": ["code", "title", "institution", "language", "methodology", "units"],
+  "additionalProperties": false,
+  "properties": {
+    "code": { "type": "string", "description": "Institutional course code, e.g. '202-1-2051'." },
+    "title": { "type": "string" },
+    "institution": { "type": "string" },
+    "instructors": { "type": "array", "items": { "type": "string" } },
+    "language": {
+      "type": "string",
+      "default": "en",
+      "description": "BCP-47 tag. English only for now (D-001); do not assume LTR in templates."
+    },
+    "methodology": {
+      "type": "string",
+      "description": "Filename stem under methodologies/, e.g. 'question-driven-25'. Selects the study-session design contract (D-011).",
+      "default": "question-driven-25"
+    },
+    "units": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20,
+      "description": "Number of units (weeks) in the semester. Typically 12 or 13."
+    },
+    "textbooks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "citation"],
+        "additionalProperties": false,
+        "properties": {
+          "key": { "type": "string", "description": "Short key referenced by study paths, e.g. 'CLRS'." },
+          "citation": { "type": "string" },
+          "url": { "type": "string" }
+        }
+      }
+    },
+    "gem": {
+      "type": "object",
+      "description": "Google Gem export settings (D-005). The Gem is a first-class study path, not just an export.",
+      "additionalProperties": false,
+      "properties": {
+        "scope": {
+          "enum": ["course", "unit", "both"],
+          "default": "unit",
+          "description": "Whether to build one Gem for the course, one per unit, or both."
+        },
+        "tutoring_stance": {
+          "type": "string",
+          "default": "socratic",
+          "description": "How the Gem should handle a guiding question: tutor toward the answer rather than stating it."
+        }
+      }
+    },
+    "time_constants": {
+      "type": "object",
+      "description": "Per-course overrides of defaults/time-constants.yaml. Any subset.",
+      "additionalProperties": { "type": "number" }
+    },
+    "agents": {
+      "type": "object",
+      "description": "Course-local agent overrides. Maps a framework agent role to a replacement agent name (Q-007).",
+      "additionalProperties": { "type": "string" }
+    }
+  }
+}
