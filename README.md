@@ -43,7 +43,8 @@ summing to the hour, assessment items that test something nobody was asked to le
 layer — agents, skills and the teacher-facing commands — is in place and has not yet been used to
 build a real course. Nothing here is stable.
 
-Not built: PPTX export, Moodle sync.
+Not built: PPTX export, Moodle sync. See [ROADMAP.md](ROADMAP.md) for the phases and what
+each remaining one is for.
 
 **Teachers start at [GETTING-STARTED.md](GETTING-STARTED.md).** The rest of this file is about the
 framework itself.

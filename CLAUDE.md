@@ -119,3 +119,7 @@ When editing agents:
 ## Not built yet
 
 PPTX export (D-006) and Moodle sync (D-004). Do not assume either exists.
+
+`ROADMAP.md` has the phases: what is done, what is next, and why each remaining phase exists.
+Phase 2 (first real course) is the one that will invalidate assumptions — the agent layer has
+never been run against real materials.

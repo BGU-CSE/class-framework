@@ -15,6 +15,9 @@ teacher on the project) picks the work up, everything needed to continue is here
 | `03-open-questions.md` | Unresolved questions blocking or shaping future work. |
 | `04-handoff.md` | Cold-start instructions for a new agent session. |
 
+The phases themselves live in `../ROADMAP.md`, not here — collaborators need them, and this folder
+gets deleted before release.
+
 ## Rules for whoever writes here
 
 - Append to `02-progress.md` at the end of every working session.
