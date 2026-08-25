@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/chenavin/class-framework/schemas/in-class-session.schema.json",
+  "$id": "https://github.com/BGU-CSE/class-framework/schemas/in-class-session.schema.json",
   "title": "InClassSession",
   "description": "YAML front matter of course/units/NN-slug/in-class.md. The weekly 50-minute meeting, a.k.a. the Lesson Plan. One per unit (D-012).",
   "type": "object",

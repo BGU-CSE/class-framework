@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/chenavin/class-framework/schemas/course.schema.json",
+  "$id": "https://github.com/BGU-CSE/class-framework/schemas/course.schema.json",
   "title": "Course",
   "description": "course/course.yaml — the root configuration of a single course. One per course repo.",
   "type": "object",

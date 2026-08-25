@@ -56,7 +56,7 @@ Keeping this repo as a second remote is what lets you pull framework improvement
 without re-applying them by hand.
 
 ```bash
-git clone https://github.com/chenavin/class-framework.git my-course
+git clone https://github.com/BGU-CSE/class-framework.git my-course
 cd my-course
 git remote rename origin framework
 git remote add origin https://github.com/chenavin/my-course.git   # create it first, PRIVATE

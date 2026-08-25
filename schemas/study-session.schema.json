@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/chenavin/class-framework/schemas/study-session.schema.json",
+  "$id": "https://github.com/BGU-CSE/class-framework/schemas/study-session.schema.json",
   "title": "StudySession",
   "description": "YAML front matter of course/units/NN-slug/sessions/NN-slug.md. The ~25-minute at-home unit (D-012). THIS IS THE METHODOLOGY CONTRACT (D-011) — downstream agents consume `goals`, never the methodology that produced them.",
   "type": "object",

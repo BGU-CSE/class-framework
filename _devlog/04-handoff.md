@@ -15,7 +15,9 @@ For a new agent session, or a different coding agent, or a human collaborator pi
 - Working dir `/Users/avin/Claude/class-framework`. Git repo on branch `main`.
 - **Phases 0 and 1 are built**: schemas, methodology, templates, scaffold, validator (14 passing
   tests), plus the agent layer — 7 agents, 2 skills, 6 commands, `GETTING-STARTED.md`.
-- Remote is `github.com/chenavin/class-framework`, **private**. Phases 0 and 1 are pushed.
+- Remote is `github.com/BGU-CSE/class-framework`, **private**. Transferred from the personal
+  account `chenavin` on 2026-08-25 (see Q-020); GitHub redirects the old URL, but local clones
+  should still `git remote set-url` to the new location.
 - **The agent layer has never been run on a real course.** Expect the prompts to need real
   revision after the first one. This is Phase 2 and it is where the useful information is.
 - `defaults/time-constants.yaml` contains **placeholder numbers** (Q-005). The validator's

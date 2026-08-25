@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/chenavin/class-framework/schemas/methodology.schema.json",
+  "$id": "https://github.com/BGU-CSE/class-framework/schemas/methodology.schema.json",
   "title": "Methodology",
   "description": "methodologies/*.yaml — the pluggable study-session design contract (D-011). question-driven-25 is the default implementation, not the only one. Add a file here to add a methodology.",
   "type": "object",

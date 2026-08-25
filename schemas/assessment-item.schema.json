@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/chenavin/class-framework/schemas/assessment-item.schema.json",
+  "$id": "https://github.com/BGU-CSE/class-framework/schemas/assessment-item.schema.json",
   "title": "AssessmentItem",
   "description": "YAML front matter of course/assessments/items/UNN-INN.md. One quiz/homework/exam question. Never called just 'question' (D-012).",
   "type": "object",

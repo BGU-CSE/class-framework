@@ -146,7 +146,26 @@ teacher work starts being at risk from an overwrite bug.
 
 ---
 
-## Q-020 — Personal account or a GitHub Organization?
+## ~~Q-020 — Personal account or a GitHub Organization?~~ RESOLVED
+**Resolved 2026-08-25.** The repo was transferred to the **`BGU-CSE` organization**
+(`github.com/BGU-CSE/class-framework`), still private. GitHub redirects the old personal-account
+URL, but existing local clones should `git remote set-url` to the new location. All in-repo
+references were updated in the same commit.
+
+**What this unlocks — D-014 can now be implemented as written.** Organization repos have real
+roles, so the two audiences can finally be separated:
+
+- **Read** for teachers who only clone the framework to start a course (D-009). This was impossible
+  on a personal repo, where the only collaborator level is write.
+- **Write** for the developers who maintain agents and tooling.
+
+**Follow-up, not yet done:** assign those roles (or create teams for them), and check whether
+branch protection on `main` is available under the organization's plan — it was unavailable for a
+private repo on a personal free account, which left `main` unprotected against force-pushes.
+
+Original analysis below.
+
+### (superseded) Q-020
 **Raised 2026-08-20 when sharing came up. Blocks proper implementation of D-014.**
 
 A repo owned by a **personal account** has exactly one collaborator permission level: **write**.

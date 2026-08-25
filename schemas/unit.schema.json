@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/chenavin/class-framework/schemas/unit.schema.json",
+  "$id": "https://github.com/BGU-CSE/class-framework/schemas/unit.schema.json",
   "title": "Unit",
   "description": "YAML front matter of course/units/NN-slug/unit.md. One week's subject (D-012).",
   "type": "object",

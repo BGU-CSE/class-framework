@@ -393,3 +393,16 @@ Nothing. Documentation only: D-018, Q-021, this entry.
 
 Unchanged — Phase 2 still blocked on **Q-004** (pilot course materials) and **Q-005** (real time
 constants). **Q-021** now sits alongside them, and should be answered before Phase 2 writes content.
+
+### Addendum — repo transferred to BGU-CSE (same day)
+
+Discovered mid-push: GitHub reported *"This repository moved"*. The framework now lives at
+`github.com/BGU-CSE/class-framework`, still private. **Q-020 resolved** — organization roles make
+D-014's permission model implementable for the first time (Read for teachers who only clone, Write
+for developers), which a personal repo structurally could not do.
+
+All in-repo URLs updated, including the six schema `$id` fields. Local remote repointed; the old
+URL still redirects, but other clones should `git remote set-url`.
+
+Outstanding: assign the org roles, and check whether branch protection on `main` is available under
+the organization's plan.

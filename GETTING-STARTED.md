@@ -13,7 +13,7 @@ Your course lives in **its own private repo**, created by cloning the framework.
 framework as a second remote is what lets you pull improvements later without redoing them.
 
 ```bash
-git clone https://github.com/chenavin/class-framework.git my-course
+git clone https://github.com/BGU-CSE/class-framework.git my-course
 cd my-course
 git remote rename origin framework
 git remote add origin https://github.com/<you>/my-course.git   # create it first, PRIVATE
