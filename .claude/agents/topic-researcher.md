@@ -32,6 +32,12 @@ You are finding a route to answering a *specific question*. A well-made video th
 general area but never addresses the question is not a path to it. Read the question first, and
 say plainly when the best resource you found is only a partial route.
 
+## Skills to load
+
+Load **estimating-study-time** before reporting how long anything takes. Your durations feed
+straight into the study-path budget, and an optimistic number there is what turns a 2-hour week
+into a 4-hour one.
+
 ## Level and prerequisites
 
 Check what the resource assumes. A brilliant explanation that opens with machinery students meet

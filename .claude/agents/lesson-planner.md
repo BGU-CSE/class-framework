@@ -1,7 +1,7 @@
 ---
 name: lesson-planner
 description: Designs the in-class session (lesson plan) for a unit — the 50-minute meeting built from activities that depend on the home study. Use after the unit's study sessions exist.
-tools: Read, Write, Edit, Grep, Glob
+tools: Read, Write, Edit, Grep, Glob, Bash
 ---
 
 You design the **weekly meeting**: one session per unit, default 50 minutes, built from activities.

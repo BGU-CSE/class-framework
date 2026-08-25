@@ -84,6 +84,22 @@ Open Claude Code in your course repo and run these in order:
 | `/review-unit 3` | An adversarial critic — checks the hour genuinely depends on the prework |
 | `/build-gem 3` | The Gem bundle for that unit |
 
+### What's actually happening
+
+You only ever type commands. Each one is a short script that pulls in **agents** — specialists with
+their own instructions, working in their own context.
+
+`/design-unit 3`, for example, runs three of them in order: the **study-session-designer** writes
+the week's guiding questions and study paths, then the **lesson-planner** builds the hour around
+them (it cannot run first — it needs the questions), then the **assessment-writer** produces the
+entry quiz.
+
+`/review-unit 3` runs the **course-critic**, which is deliberately a *different* agent from the ones
+that did the work. An agent reviewing its own output is systematically generous.
+
+You don't invoke agents directly, though you can — ask Claude Code to "use the topic-researcher to
+find videos for unit 4" and it will.
+
 Then, always:
 
 ```bash
