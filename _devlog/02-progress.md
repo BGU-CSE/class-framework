@@ -420,3 +420,17 @@ the URL that was already updated:
 - **Raised Q-022:** where course repos should now live. The doc still says personal account, which
   was the only option before. Org placement buys continuity and managed TA access but exposes exam
   content and its history to org owners, which pulls against Q-002. Left as the teacher's decision.
+
+### Addendum 3 — GETTING-STARTED is written for the public state
+
+Avin: *"The GETTING-STARTED will be given to teachers only after we make the project public. For
+now it is private as we are in development mode. So write as it is public. For now, the plan is for
+each teacher's course repo to be private."*
+
+So the access prerequisite added in Addendum 2 was **removed again** — it described the development
+state, not the state the document ships into. The file now assumes framework public / course repos
+private, and carries an HTML comment saying so, so the note does not get re-added by someone
+noticing that the clone currently fails.
+
+**Q-022 partially answered:** course repos are private (visibility settled). Ownership — org vs
+personal account — remains open, so the doc uses a neutral `<owner>` placeholder.

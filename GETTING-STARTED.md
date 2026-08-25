@@ -1,12 +1,16 @@
+<!--
+  Written for the state this document ships in: the framework repo PUBLIC, teachers' course repos
+  PRIVATE. The framework is private during development, so the clone below will not work for
+  someone without access yet. That is expected — do not add an "ask for access" note; this file is
+  only handed to teachers once the repo is public (ROADMAP Phase 6).
+-->
+
 # Getting started — for teachers
 
 How you turn your existing course into a flipped one. You supply materials and settings;
 Claude Code does the design work; the validator catches what went wrong.
 
 You need [Claude Code](https://claude.com/claude-code) and Python 3.10+.
-
-**Before you start:** the framework repo is private. Ask for **Read** access to
-`BGU-CSE/class-framework` — without it, the clone below fails with `repository not found`.
 
 ---
 
@@ -15,18 +19,22 @@ You need [Claude Code](https://claude.com/claude-code) and Python 3.10+.
 Your course lives in **its own private repo**, created by cloning the framework. Keeping the
 framework as a second remote is what lets you pull improvements later without redoing them.
 
-Create the empty course repo on GitHub first — **private**, and with no README, `.gitignore` or
-licence, since an initialized repo starts its own history that you would then have to merge.
+Create your course repo on GitHub first, and make it **private** — it will hold your assessment
+material. Leave every "initialize this repository" box unchecked: a repo that starts with its own
+README or licence has a separate history you would then have to merge.
 
 ```bash
 git clone https://github.com/BGU-CSE/class-framework.git my-course
 cd my-course
 git remote rename origin framework
-git remote add origin https://github.com/<you>/my-course.git   # create it first, PRIVATE
+git remote add origin https://github.com/<owner>/my-course.git   # your private course repo
 git push -u origin main
 
 pip install -e .
 ```
+
+Your course repo stays private; the framework it came from is public. Pulling framework updates
+later works exactly the same either way.
 
 ## 2. Create the course tree
 

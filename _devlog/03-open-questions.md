@@ -112,6 +112,15 @@ canonical glossary.
 ---
 
 ## Q-022 — Where do *course* repos live now that BGU-CSE exists?
+**Partially answered 2026-08-25.** Avin: course repos are **private**, one per teacher. That
+settles visibility (and confirms D-009). **Ownership — organization vs personal account — is still
+open**, so `GETTING-STARTED.md` uses a neutral `<owner>` placeholder rather than presuming either.
+
+Also decided the same day: `GETTING-STARTED.md` is written for the state it ships in — framework
+**public**, course repos **private** — not for the current development state. It is only handed to
+teachers after the repo goes public (ROADMAP Phase 6). An HTML comment at the top of the file says
+so, to stop a well-meaning developer re-adding an "ask for access" note.
+
 **Raised 2026-08-25 by the org transfer (Q-020).** `GETTING-STARTED.md` still tells a teacher to
 create their course repo under their **personal account**, which was the only sensible option when
 the framework itself was personal. It is now a real choice.
