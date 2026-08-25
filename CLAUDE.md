@@ -72,7 +72,11 @@ _devlog/                  build log — decisions, progress, open questions
 
 ## Before changing anything structural
 
-Read `_devlog/01-decisions.md`. Locked decisions are not to be relitigated; several
+Read `DESIGN.md` first — it explains the layering, the contracts between layers, and which
+constraints are load-bearing. **If your change alters structure or flow, update `DESIGN.md` in the
+same commit**; it is the document that survives `_devlog/` being deleted.
+
+Then read `_devlog/01-decisions.md`. Locked decisions are not to be relitigated; several
 constraints that look arbitrary have a recorded reason. `_devlog/03-open-questions.md`
 lists what is genuinely undecided.
 

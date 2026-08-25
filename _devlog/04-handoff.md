@@ -8,9 +8,11 @@ For a new agent session, or a different coding agent, or a human collaborator pi
 2. `01-decisions.md` — what's already settled. **Do not relitigate locked decisions.**
 3. `02-progress.md` (last block) — where we stopped.
 4. `03-open-questions.md` — what's unresolved.
-5. `../ROADMAP.md` — the phases, what's done, and what each remaining one is for.
+5. `../DESIGN.md` — how the system works now. Read this before the decision log; the log is
+   chronological and several decisions supersede earlier ones.
+6. `../ROADMAP.md` — the phases, what's done, and what each remaining one is for.
 
-## Current state — 2026-08-20
+## Current state — 2026-08-25
 
 - Working dir `/Users/avin/Claude/class-framework`. Git repo on branch `main`.
 - **Phases 0 and 1 are built**: schemas, methodology, templates, scaffold, validator (14 passing

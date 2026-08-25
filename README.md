@@ -46,8 +46,9 @@ build a real course. Nothing here is stable.
 Not built: PPTX export, Moodle sync. See [ROADMAP.md](ROADMAP.md) for the phases and what
 each remaining one is for.
 
-**Teachers start at [GETTING-STARTED.md](GETTING-STARTED.md).** The rest of this file is about the
-framework itself.
+**Teachers start at [GETTING-STARTED.md](GETTING-STARTED.md).** **Developers start at
+[DESIGN.md](DESIGN.md)** — how the system works and why it is shaped this way. The rest of this
+file is a summary.
 
 ## Starting a course
 
@@ -59,7 +60,7 @@ without re-applying them by hand.
 git clone https://github.com/BGU-CSE/class-framework.git my-course
 cd my-course
 git remote rename origin framework
-git remote add origin https://github.com/chenavin/my-course.git   # create it first, PRIVATE
+git remote add origin https://github.com/<owner>/my-course.git   # create it first, PRIVATE
 git push -u origin main
 
 pip install -e .

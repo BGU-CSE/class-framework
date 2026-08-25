@@ -23,4 +23,7 @@ gets deleted before release.
 - Append to `02-progress.md` at the end of every working session.
 - A decision only counts once it's in `01-decisions.md`. If it's only in chat, it isn't decided.
 - When a question in `03-open-questions.md` gets answered, move it to `01-decisions.md`.
+- **Structure and flow belong in `../DESIGN.md`, not here.** This folder records *how we got here*;
+  DESIGN.md records *how it works now*. Only DESIGN.md survives this folder's deletion, so any
+  rationale worth keeping must be reflected there too.
 - Keep course-specific content **out** of this folder — see the separation rule in `01-decisions.md` (D-002).

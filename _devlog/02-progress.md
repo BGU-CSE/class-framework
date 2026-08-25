@@ -434,3 +434,50 @@ noticing that the clone currently fails.
 
 **Q-022 partially answered:** course repos are private (visibility settled). Ownership — org vs
 personal account — remains open, so the doc uses a neutral `<owner>` placeholder.
+
+---
+
+## Session 9 — 2026-08-25 — DESIGN.md
+
+### What happened
+
+Avin: *"I don't think we have a clear design document... The design document is for developers and
+should provide an overview of the system design and flow, as well as our current status. Do we need
+it? Do we have it?"*
+
+Correct on both counts. We had four top-level docs and none of them was a design document: README is
+a front door, CLAUDE.md is rules for agents editing the framework, ROADMAP is status,
+GETTING-STARTED is teacher-facing.
+
+### The sharper reason it was needed
+
+The system's design existed **only in `_devlog/`** — 1,254 chronological, decision-shaped lines. To
+reconstruct the current system you had to read 18 decisions in order *and* reconcile the ones that
+overwrite each other (D-007 superseded by D-010; D-009 rule 1 amended and demoted by D-014; D-015
+amended by its own addendum). A new developer doing that gets the current state wrong.
+
+And **`_devlog/` is scheduled for deletion** (D-008, ROADMAP Phase 6). So every reason behind the
+system's shape sat in a folder we had already decided to delete. `DESIGN.md` is what survives it —
+that is now stated in `_devlog/README.md` as a rule: rationale worth keeping must be reflected in
+DESIGN.md, because this folder is going away.
+
+The trigger was Avin's previous question — who runs the agents and when — which had been answered in
+conversation, then partially in a *teacher-facing* doc, and nowhere for developers.
+
+### Built
+
+`DESIGN.md`, 260 lines: the problem and the two structural failure modes; the guiding question as
+the one idea everything rests on; the content model; the four layers (commands → agents → skills /
+tooling → schemas) and the code-verifies/agents-judge split; control flow through `/design-unit 3`
+including which orderings are load-bearing; a data-flow table; the two-repo model; extension points;
+the seven invariants with reasons; and §10 "Where this design might be wrong".
+
+Deliberately carries **no status** (ROADMAP owns that) and **no chronology** (the devlog owns that),
+to stop it rotting. A documentation map at the top says where each kind of content belongs.
+
+Cross-linked from README (developers start here), CLAUDE.md (*update DESIGN.md in the same commit as
+any structural change*), and both devlog entry points.
+
+### Next
+
+Unchanged: Phase 2 blocked on Q-004 and Q-005. Q-021 and Q-022 still open.
