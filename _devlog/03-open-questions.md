@@ -111,6 +111,32 @@ canonical glossary.
 
 ---
 
+## Q-022 — Where do *course* repos live now that BGU-CSE exists?
+**Raised 2026-08-25 by the org transfer (Q-020).** `GETTING-STARTED.md` still tells a teacher to
+create their course repo under their **personal account**, which was the only sensible option when
+the framework itself was personal. It is now a real choice.
+
+| | Course repos under `BGU-CSE` | Course repos under personal accounts |
+|---|---|---|
+| Continuity | Course survives a teacher leaving the university | Course leaves with them, or has to be transferred by hand |
+| TA / co-teacher access | Managed with org roles | Ad-hoc collaborator invitations per repo |
+| Exam confidentiality (**Q-002**) | Org owners and anyone with org-wide read can reach exam content and its full git history | Exposure limited to people the teacher explicitly invites |
+| Teacher autonomy | Org admins can change or remove the repo | The teacher owns it outright |
+| Discoverability across the project | All courses visible in one place — useful for a joint project | Scattered |
+
+**The tension is real:** the same property that makes an org good for continuity and collaboration
+(other people can see it) is what makes it worse for exam material. D-009 already requires course
+repos to be private; that is necessary either way but not sufficient here, since "private" inside an
+org still means visible to org owners.
+
+**Possible middle path:** course repos in the org, but exam content in a separate repo owned by the
+teacher — which is roughly what Q-002 was heading towards anyway. Worth deciding the two together.
+
+**Blocks nothing yet**, but should be answered before a second teacher creates a course repo, since
+moving one later means moving its history too.
+
+---
+
 ## Q-021 — Should `scaffold` stay Python, or move into a command/agent?
 **Raised 2026-08-25 by Avin: "why do we need the Python code and scripts — can't we do it all with
 commands or agents?"** Good question. The answer splits, and only the scaffold half is genuinely open.

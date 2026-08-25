@@ -5,12 +5,18 @@ Claude Code does the design work; the validator catches what went wrong.
 
 You need [Claude Code](https://claude.com/claude-code) and Python 3.10+.
 
+**Before you start:** the framework repo is private. Ask for **Read** access to
+`BGU-CSE/class-framework` — without it, the clone below fails with `repository not found`.
+
 ---
 
 ## 1. Make your course repo
 
 Your course lives in **its own private repo**, created by cloning the framework. Keeping the
 framework as a second remote is what lets you pull improvements later without redoing them.
+
+Create the empty course repo on GitHub first — **private**, and with no README, `.gitignore` or
+licence, since an initialized repo starts its own history that you would then have to merge.
 
 ```bash
 git clone https://github.com/BGU-CSE/class-framework.git my-course

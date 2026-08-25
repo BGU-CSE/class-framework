@@ -406,3 +406,17 @@ URL still redirects, but other clones should `git remote set-url`.
 
 Outstanding: assign the org roles, and check whether branch protection on `main` is available under
 the organization's plan.
+
+### Addendum 2 — `GETTING-STARTED.md` after the move
+
+Avin asked whether the teacher-facing doc needed changing after the transfer. Two things, beyond
+the URL that was already updated:
+
+- **Added an access prerequisite.** The framework is private inside an org, so step 1 fails with
+  `repository not found` for anyone who has not been granted Read on `BGU-CSE/class-framework`.
+  Previously the clone just worked for the owner and there was nothing to say. Also spelled out
+  that the teacher's own course repo must be created empty — no README, `.gitignore` or licence —
+  since an initialized repo starts a second history that has to be merged.
+- **Raised Q-022:** where course repos should now live. The doc still says personal account, which
+  was the only option before. Org placement buys continuity and managed TA access but exposes exam
+  content and its history to org owners, which pulls against Q-002. Left as the teacher's decision.
