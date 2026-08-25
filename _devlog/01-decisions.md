@@ -373,3 +373,37 @@ Enforced in code by routing every write through `scaffold.write_new()`, and in
 
 The validator degrades gracefully if `jsonschema` is missing — semantic rules still run, and it
 warns that the schema layer was skipped.
+
+---
+
+## D-018 — Code verifies, agents judge
+**Date:** 2026-08-25 · **Status:** locked (for `validate`; `scaffold` is Q-021)
+
+The division of labour between the Python tooling and the agent layer, written down because it had
+never been recorded and Avin reasonably asked why the Python exists at all.
+
+**Code does verification** — things that must be exhaustive, deterministic, arithmetic, and cheap:
+
+- **Exhaustive cross-referencing.** A 13-unit course is 79 Markdown files with 221 guiding-question
+  ID references that must all resolve. An agent re-reading all of them burns context and misses
+  references in the middle of long lists — and you cannot tell which ones it missed.
+- **Arithmetic.** Fastest-path sums per session against the budget; activity durations against the
+  hour. Hundreds of small sums per course. Models approximate, and an approximate feasibility check
+  is precisely the failure the check exists to prevent.
+- **Testability.** 14 tests prove each rule fires when its defect is present. You cannot unit-test a
+  prompt this way, and a rule that silently stops firing is worse than no rule because it
+  manufactures confidence.
+- **Independence.** The agent that designed a unit must not be the one certifying it; self-review is
+  systematically generous and the bias is invisible from the inside.
+- **Cost.** Full validation takes 0.09s and no tokens, so it can run after every edit. A check
+  nobody runs is not a check.
+
+**Agents do judgment** — things code cannot attempt: whether a guiding question is a topic label in
+disguise, whether an activity would still work if nobody did the prework, whether 8 minutes is
+honest for 8 pages of proofs. This is why `course-critic` exists and why it is explicitly told not
+to repeat what the validator already does.
+
+**The premise this serves:** a course managed like a software project. What makes it one, rather
+than a well-organised folder of Markdown, is that something can *fail* — reproducibly, and with a
+reason. Remove the validator and you keep a good content model and useful agents, but you lose the
+ability to *know* the course holds together as distinct from believing it after something said so.

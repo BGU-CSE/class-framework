@@ -111,6 +111,41 @@ canonical glossary.
 
 ---
 
+## Q-021 — Should `scaffold` stay Python, or move into a command/agent?
+**Raised 2026-08-25 by Avin: "why do we need the Python code and scripts — can't we do it all with
+commands or agents?"** Good question. The answer splits, and only the scaffold half is genuinely open.
+
+**`validate` stays code — settled, see D-018.** Exhaustive cross-referencing, arithmetic,
+testability, independence from the agent that wrote the content, and it must be free enough to run
+after every edit.
+
+**`scaffold` is the weak case.** 257 of 1,097 lines of Python. An agent could read a template and
+write files perfectly well — that *is* what agents do.
+
+| Keep as Python | Move to a command |
+|---|---|
+| Byte-identical output every time; no drift between runs or teachers | ~257 fewer lines to maintain |
+| Create-only guarantee enforced mechanically (D-016), not remembered | Templates could carry prose guidance an agent interprets, e.g. "name the unit after its subject" |
+| Works with no model call, in CI, offline | One less reason a teacher needs the Python toolchain at all |
+| Already written and tested | Scaffolding a unit is naturally part of `/design-unit` anyway |
+
+**Considerations:**
+
+- The install tax is real. `pip install -e .` is a barrier for a non-technical colleague, paid by
+  every teacher who adopts this. But Phase 4's PPTX export needs `python-pptx` regardless, so
+  Python arrives eventually either way — dropping scaffold does not remove the dependency, it only
+  shrinks it.
+- Losing create-only-by-construction matters more than it looks. "Never overwrite" as a prompt
+  instruction is a rule that holds until an agent has a plausible reason to break it, and the
+  failure destroys a teacher's work silently.
+- The templates themselves stay either way. They are the thing being copied; only the copier is
+  in question.
+
+**Not blocking anything.** Decide before Phase 2 generates real course content, since that is when
+teacher work starts being at risk from an overwrite bug.
+
+---
+
 ## Q-020 — Personal account or a GitHub Organization?
 **Raised 2026-08-20 when sharing came up. Blocks proper implementation of D-014.**
 

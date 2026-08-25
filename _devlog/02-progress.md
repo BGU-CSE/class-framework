@@ -331,3 +331,65 @@ something.
    still need to know where they are and what format).
 2. **Q-005** — real time constants. The feasibility check is placeholder-backed until then.
 3. Revise agent prompts based on what unit 1 exposes.
+
+---
+
+## Session 8 — 2026-08-25 — Why is there Python at all?
+
+### What happened
+
+Avin: *"Can you remind me why we need the Python code and scripts? Can't we do it all with commands
+or agents (.md files)?"*
+
+A fair challenge, and one nobody had written an answer to — the rationale existed only in the
+original plan discussion, never in the repo. Session spent answering it properly rather than
+building.
+
+### Measured, so the argument rests on numbers rather than assertion
+
+A full 13-unit course was generated to check the scale the tooling actually operates at:
+
+| | |
+|---|---|
+| Markdown files | 79 |
+| Guiding questions | 156 |
+| Guiding-question ID references that must all resolve | 221 |
+| Validator rules | 18 |
+| Python, total | 1,097 lines (462 validator, 257 scaffold) |
+| Time for a full validation | **0.09 s** |
+
+### Outcome — the answer splits in two
+
+**`validate` stays code → D-018 "Code verifies, agents judge."** Five reasons, recorded in full:
+exhaustive cross-referencing (221 references across 79 files, every run); arithmetic (hundreds of
+small sums, which models approximate); testability (14 tests prove each rule fires — you cannot
+unit-test a prompt, and a rule that silently stops firing manufactures false confidence);
+independence (the agent that designed a unit must not certify it); and cost (0.09 s and no tokens
+means it runs after every edit — a check nobody runs is not a check).
+
+The complementary half matters as much: **agents do the judgment code cannot attempt** — is this
+guiding question a topic label in disguise, would this activity work if nobody did the prework, is
+8 minutes honest for 8 pages of proofs. That is why `course-critic` exists and why it is told not
+to repeat the validator.
+
+**`scaffold` is genuinely open → Q-021.** Avin is right that an agent could read a template and
+write files; that is what agents do. 257 lines against: byte-identical output, create-only enforced
+mechanically rather than remembered, works offline with no model call. To decide before Phase 2
+starts producing real course content, since that is when an overwrite bug starts costing a teacher
+real work.
+
+### Conceded honestly
+
+- The install tax (`pip install -e .`) is a real barrier for a non-technical colleague, paid by
+  every adopter. It was glossed over when Python was chosen (D-017).
+- Phase 4's PPTX export needs `python-pptx` regardless, so dropping scaffold shrinks the Python
+  surface but does not remove the dependency.
+
+### Built
+
+Nothing. Documentation only: D-018, Q-021, this entry.
+
+### Next
+
+Unchanged — Phase 2 still blocked on **Q-004** (pilot course materials) and **Q-005** (real time
+constants). **Q-021** now sits alongside them, and should be answered before Phase 2 writes content.
