@@ -407,3 +407,45 @@ to repeat what the validator already does.
 than a well-organised folder of Markdown, is that something can *fail* — reproducibly, and with a
 reason. Remove the validator and you keep a good content model and useful agents, but you lose the
 ability to *know* the course holds together as distinct from believing it after something said so.
+
+---
+
+## D-019 — Every Guiding Question carries an `answer`: precise references to where the answer lives
+**Date:** 2026-08-27 · **Status:** locked (design) · **implementation pending** (schema, validator,
+templates, agents)
+
+The atomic unit stored the *question* (`prompt`) and *routes to learn it* (`paths`) but nothing
+recording what answering it looks like. That is a real hole: the guiding-questions skill demands a
+question be "answerable and checkable" with "a real answer", the Gem's `tutoring_stance: socratic`
+promises to "tutor toward the answer", and the assessment writer needs a ground truth — yet the
+answer was written nowhere. The only check on "did the student get it" was the in-class entry quiz,
+a separate artifact by a different agent.
+
+**Decision.** Add an `answer` field to each goal: a list of **precise references to where the
+correct answer is found**, not the answer in prose.
+
+- Not prose, by design. A written answer would put course content in the repo (against D-002),
+  invite the fabrication invariant 7 forbids, and drift from the source. A locator stays checkable
+  and content-free. Avin's framing: *"a reference to where the answer can be found — a subsection in
+  the textbook, a slide, a Wikipedia page, a video."*
+- **Separate field, not a flag on a path** (Avin chose this for clarity). `paths` are *optional*
+  learning routes, coarse and time-budgeted, one of which the student picks; `answer` is the
+  *authoritative* location of the correct answer, precise (slide 18, §2.3.1, a timestamp), with **no
+  time estimate**. They may point at the same resource at different granularity, but answer
+  different questions: "how do I get there / how long" vs. "where is the correct answer, exactly".
+- **Shape:** each entry is `{ kind, ref, note? }`. `kind` ∈ `textbook | slide | video | article |
+  web | other` — `slide` added (teachers have decks), `gem`/`exercise` dropped (an answer is
+  *located*, not tutored or practiced).
+- **Required, ≥1 per goal.** New validator rule `answer_reference_present` (severity `error`). A
+  guiding question with no locatable answer signals the question or the materials are thin — exactly
+  what we want to fail loudly.
+
+**Consequence.** Three downstream consumers gain a shared ground truth: the **gem-builder** tutors
+toward it, the **assessment-writer** uses it as the correct-answer / rubric basis, the
+**course-critic** checks it is precise and reachable. Whether the answer's location is *reachable
+from at least one study path* (answer on slide 18 but no path covers those slides — the skill's
+"unanswerable-from-its-own-paths" failure mode) stays a **critic-level judgment**, not a code rule,
+because locators are free text.
+
+**Not changed:** the name "Guiding Question" was reconsidered this session (it undersells that
+knowing the answer is *mandatory* after the session) and deliberately **kept** — reaffirming D-012.

@@ -12,9 +12,19 @@ For a new agent session, or a different coding agent, or a human collaborator pi
    chronological and several decisions supersede earlier ones.
 6. `../ROADMAP.md` — the phases, what's done, and what each remaining one is for.
 
-## Current state — 2026-08-25
+## Current state — 2026-08-27
 
-- Working dir `/Users/avin/Claude/class-framework`. Git repo on branch `main`.
+- Working dir `/Users/avin/Antigravity-Code/class-framework` (moved from `/Users/avin/Claude/...`
+  when the project was picked up on a **different machine**). Git repo on branch `main`.
+- **Machine setup:** the system `pip` is broken (shim → missing Python 3.7). Use a local `.venv`
+  (gitignored): `python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"`. Tests pass (14).
+- **Now in a design-draft pass** (Session 10): finishing a full *draft* of the design before any
+  classroom testing, so the testing has a stable target. Order: content model → agent coverage →
+  metrics → course lifecycle. Agenda + open items in `03-open-questions.md`.
+  - **Decided this session:** guiding questions gain an `answer` field (**D-019**) — *design only;
+    not yet in schema/validator/templates/agents.* Implementation is the later "fill the gaps" step.
+  - **Next:** Gap 2 = Q-023 (is a Study Path per-question or a per-session route?), then Q-024/Q-025,
+    then homework (Q-026).
 - **Phases 0 and 1 are built**: schemas, methodology, templates, scaffold, validator (14 passing
   tests), plus the agent layer — 7 agents, 2 skills, 6 commands, `GETTING-STARTED.md`.
 - Remote is `github.com/BGU-CSE/class-framework`, **private**. Transferred from the personal
@@ -22,9 +32,13 @@ For a new agent session, or a different coding agent, or a human collaborator pi
   should still `git remote set-url` to the new location.
 - **The agent layer has never been run on a real course.** Expect the prompts to need real
   revision after the first one. This is Phase 2 and it is where the useful information is.
-- `defaults/time-constants.yaml` contains **placeholder numbers** (Q-005). The validator's
-  feasibility check is only as honest as those constants — right now it verifies arithmetic over
-  a guess, which is worse than no check because it looks like verification.
+- `defaults/time-constants.yaml` contains **placeholder numbers** (Q-005), and the validator does
+  not even use most of them yet (Q-024). The feasibility check is only as honest as hand-entered
+  `est_minutes` — right now that is arithmetic over a guess, worse than no check because it looks
+  like verification.
+- **DESIGN.md scope:** the framework itself (content model, components, agents, metrics, lifecycle),
+  **not** the development process (merges, a developer's teacher-vs-developer hats). Keep process
+  out of DESIGN.md.
 
 ## The two things most likely to be got wrong
 

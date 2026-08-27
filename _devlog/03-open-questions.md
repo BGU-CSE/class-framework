@@ -295,3 +295,68 @@ courses never live here.
 ## Q-006 — Other teachers / other courses
 Who else is on the project, what courses, and on what timeline? Affects how soon the
 separation mechanism (Q-001) has to be real rather than planned.
+
+---
+
+## Q-023 — "Study Path": per-Guiding-Question route, or per-Study-Session route?
+**Raised 2026-08-27 (Session 10, Gap 2).** The vocabulary (CLAUDE.md) defines a Study Path as a
+route to answering **a Guiding Question** — per-question. But README/templates promise "one **route**
+through all its questions that fits the budget" — a coherent per-session route (all-video, or
+all-textbook). The validator implements neither: `check_session_feasibility` takes the *cheapest
+path of each goal independently and sums them*, so a session passes on a cherry-picked mix (video
+for G1, textbook for G2, Gem for G3) even if no single coherent route fits 25 min. A student who
+says "I'll just watch the videos" has no guarantee that route was ever checked. **Decide whether a
+path is per-question or a per-session route, and make the feasibility check match.**
+
+---
+
+## Q-024 — The study-time budget is not actually automated
+**Raised 2026-08-27 (Session 10, Gap 3).** `defaults/time-constants.yaml` defines reading rate,
+words/min and a video multiplier, but the validator **never uses them**: `_estimate_path` only has
+fallbacks for `gem` and `exercise`; for `textbook`/`video`/`article` it returns `None` unless
+`est_minutes` is typed by hand, because there is no structured page-count / word-count / duration
+field to multiply against (the `ref` is free text like `"CLRS ch.3 pp.45-52"`). So the constants are
+dead and the feasibility check is only as honest as hand-entered numbers. **Decide: give paths
+structured quantity fields (pages / words / minutes) so derivation works, or make `est_minutes`
+mandatory and admit the constants file is theater.** Overlaps Q-005 (which is about the *numbers*);
+this is about the *schema* that would let them be used.
+
+---
+
+## Q-025 — Nothing sits above Unit Objectives
+**Raised 2026-08-27 (Session 10, Gap 4).** Objectives are unit-local; there are no course-level
+outcomes for units to roll up to. So "do the 13 units *together* cover what the course promised?" is
+unanswerable and uncheckable — the two-way coverage guarantee we enforce inside a unit stops at the
+unit boundary. For a framework whose selling point is mechanical coherence, the top of the pyramid is
+missing. **Decide whether to add a course-outcomes layer (and a coverage rule objectives→outcomes).**
+
+Minor sibling gaps noted the same day: a session's `duration_minutes` is unconstrained (nothing ties
+it to the methodology's `session_minutes`); no check that the sessions' budgets *sum* to the declared
+home-study total; no priority/difficulty marker on goals (core vs. stretch).
+
+---
+
+## Q-026 — Homework (including programming assignments) is undesigned
+**Raised 2026-08-27 (Session 10).** Homework is a **distinct section** from the flipped-class study,
+and the content model has no first-class notion of it. Avin's framing: homework is at-home work *in
+addition to* the study sessions; it can span **several units/topics**; it is **not** per-unit or
+mandatory every week; its purpose is to **test what has already been learned** (contrast: study
+sessions are the week's material, done *before* the in-class meeting). Programming assignments are
+the sharp case — multi-part, multi-day, with a spec, starter code, test cases and a grading scheme —
+which neither a Study Path (`type: exercise`, an optional *learning* route) nor an Assessment Item (a
+single quiz/exam question) models. Whether it needs its own schema, and its own agent (a "homework"
+or "programming-assignment" agent — none exists today), is open. To be taken up after the
+flipped-class content model is settled.
+
+---
+
+## Design-draft agenda (Session 10)
+Not questions so much as the ordered list of what the design draft must still close, recorded for
+continuity. Content model first because agents, metrics and lifecycle are all defined over it.
+
+1. **Content-model completeness** — in progress. Gap 1 done (D-019); open: Q-023, Q-024, Q-025, Q-026.
+2. **Agent coverage** — do new components (e.g. programming assignments) need new agents?
+3. **Metrics** — do we measure agent performance and/or unit/course quality beyond pass-fail? Where
+   does it surface (validate output, a new `classkit metrics`)? Advisory or gating?
+4. **Course lifecycle** — the semester arc: creation → design → teach → revise → re-offer;
+   versioning within a course; carrying learning into the next offering.

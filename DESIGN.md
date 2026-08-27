@@ -52,6 +52,14 @@ That single choice (D-010, refining D-007) is what makes the two failure modes c
 - A session's guiding questions each carry timed study paths → the home budget is arithmetic, not
   an assertion.
 
+A guiding question carries three things about itself: the `prompt` (the question), an `answer`, and
+`paths`. The **answer** is a set of *precise references to where the correct answer lives* — a
+textbook subsection, a slide, a video timestamp — never the answer in prose (that would put course
+content in the repo and invite fabrication). It is distinct from the paths: paths are *optional,
+time-budgeted routes to learn* the question, one of which the student picks; the answer is the
+*authoritative location* of the correct answer, and it is what grounds the Gem's tutoring, the
+assessment writer's correct-answer key, and the critic's check (D-019).
+
 Everything else in this document is consequence.
 
 ## 3. The content model
@@ -65,6 +73,8 @@ Semester = 12–13 Units                              course.yaml
     ├── HOME STUDY 100 min = 2 × 50
     │   └── 4 × Study Session (~25 min)             units/NN-slug/sessions/NN.md
     │       └── 3–5 Guiding Questions               U01-S02-G1  ← the spine
+    │           ├── answer                          precise refs to where the correct answer is
+    │           │     textbook | slide | video | article | web. Not prose. (D-019)
     │           └── Study Paths                     gem | video | textbook | article | exercise
     │                 candidate routes, typed and time-estimated.
     │                 The student picks one; none is mandatory.

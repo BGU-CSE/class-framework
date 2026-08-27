@@ -29,6 +29,21 @@ runs in the teacher's own Claude Code, inside their course repo.
 
 **Written but unexercised.** No real course has been built with it.
 
+## 🔨 Design-draft pass (precedes the classroom)
+
+A deliberate pass to finish a full *draft* of the design before classroom testing, so the testing
+pushes against a stable target (Session 10). Scope: complete the content model, then agent coverage,
+metrics, and the course lifecycle. Runs on the design doc and `_devlog/`, not on real course content.
+
+- **Content model** — reviewing the flipped-class part for gaps. Decided: guiding questions gain an
+  `answer` field (**D-019**) — *design only, not yet in the schema/validator/templates/agents.* Open:
+  Q-023 (path vs. route), Q-024 (time-budget inputs), Q-025 (course-level outcomes), Q-026 (homework
+  / programming assignments — a separate section).
+- Then: agent coverage, metrics, course lifecycle. See the agenda in `_devlog/03-open-questions.md`.
+
+Implementing what this pass decides ("fill the framework gaps") is a separate step, and precedes
+Phase 2's real-course work.
+
 ## 🔨 Phase 2 — First real course
 
 **The phase that will teach us the most, and the one most likely to invalidate earlier work.**

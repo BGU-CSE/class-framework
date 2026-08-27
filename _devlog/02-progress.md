@@ -481,3 +481,75 @@ any structural change*), and both devlog entry points.
 ### Next
 
 Unchanged: Phase 2 blocked on Q-004 and Q-005. Q-021 and Q-022 still open.
+
+---
+
+## Session 10 — 2026-08-27 — Design-draft pass begins; Gap 1 (the answer) resolved
+
+### Context / setup
+
+Picked the project up on a **different machine**. New working dir
+`/Users/avin/Antigravity-Code/class-framework` (was `/Users/avin/Claude/class-framework`). System
+`pip` is broken (its shim points at a missing Python 3.7); worked around with a local `.venv`
+(gitignored). `pip install -e ".[dev]"` + `pytest` → **14 passing**, CLI works. Repo clean, on
+`main`, remote `BGU-CSE/class-framework`.
+
+### The reframe (Avin)
+
+Two corrections that set the agenda:
+
+1. **DS&A is not privileged.** It is one test subject among several; other developers will test the
+   framework on other courses. Hardens D-002 — nothing DS&A-specific may leak into the framework.
+2. **We are not finishing the framework before the classroom** — that is impossible. The goal now is
+   to **complete a full *draft* of the design document**, then fill the framework gaps (also a
+   draft), then test on real classes *and update in parallel*. The design draft is the gate whose
+   purpose is to give the testing a stable target.
+
+**Scope clarification for DESIGN.md:** it is about *the framework* — content model, components,
+agents, metrics, course lifecycle — **not the development process** (merges, a developer's
+"teacher" vs "developer" hats). That process is a separate discussion, not part of DESIGN.md. (This
+retired an earlier proposal to write the framework-update/Q-007 mechanism into DESIGN.)
+
+### Design-draft agenda
+
+Established four areas the draft must close, and their order (content model first, because agents,
+metrics and lifecycle are all defined *over* it):
+
+1. **Content-model completeness** — ← in progress
+2. **Agent coverage** — do new components need new agents?
+3. **Metrics** — do we measure agent performance and/or unit/course quality beyond pass-fail?
+4. **Course lifecycle** — the semester arc, revision, re-offering.
+
+Also separated out: **homework, including programming assignments, is a distinct section** from the
+flipped-class study. It is at-home work *in addition to* the study sessions, can span several units,
+is not per-unit/mandatory, and its purpose is to *test what has already been learned*. Undesigned →
+Q-026.
+
+### Flipped-class design review
+
+Read schemas + validator + templates + the guiding-questions skill and reviewed the reverse-class
+part for gaps. Verdict: the skeleton is sound (both headline failure modes genuinely enforced,
+two-way coverage, ID consistency, duration sums). Four real gaps found:
+
+- **Gap 1 — a guiding question had no answer.** Resolved this session → **D-019**.
+- **Gap 2 — "Study Path" means per-question vs. per-session route**, and the feasibility check sums a
+  cherry-picked cheapest path per goal rather than a coherent route → **Q-023**.
+- **Gap 3 — the time budget is not really automated**: the reading/video constants in
+  `time-constants.yaml` are never used (no structured page/word/duration fields; `_estimate_path`
+  only has fallbacks for `gem`/`exercise`) → **Q-024**.
+- **Gap 4 — nothing sits above Unit Objectives**: no course-level outcomes, so whole-course coverage
+  is uncheckable → **Q-025**.
+
+### Decided — D-019 (Gap 1)
+
+Every Guiding Question gets a separate `answer` field: a required list of precise references
+(`{kind, ref, note?}`, `kind ∈ textbook|slide|video|article|web|other`, no time estimate) to where
+the correct answer lives — not prose. New rule `answer_reference_present` (error). Grounds the Gem,
+the assessment writer, and the critic. Name "Guiding Question" reconsidered and kept. Full rationale
+in D-019.
+
+### Next
+
+Continue the content-model pass: **Gap 2 (path vs. route, Q-023)**. Then Gaps 3–4, then the homework
+section (Q-026), then agenda items 2–4 (agent coverage, metrics, lifecycle). D-019 is design-only —
+schema/validator/template/agent changes are the later "fill the gaps" step, not done yet.
