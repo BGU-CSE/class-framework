@@ -449,3 +449,89 @@ because locators are free text.
 
 **Not changed:** the name "Guiding Question" was reconsidered this session (it undersells that
 knowing the answer is *mandatory* after the session) and deliberately **kept** — reaffirming D-012.
+
+**Amended by D-020:** the time budget now lives on the question (`est_minutes`), not on study paths,
+and study paths move to the session. D-019's core (the `answer` field, untimed pointers) stands.
+
+---
+
+## D-020 — Study Path is a per-session optional pool; the 25-min budget rides on per-question study time
+**Date:** 2026-08-28 · **Status:** locked (design) · **implementation pending** · resolves Q-023,
+narrows Q-024, amends D-019
+
+The original Study Path bundled three jobs: student agency (choose your route), feasibility
+arithmetic (timed per-question routes summed against 25 min — the "two hours at home isn't fiction"
+guarantee), and the Gem as a first-class route. Once D-019 gave every question an authoritative
+`answer`, the "provide a way to reach the answer" job became redundant, and the three jobs came
+apart. Avin's reshape: a study path should be *additional* resources, listed *per session* (not per
+question), optional and non-exhaustive — students may bring their own (another AI, another video) —
+and is teacher-facing for now (an inventory of what students can access), possibly published later.
+
+**Decisions.**
+
+- **The feasibility budget moves from paths onto the questions (option "a").** Each guiding question
+  carries `est_minutes` — a single, teacher-approved approximate study time. The session check is
+  `sum(goal.est_minutes) + overhead ≤ session_minutes`. Avin: *"an approximate time for studying it
+  … approved by the teacher … to ensure the study session is about 25 min"* — and explicitly an
+  approximation (students vary), so the check should carry a tolerance, not a hard cliff.
+- **`est_minutes` lives on the goal, not on the answer references.** So D-019's answer refs stay pure
+  untimed pointers; no conflict. The number is the teacher's estimate for studying the question, not
+  a parse of the answer locator.
+- **`paths` moves to the Study Session** (a sibling of `goals`), and is an open, optional,
+  non-exhaustive pool of alternative resources for the session as a whole. **Not tagged to individual
+  questions** (Avin confirmed session-level, not per-question). **Not time-summed** — nothing about
+  the budget depends on it. Recommended ≥1 (soft), since the `answer` already guarantees a source.
+
+**Consequences.**
+
+- **Q-023 resolved** (path is a per-session pool; feasibility rides on per-question time).
+- **Q-024 narrows sharply.** The core 25-min guarantee no longer needs derived reading-rate
+  constants — it is one teacher-approved number per question. `defaults/time-constants.yaml` stops
+  being load-bearing for the guarantee (it may still help agents *propose* an `est_minutes`, and
+  paths may optionally carry a rough time to help students choose, but nothing sums those).
+- **Schema/validator changes deferred** (design-draft phase): move `paths` to session scope; add
+  required `est_minutes` to each goal; rewrite `session_path_feasibility` to sum `goal.est_minutes`;
+  rename methodology `study_paths.min_paths_per_goal` → a per-session minimum (soft).
+
+---
+
+## D-021 — The Syllabus is the course-level top layer (Bologna-style); Course Outcomes close the coverage chain
+**Date:** 2026-08-28 · **Status:** locked (design) · **implementation pending** · resolves Q-025
+
+The framework had no layer above Unit Objectives, so "do the units *together* deliver what the course
+promised?" was unanswerable and uncheckable (Q-025). Avin: the top layer of a class should be its
+**syllabus**, defaulting to a **Bologna-style** descriptor.
+
+**Decisions.**
+
+- **Two artifacts, no `course.md`.** The syllabus is `syllabus/syllabus.md` — an authored document
+  (YAML front matter + prose body), edited exactly like `unit.md`: scaffold writes the skeleton once
+  into the already-reserved `syllabus/` slot (see `scaffold.py` `COURSE_DIRECTORIES`) and never
+  overwrites. `course.yaml` stays the machine *wiring* (code, methodology, unit count, textbooks).
+  It is not YAML-only config because a syllabus is a *document* (prose aim + structured data), which
+  is what the front-matter-plus-body `.md` format is for.
+- **Bologna-style default front matter, kept generic:** `goal`; `outcomes` — **Course Outcomes**,
+  id `CO1…`, `statement`, optional `bloom`; `workload` — `credits`, `credit_system` (ECTS is *one*
+  instantiation, not hardcoded — invariant 2), optional `total_hours`; `prerequisites`; and a
+  reserved `assessment` block (the grading scheme — its details deferred to **Q-026**).
+- **No duplication.** Identity fields (title, code, language, instructors, textbooks) stay in
+  `course.yaml`; the *rendered* syllabus pulls them in, plus a **unit overview stitched live from the
+  `unit.md` files** — so the overview is generated at render time and cannot drift. The stored
+  `syllabus.md` holds only genuinely course-level content.
+- **Source vs. view.** `syllabus.md` is edited, never auto-generated. The full published syllabus (for
+  students / accreditation) is a generated *view* combining it with the live units.
+
+**The coverage rule this unlocks (the point of Q-025).** Unit Objectives gain an `outcomes: [CO1…]`
+reference. Two-way checks, mirroring the objective↔question checks one level up: `outcome_coverage`
+(no orphan Course Outcome) and `objective_maps_to_outcome` (no orphan objective). This touches
+`unit.schema.json`.
+
+**Bonus.** `workload.total_hours` enables a later *course-scope* workload check — the sum of all
+home-study `est_minutes` + in-class + homework against the declared workload, the course-level twin
+of the 25-minute session check.
+
+**Consequences / implementation pending** (design-draft phase — no code this session): a new
+`syllabus.schema.json`; a Bologna-default `templates/course/syllabus.md`; scaffold writing it into
+`syllabus/`; the `outcomes` field on `unit.schema.json` objectives; the two coverage rules; the `CO`
+id convention added to `CLAUDE.md`; `curriculum-architect` set to author the syllabus. **Resolves
+Q-025;** grading-scheme details stay open under **Q-026**.

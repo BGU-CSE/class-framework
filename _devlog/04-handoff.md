@@ -21,10 +21,14 @@ For a new agent session, or a different coding agent, or a human collaborator pi
 - **Now in a design-draft pass** (Session 10): finishing a full *draft* of the design before any
   classroom testing, so the testing has a stable target. Order: content model → agent coverage →
   metrics → course lifecycle. Agenda + open items in `03-open-questions.md`.
-  - **Decided this session:** guiding questions gain an `answer` field (**D-019**) — *design only;
-    not yet in schema/validator/templates/agents.* Implementation is the later "fill the gaps" step.
-  - **Next:** Gap 2 = Q-023 (is a Study Path per-question or a per-session route?), then Q-024/Q-025,
-    then homework (Q-026).
+  - **Decided so far:** guiding questions gain an `answer` field (**D-019**) and a teacher-approved
+    `est_minutes`; study paths move to the Study Session as an open optional pool, budget sums the
+    per-question `est_minutes` (**D-020**); the course gains a **Syllabus** top layer
+    `syllabus/syllabus.md` (Bologna-style), with Course Outcomes (`CO1…`) that Unit Objectives roll
+    up to (**D-021**). All **design only** — nothing in schema/validator/templates/agents yet;
+    implementation is the later "fill the gaps" step.
+  - **Next:** the homework / programming-assignment section (Q-026 — a distinct at-home track; carries
+    the deferred grading scheme), then agenda items 2–4 (agent coverage, metrics, course lifecycle).
 - **Phases 0 and 1 are built**: schemas, methodology, templates, scaffold, validator (14 passing
   tests), plus the agent layer — 7 agents, 2 skills, 6 commands, `GETTING-STARTED.md`.
 - Remote is `github.com/BGU-CSE/class-framework`, **private**. Transferred from the personal

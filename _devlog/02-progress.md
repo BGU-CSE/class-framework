@@ -553,3 +553,82 @@ in D-019.
 Continue the content-model pass: **Gap 2 (path vs. route, Q-023)**. Then Gaps 3–4, then the homework
 section (Q-026), then agenda items 2–4 (agent coverage, metrics, lifecycle). D-019 is design-only —
 schema/validator/template/agent changes are the later "fill the gaps" step, not done yet.
+
+---
+
+## Session 11 — 2026-08-28 — Gap 2 resolved (Study Path reshape); pip fixed
+
+### Housekeeping
+
+Fixed the machine's `pip`: `/usr/local/bin/pip` was a dead Homebrew 3.7 shim (stale shebang →
+removed interpreter). Repointed it to the working python.org 3.13 `pip3`, mirroring the existing
+`pip3` symlink; no sudo needed. `pip`/`pip3`/`python3 -m pip` now all agree (24.3.1). Handoff note
+corrected accordingly.
+
+### Gap 2 — Study Path (→ D-020)
+
+Avin questioned the Study Path's rationale. Surfaced that it bundled three jobs: student agency,
+feasibility arithmetic (the load-bearing "25 min is real" check), and Gem-as-route. D-019's `answer`
+made the "provide a route to the answer" job redundant, so the jobs separated.
+
+Resolved (option "a"):
+
+- **Budget moves onto the question.** Each guiding question gets `est_minutes`, a single
+  teacher-approved study time; the session check sums them (`sum(est_minutes) + overhead ≤ ~25`, with
+  tolerance — Avin stressed it's an approximation, students vary). Lives on the goal, not the answer
+  refs, so D-019 is unaffected.
+- **`paths` moves to the Study Session** as an open, optional, non-exhaustive pool of alternative
+  resources — teacher-facing for now, not tagged to individual questions (Avin confirmed), not
+  time-summed. Students may substitute their own.
+- **Q-023 resolved; Q-024 narrowed hard** — the core guarantee no longer needs the reading-rate
+  constants; it's one teacher number per question.
+
+Updated DESIGN.md (§2 + §3 content model), D-019 (amendment pointer), added D-020, struck Q-023,
+narrowed Q-024, advanced the agenda note. Still **docs only** — no schema/validator/agent changes;
+those wait until the design draft is finalized (Avin's explicit sequencing).
+
+### Next
+
+Gap 3 = **Q-025** (nothing above Unit Objectives — no course-level outcomes). Then the homework /
+programming-assignment section (**Q-026**). Then agenda items 2–4 (agent coverage, metrics, lifecycle).
+
+---
+
+## Session 12 — 2026-08-28 — Gap 3 resolved: the Syllabus top layer (→ D-021)
+
+### The gap
+
+Nothing sat above Unit Objectives, so whole-course coverage was uncheckable (Q-025).
+
+### Resolution
+
+Avin: the top layer of a class should be its **syllabus**, defaulting to a **Bologna-style**
+descriptor. Decided (**D-021**):
+
+- **Two artifacts, no `course.md`** (Avin double-checked the name). `syllabus/syllabus.md` is the
+  authored top-layer document (front matter + prose), edited exactly like `unit.md` — scaffold writes
+  the skeleton once into the already-reserved `syllabus/` slot, never overwrites. `course.yaml` stays
+  the config wiring. Confirmed by reading the code: `frontmatter`/`model`/`scaffold` already reserve a
+  `syllabus/` directory, so this fills a pre-allocated slot rather than intruding.
+- **Bologna default front matter (generic):** `goal`, `outcomes` (Course Outcomes `CO1…`),
+  `workload` (credits / credit_system — ECTS as one instantiation, not hardcoded; optional
+  total_hours), `prerequisites`, and a *reserved* `assessment` block. Identity fields stay in
+  `course.yaml`; the rendered syllabus pulls them + a **live-stitched unit overview** (anti-drift).
+  Source is edited; the full published syllabus is a generated view.
+- **Course Outcomes are the roof:** Unit Objectives gain `outcomes: [CO1…]`; two-way checks
+  (`outcome_coverage`, `objective_maps_to_outcome`) deferred to implementation.
+- **Grading deferred** to Q-026 (Avin: "we'll specify grading later"). The `assessment` block is
+  reserved, not specified.
+
+Also fixed the machine's `pip` earlier today (see Session 11). Noted a stale `(D-019)` citation in
+`frontmatter.py` (predates this session, most likely meant D-017) — cleanup for when we next touch
+code.
+
+Updated DESIGN.md (§3 content model + prose, §6 data flow), added D-021, resolved Q-025, relocated its
+minor sub-items to Q-027, advanced the agenda. Still **docs only**.
+
+### Next
+
+**Q-026** — the homework / programming-assignment section (a distinct at-home track from study
+sessions; multi-unit; not mandatory; tests what's already learned; carries the grading scheme). Then
+agenda items 2–4 (agent coverage, metrics, course lifecycle).

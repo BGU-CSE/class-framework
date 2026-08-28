@@ -49,35 +49,47 @@ That single choice (D-010, refining D-007) is what makes the two failure modes c
 
 - An activity must reference ≥1 guiding question from that unit → the hour cannot be about nothing
   the students studied.
-- A session's guiding questions each carry timed study paths → the home budget is arithmetic, not
-  an assertion.
+- Each guiding question carries a teacher-approved study time (`est_minutes`) and an authoritative
+  answer source → the session's home budget is the *sum* of those times, arithmetic, not an
+  assertion (D-020).
 
-A guiding question carries three things about itself: the `prompt` (the question), an `answer`, and
-`paths`. The **answer** is a set of *precise references to where the correct answer lives* — a
-textbook subsection, a slide, a video timestamp — never the answer in prose (that would put course
-content in the repo and invite fabrication). It is distinct from the paths: paths are *optional,
-time-budgeted routes to learn* the question, one of which the student picks; the answer is the
-*authoritative location* of the correct answer, and it is what grounds the Gem's tutoring, the
-assessment writer's correct-answer key, and the critic's check (D-019).
+A guiding question carries, about itself: the `prompt` (the question), an `est_minutes` (the
+teacher-approved approximate time to study it), and an `answer` — a set of *precise references to
+where the correct answer lives* (a textbook subsection, a slide, a video timestamp), never the
+answer in prose (that would put course content in the repo and invite fabrication). The answer is
+the *authoritative location* of the correct answer: it grounds the Gem's tutoring, the assessment
+writer's correct-answer key, and the critic's check (D-019).
+
+**Study Paths are separate, and live on the Study Session, not the question** (D-020). They are an
+*open, optional pool* of alternative resources for studying the session — the class Gem, a video, a
+chapter — none mandatory, not exhaustive; a student may use their own (another AI, another video)
+instead. They are teacher-facing for now (an inventory of what students can reach) and are **not**
+time-summed — the 25-minute guarantee rides on the per-question `est_minutes`, not on the paths.
 
 Everything else in this document is consequence.
 
 ## 3. The content model
 
 ```
-Semester = 12–13 Units                              course.yaml
-└── Unit — one week's subject, 150 min              units/NN-slug/unit.md
-    ├── Unit Objectives (2–4)                       U01-O1
-    │     abstract, teacher-facing: syllabus text, accreditation,
-    │     prerequisite tracking. NOT the working layer.
+Course = Syllabus + 12–13 Units                     course.yaml (config) · syllabus/syllabus.md
+├── Syllabus — Bologna-style top layer              syllabus/syllabus.md
+│     goal · Course Outcomes (CO1…) · workload/credits · assessment scheme ·
+│     prerequisites. Its rendered view stitches in a unit overview from the units
+│     below, so it can't drift. (D-021)
+└── each of 12–13 Units — one week's subject, 150 min   units/NN-slug/unit.md
+    ├── Unit Objectives (2–4)                       U01-O1  → outcomes: [CO1…]
+    │     each rolls up to ≥1 Course Outcome (D-021); teacher-facing, not the
+    │     working layer.
     ├── HOME STUDY 100 min = 2 × 50
     │   └── 4 × Study Session (~25 min)             units/NN-slug/sessions/NN.md
-    │       └── 3–5 Guiding Questions               U01-S02-G1  ← the spine
-    │           ├── answer                          precise refs to where the correct answer is
-    │           │     textbook | slide | video | article | web. Not prose. (D-019)
-    │           └── Study Paths                     gem | video | textbook | article | exercise
-    │                 candidate routes, typed and time-estimated.
-    │                 The student picks one; none is mandatory.
+    │       ├── 3–5 Guiding Questions               U01-S02-G1  ← the spine
+    │       │     ├── est_minutes                   teacher-approved study time; the session
+    │       │     │                                 budget is the sum of these (D-020)
+    │       │     └── answer                        precise refs to where the correct answer is
+    │       │           textbook | slide | video | article | web. Not prose. (D-019)
+    │       └── Study Paths (per session)           gem | video | textbook | article | exercise
+    │             an open, optional pool of alternative resources for the session.
+    │             Not enforced, not exhaustive; students may add their own. Not time-summed. (D-020)
     └── IN-CLASS SESSION 50 min (= Lesson Plan)     units/NN-slug/in-class.md
         └── Activities                              U01-A1
               each references ≥1 Guiding Question of this unit.
@@ -85,6 +97,16 @@ Semester = 12–13 Units                              course.yaml
 Assessment Items                                    assessments/items/U01-I01.md
       each references ≥1 Guiding Question.
 ```
+
+The **Syllabus** (`syllabus/syllabus.md`) is the course-level top layer (D-021): a Bologna-style
+document whose front matter carries the course goal, **Course Outcomes** (`CO1…`), workload/credits,
+the assessment scheme (grading details deferred, Q-026) and prerequisites, with a prose body for the
+aim and narrative. It is authored and edited like any other file — scaffold writes the skeleton once
+into the reserved `syllabus/` slot and never overwrites. Course Outcomes are the *roof* of the
+coverage chain: every Unit Objective rolls up to ≥1 outcome and every outcome is covered by ≥1
+objective, so "do the units together deliver the course's promises?" becomes checkable at course
+scope. Identity fields (title, code, textbooks) stay in `course.yaml` to avoid duplication; a
+*rendered* syllabus stitches in the unit overview live, so it cannot drift. There is no `course.md`.
 
 Vocabulary is fixed and synonym-free (D-012). Two words are banned because each once meant two
 things: **"topic"**, and bare **"question"** — say *Guiding Question* or *Assessment Item*. The full
@@ -175,6 +197,7 @@ is already in the repo, so a reviewed unit 1 improves unit 2, and an unreviewed 
 | Reads | Written by | Consumed by |
 |---|---|---|
 | `course.yaml` | teacher | every agent, all tooling |
+| `syllabus/syllabus.md` | curriculum-architect | validator, (rendered) syllabus export |
 | `methodologies/*.yaml` | framework (or a teacher adding one) | designer, planner, validator |
 | `defaults/time-constants.yaml` | framework, overridable per course | designer, critic, validator |
 | `materials/source/*` | teacher | `/ingest`, curriculum-architect, designer |

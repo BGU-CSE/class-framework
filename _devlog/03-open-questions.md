@@ -298,7 +298,10 @@ separation mechanism (Q-001) has to be real rather than planned.
 
 ---
 
-## Q-023 — "Study Path": per-Guiding-Question route, or per-Study-Session route?
+## ~~Q-023 — "Study Path": per-Guiding-Question route, or per-Study-Session route?~~ RESOLVED
+**Resolved 2026-08-28 → D-020.** Per **session**, an open optional pool; feasibility rides on a
+teacher-approved `est_minutes` per question, not on paths. Original framing below.
+
 **Raised 2026-08-27 (Session 10, Gap 2).** The vocabulary (CLAUDE.md) defines a Study Path as a
 route to answering **a Guiding Question** — per-question. But README/templates promise "one **route**
 through all its questions that fits the budget" — a coherent per-session route (all-video, or
@@ -311,6 +314,12 @@ path is per-question or a per-session route, and make the feasibility check matc
 ---
 
 ## Q-024 — The study-time budget is not actually automated
+**Narrowed 2026-08-28 by D-020.** The *core* 25-min guarantee no longer needs derived constants — it
+now sums one teacher-approved `est_minutes` per question. What remains of this question is optional:
+whether agents should *derive a proposed* `est_minutes` (or an optional per-path time to help
+students choose) from structured quantity fields, or whether teacher-entered estimates are enough.
+Much lower stakes than when raised. Original framing below.
+
 **Raised 2026-08-27 (Session 10, Gap 3).** `defaults/time-constants.yaml` defines reading rate,
 words/min and a video multiplier, but the validator **never uses them**: `_estimate_path` only has
 fallbacks for `gem` and `exercise`; for `textbook`/`video`/`article` it returns `None` unless
@@ -323,16 +332,19 @@ this is about the *schema* that would let them be used.
 
 ---
 
-## Q-025 — Nothing sits above Unit Objectives
+## ~~Q-025 — Nothing sits above Unit Objectives~~ RESOLVED
+**Resolved 2026-08-28 → D-021.** The course-level top layer is `syllabus/syllabus.md` (a Bologna-style
+document); **Course Outcomes** (`CO1…`) are the roof, and every Unit Objective rolls up to ≥1 of them.
+Original framing below.
+
 **Raised 2026-08-27 (Session 10, Gap 4).** Objectives are unit-local; there are no course-level
 outcomes for units to roll up to. So "do the 13 units *together* cover what the course promised?" is
 unanswerable and uncheckable — the two-way coverage guarantee we enforce inside a unit stops at the
 unit boundary. For a framework whose selling point is mechanical coherence, the top of the pyramid is
 missing. **Decide whether to add a course-outcomes layer (and a coverage rule objectives→outcomes).**
 
-Minor sibling gaps noted the same day: a session's `duration_minutes` is unconstrained (nothing ties
-it to the methodology's `session_minutes`); no check that the sessions' budgets *sum* to the declared
-home-study total; no priority/difficulty marker on goals (core vs. stretch).
+(The minor sibling gaps once parked here — session `duration_minutes` unconstrained, no home-study
+sum check, no goal priority marker — moved to Q-027 so they survive this resolution.)
 
 ---
 
@@ -350,11 +362,21 @@ flipped-class content model is settled.
 
 ---
 
+## Q-027 — Minor flipped-class checks (parked)
+**Raised 2026-08-27, relocated here 2026-08-28.** Small structural checks the flipped-class model
+does not yet make, none blocking: (1) a session's `duration_minutes` is unconstrained — nothing ties
+it to the methodology's `session_minutes`; (2) nothing checks that the sessions' `est_minutes` budgets
+*sum* to the declared home-study total (100 min); (3) goals have no core-vs-stretch priority marker.
+Pick up after the main content-model and homework passes.
+
+---
+
 ## Design-draft agenda (Session 10)
 Not questions so much as the ordered list of what the design draft must still close, recorded for
 continuity. Content model first because agents, metrics and lifecycle are all defined over it.
 
-1. **Content-model completeness** — in progress. Gap 1 done (D-019); open: Q-023, Q-024, Q-025, Q-026.
+1. **Content-model completeness** — in progress. Gap 1 done (D-019), Gap 2 done (D-020), Gap 3 done
+   (D-021); open: Q-026 (homework), Q-024 (narrowed, minor), Q-027 (minor).
 2. **Agent coverage** — do new components (e.g. programming assignments) need new agents?
 3. **Metrics** — do we measure agent performance and/or unit/course quality beyond pass-fail? Where
    does it surface (validate output, a new `classkit metrics`)? Advisory or gating?
