@@ -16,8 +16,8 @@ For a new agent session, or a different coding agent, or a human collaborator pi
 
 - Working dir `/Users/avin/Antigravity-Code/class-framework` (moved from `/Users/avin/Claude/...`
   when the project was picked up on a **different machine**). Git repo on branch `main`.
-- **Machine setup:** the system `pip` is broken (shim → missing Python 3.7). Use a local `.venv`
-  (gitignored): `python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"`. Tests pass (14).
+- **Machine setup:** Python is python.org 3.13; `pip install -e ".[dev]"` works. A local `.venv`
+  (gitignored) is the cleaner option to keep `classkit` out of global site-packages. Tests pass (14).
 - **Now in a design-draft pass** (Session 10): finishing a full *draft* of the design before any
   classroom testing, so the testing has a stable target. Order: content model → agent coverage →
   metrics → course lifecycle. Agenda + open items in `03-open-questions.md`.
