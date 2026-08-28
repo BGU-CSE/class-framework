@@ -8,6 +8,11 @@ temporary and will be deleted before release). Where a choice needs justifying, 
 one or two sentences and cross-referenced as `D-nnn`; when `_devlog/` goes, this file is what
 survives it.
 
+> **This describes the target design, and parts of it are not built yet.** The draft is being
+> finished before the code is changed to match, so the document deliberately runs ahead of the
+> repository. The **implementation ledger in `ROADMAP.md` is authoritative for what actually
+> exists** — check it before assuming a field, rule or agent behaviour described here is real.
+
 ## Where documentation belongs
 
 | Document | Audience | Answers |
@@ -279,14 +284,24 @@ they are repeated here with their reasons.
 
 Honest list, kept current.
 
+- **Parts of this document are designed, not built.** The design draft is being finished before the
+  code follows, so `schemas/`, `src/classkit/` and several agents still implement the previous
+  model. `ROADMAP.md`'s implementation ledger says exactly which. This gap is deliberate and
+  temporary; it is also the most likely thing to mislead a new developer.
+- **Nobody but the critic checks that study times are honest.** Since D-020 the 25-minute guarantee
+  rides on one teacher-approved `est_minutes` per question. Code can verify the arithmetic; only
+  `course-critic` can judge whether a number is plausible against the material it covers. That is a
+  real weakening compared with a derived estimate — accepted knowingly, because the derived version
+  was never actually wired up (Q-024) — but it means the guarantee has a human-judgment step in it,
+  not a mechanical one.
 - **The agent layer has never been run on a real course.** Every prompt in `.claude/` is untested
   against real materials. Expect substantial revision after the first unit. (ROADMAP Phase 2)
 - **The pluggable-methodology claim is unverified.** D-011 says another methodology works without
   code changes; nobody has written one. Anything that must change in `src/` to accommodate a
   second methodology is a bug against invariant 3. (Phase 3)
-- **Time constants are placeholders.** `defaults/time-constants.yaml` holds invented numbers, so the
-  feasibility check currently verifies arithmetic over a guess — which is worse than no check,
-  because it looks like verification. (Q-005)
+- **Time constants are close to dead.** `defaults/time-constants.yaml` holds invented numbers that
+  the validator barely uses, and D-020 removed their load-bearing role entirely. Whether they still
+  earn a place — proposing an `est_minutes` for a teacher to approve — is open. (Q-005, Q-024)
 - **`scaffold` may not need to be code at all.** An agent could read a template and write files;
   257 of 1,097 Python lines are at stake. (Q-021)
 - **Exam confidentiality is unresolved.** Course repos are private, but git history is permanent and

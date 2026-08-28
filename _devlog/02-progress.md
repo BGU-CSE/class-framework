@@ -632,3 +632,63 @@ minor sub-items to Q-027, advanced the agenda. Still **docs only**.
 **Q-026** — the homework / programming-assignment section (a distinct at-home track from study
 sessions; multi-unit; not mandatory; tests what's already learned; carries the grading scheme). Then
 agenda items 2–4 (agent coverage, metrics, course lifecycle).
+
+---
+
+## Session 11 — 2026-08-28 — Implementation ledger
+
+### What happened
+
+Claude pulled Avin's three design-draft commits (D-019 `answer` field, D-020 study-path reshape,
+D-021 syllabus) and reviewed them. The design work holds up; the problem was elsewhere.
+
+**Four decisions were `locked (design)` with no code, and nothing tracked the gap.** The repo held
+two contradictory descriptions of itself: `DESIGN.md` said paths are per-session and untimed, goals
+carry `est_minutes` and `answer`, and a syllabus exists — while `schemas/`, `src/classkit/` and six
+agent/skill files still implemented the previous model. `DESIGN.md` read throughout as if all of it
+existed.
+
+Avin agreed to a ledger, and confirmed the order of work: **finish the design draft first, then
+change the code to match.** The ledger is therefore a record, not a work queue to start on now.
+
+### Built
+
+**Implementation ledger in `ROADMAP.md`** — 3 decisions, **40 artifact changes**, 0 built. Grouped
+by decision so each can be implemented and tested as a unit. It captures second-order consequences
+that would otherwise be missed, e.g. D-021 also requires an `outcomes` field on
+`unit.schema.json`, a `CO1` ID convention in `CLAUDE.md`, and a `SCHEMA_FOR` entry; D-020 also
+invalidates the `estimating-study-time` skill, the Study Path glossary entry, and the description of
+`time_constants` in `GETTING-STARTED.md`.
+
+**Two open items surfaced while enumerating**, both recorded in the ledger next to the decision they
+belong to:
+
+- **D-019's required `answer` has no honest filler.** A judgment question may have no single
+  locator, and a required field at error severity is exactly the pressure that produces the
+  fabricated reference invariant 7 forbids. Needs a documented escape, or a ruling that such
+  questions belong in the in-class hour. Decide before implementing.
+- **D-020 shifted the study-time guarantee from code to the critic.** Code can check the arithmetic;
+  only `course-critic` can judge whether a teacher's `est_minutes` is plausible. Its prompt does not
+  say so. Now written into `DESIGN.md §10` and queued in the ledger.
+
+**`DESIGN.md`** gained a header note — it describes the *target* design, and the ledger is
+authoritative for what exists — plus two §10 entries (designed-not-built; nobody but the critic
+checks estimate honesty), and a corrected time-constants entry now that D-020 removed their
+load-bearing role.
+
+**`_devlog/README.md`** gained the rule: a `locked (design)` decision needs a ledger row in the same
+commit.
+
+### Next — design draft, continuing
+
+1. **Q-026 homework** — the one genuinely unfinished entity in the content model.
+2. **Course lifecycle** — moved ahead of agent coverage: the semester arc can still change the
+   *model* (per-offering versioning, where "what went wrong last year" lives), and settling agent
+   coverage first would mean redoing it.
+3. **Agent coverage** — over the settled model; includes rewriting the agents the ledger already
+   lists as stale.
+4. **Metrics** — scoped down to deciding *where* metrics surface and whether they gate; the measures
+   themselves wait for a real unit, or they will be invented wrong.
+
+Proposed exit criterion for the draft: every entity in the content model has an ID convention, a
+schema owner, an agent that writes it, and at least one validator rule that can fail on it.
