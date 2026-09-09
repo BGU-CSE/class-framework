@@ -29,20 +29,33 @@ runs in the teacher's own Claude Code, inside their course repo.
 
 **Written but unexercised.** No real course has been built with it.
 
-## 🔨 Design-draft pass (precedes the classroom)
+## 🔨 Build plan — vertical slices, Core first (D-022)
 
-A deliberate pass to finish a full *draft* of the design before classroom testing, so the testing
-pushes against a stable target (Session 10). Scope: complete the content model, then agent coverage,
-metrics, and the course lifecycle. Runs on the design doc and `_devlog/`, not on real course content.
+We design → implement → test → update **one coherent slice at a time**, rather than designing the
+whole framework before building any of it. Each slice is finished end to end before the next is
+designed, so we reach the implement-and-test loop — where the real risk lives — sooner, and each
+later slice is designed against a Core that has actually been exercised rather than against
+assumptions.
 
-- **Content model** — reviewing the flipped-class part for gaps. Decided: guiding questions gain an
-  `answer` field (**D-019**) — *design only, not yet in the schema/validator/templates/agents.* Open:
-  Q-023 (path vs. route), Q-024 (time-budget inputs), Q-025 (course-level outcomes), Q-026 (homework
-  / programming assignments — a separate section).
-- Then: agent coverage, metrics, course lifecycle. See the agenda in `_devlog/03-open-questions.md`.
+1. **Core** — *design nearly complete.* Course initiation, syllabus, Course Outcomes, units, and the
+   whole learning part: study sessions (guiding questions, `answer`, `est_minutes`, the study-path
+   pool) and the in-class hour, **including the entry quiz end to end** — generating its questions
+   and producing gradeable quizzes. The bar: Core delivers everything needed to *generate and run*
+   the learning phase. Content-model decisions locked as **D-019, D-020, D-021** (see the ledger).
+   Remaining design: the two open items beside D-019/D-020, and the minors in Q-027.
+2. **Assessment** — homework, programming assignments, exams (**Q-026**); fills the syllabus's
+   reserved grading block. Depends on Core's guiding questions. (Entry-quiz items are Core; homework
+   and exam items are here.)
+3. **Exports** — the Gem *builder* and PPTX. "Generate an artifact from the designed course."
+   (Gem-as-a-study-path is Core; only the builder defers.)
+4. **Metrics** — *later.* Measures to improve a course or its activities, once Core has been built
+   and taught enough to know which signals matter.
+5. **Lifecycle** — *much later,* after the course has been taught at least once: the semester arc,
+   revision, re-offering.
 
-Implementing what this pass decides ("fill the framework gaps") is a separate step, and precedes
-Phase 2's real-course work.
+**How this maps to the risk-ordered phases below:** Core's implement-and-test step *is* "Phase 2 —
+First real course"; the **Exports** slice is "Phase 4". Pluggability (Phase 3), Moodle (Phase 5) and
+multi-teacher hardening (Phase 6) stay as independent later concerns, unchanged.
 
 ---
 
@@ -76,12 +89,10 @@ Status: ⬜ not built · 🔨 in progress · ✅ done
 | ⬜ | `CLAUDE.md` | glossary: a Guiding Question now carries prompt + est_minutes + answer |
 | ⬜ | `tests/test_course_lifecycle.py` | removing `answer` from a scaffolded goal fires the rule |
 
-**Open before implementing:** a required field at error severity has no honest filler. A judgment
-question — *"how would you choose between a heap and a sorted array here?"* — may have no single
-locator, and the pressure to fill the field is exactly what produces the fabricated reference
-invariant 7 forbids. Decide: a documented escape (`kind: other` plus a note saying why), or rule that
-such questions belong in the in-class hour rather than home study. Either is defensible; discovering
-it when the validator won't go green is not.
+**Open item — RESOLVED → D-023.** A required field had no honest filler for a judgment question with
+no single locator. Resolution: the escape is `defer_to_class: true` (a pre-class thinking prompt whose
+answer is deferred to, and resolved in, the meeting), not a fabricated reference. See the D-023 rows
+below.
 
 ## D-020 — Study Paths move to the session; `est_minutes` moves to the question
 
@@ -129,6 +140,22 @@ or the guarantee silently weakens with nobody owning it.
 **Later, not now:** `workload.total_hours` enables a course-scope workload check — all home-study
 `est_minutes` + in-class + homework against the declared workload. It needs homework (Q-026) first.
 
+## D-023 — A question has a recorded answer, or is explicitly deferred to the in-class meeting
+
+| | Artifact | Change |
+|---|---|---|
+| ⬜ | `schemas/study-session.schema.json` | `defer_to_class: boolean` (default false) on each goal; `answer` required *unless* `defer_to_class` is true |
+| ⬜ | `src/classkit/validate.py` | `answer_reference_present` fires only when `defer_to_class` is not set |
+| ⬜ | `src/classkit/validate.py` | new rule `deferred_question_resolved_in_class` — a deferred goal must be referenced by ≥1 in-class activity, so deferring costs contact time |
+| ⬜ | `methodologies/question-driven-25.yaml` | severities for both; optional cap on deferred goals per session |
+| ⬜ | `templates/unit/session.md` | one goal shown with `defer_to_class: true` and no `answer`, picked up by an in-class activity |
+| ⬜ | `.claude/agents/study-session-designer.md` | default to answerable questions; use `defer_to_class` sparingly, as a pre-class thinking prompt |
+| ⬜ | `.claude/agents/lesson-planner.md` | every deferred question must be resolved by an activity |
+| ⬜ | `.claude/agents/course-critic.md` | judge deferrals are genuine thinking prompts, not answer-dodges, and not overused |
+| ⬜ | `.claude/skills/writing-guiding-questions/SKILL.md` | refine "the question that needs the class hour" — allowed only if deferred *and* resolved in class |
+| ⬜ | `CLAUDE.md` | glossary: a Guiding Question has an `answer` **or** `defer_to_class: true` |
+| ⬜ | `tests/test_course_lifecycle.py` | a goal with neither fires `answer_reference_present`; a deferred goal not referenced in-class fires the new rule |
+
 ## Cross-cutting
 
 | | Artifact | Change |
@@ -136,7 +163,7 @@ or the guarantee silently weakens with nobody owning it.
 | ⬜ | `DESIGN.md §10` | add: parts of this document are designed and not built; the critic now owns estimate honesty |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-08-28:** 3 decisions, 40 artifact changes, 0 built.
+**Count as of 2026-08-28:** 4 decisions, 51 artifact changes, 0 built.
 
 ## 🔨 Phase 2 — First real course
 

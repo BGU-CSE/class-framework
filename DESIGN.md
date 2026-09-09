@@ -65,6 +65,12 @@ answer in prose (that would put course content in the repo and invite fabricatio
 the *authoritative location* of the correct answer: it grounds the Gem's tutoring, the assessment
 writer's correct-answer key, and the critic's check (D-019).
 
+The one exception is a question deliberately left open: a goal may set `defer_to_class: true` and
+carry no answer — a pre-class *thinking prompt* whose resolution is deferred to the in-class meeting
+(D-023). The cost of that escape is structural: a deferred question must be picked up by ≥1 in-class
+activity, so it consumes contact time rather than becoming a way to skip writing an answer. Most
+study-session questions are answerable; deferral is the minority case.
+
 **Study Paths are separate, and live on the Study Session, not the question** (D-020). They are an
 *open, optional pool* of alternative resources for studying the session — the class Gem, a video, a
 chapter — none mandatory, not exhaustive; a student may use their own (another AI, another video)

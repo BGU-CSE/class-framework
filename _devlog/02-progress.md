@@ -635,6 +635,50 @@ agenda items 2–4 (agent coverage, metrics, course lifecycle).
 
 ---
 
+## Session 13 — 2026-08-28 — Reshape the plan into vertical slices (→ D-022)
+
+Synced first: pulled the other session's commit `48c7a73` (the implementation ledger + the rule that
+a `locked (design)` decision needs a ledger row in the same commit). Fast-forward, no conflict.
+
+Avin reshaped how we proceed (**D-022**): instead of finishing the whole design draft then
+implementing, we go **design → implement → test → update one vertical slice at a time**. Slices:
+
+1. **Core** (now) — course init, syllabus, outcomes, units, study sessions, in-class, **and the entry
+   quiz end to end** (Avin pulled question-generation + gradeable quizzes into Core, so Core can
+   *generate and run* the learning phase, not just author it). Content model already locked as
+   D-019/20/21. So the Assessment Item type + assessment-writer are **split**: entry-quiz items are
+   Core; homework/exam items defer.
+2. **Assessment** — homework, programming assignments, exams (Q-026).
+3. **Exports** — Gem *builder* + PPTX (Gem-as-path stays Core).
+4. **Metrics** — later (to improve a course/activities).
+5. **Lifecycle** — much later (after first teaching).
+
+Naming settled: "Core", then "Assessment" and "Exports" (chosen over the broad "Extensions" so each
+name is specific; the Gem builder is a generator, so it belongs with exports, not with assessment).
+Metrics and lifecycle explicitly **not** in Core.
+
+Recorded D-022, rewrote ROADMAP's build-plan section (vertical slices + how they map onto the
+risk-ordered phases), no DESIGN.md change (this is process/roadmap, not framework spec). Still no
+code.
+
+### Also decided (D-023) — D-019's open item closed
+
+The judgment-question escape: a study-session question either carries a recorded `answer`, or is
+marked **`defer_to_class: true`** — a pre-class thinking prompt whose answer/discussion is deferred to
+the meeting (Avin wanted to keep the ability to ask a question that provokes thinking before class).
+The discipline that keeps it honest: a deferred question **must** be referenced by ≥1 in-class
+activity, so deferring costs contact time. New rule `deferred_question_resolved_in_class`. Recorded
+D-023 + ledger rows (11), DESIGN §2, and marked D-019's ledger open-item resolved.
+
+### Next
+
+Core design draft now has **one** open item left: write the `est_minutes`-honesty responsibility into
+`course-critic` + it's already noted in DESIGN §10 (just needs the critic prompt when we implement).
+Then Q-027 minors (optional), and Core is ready to implement (work its ledger rows) and test. Q-026
+opens the **Assessment** slice afterwards.
+
+---
+
 ## Session 11 — 2026-08-28 — Implementation ledger
 
 ### What happened

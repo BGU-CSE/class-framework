@@ -18,17 +18,22 @@ For a new agent session, or a different coding agent, or a human collaborator pi
   when the project was picked up on a **different machine**). Git repo on branch `main`.
 - **Machine setup:** Python is python.org 3.13; `pip install -e ".[dev]"` works. A local `.venv`
   (gitignored) is the cleaner option to keep `classkit` out of global site-packages. Tests pass (14).
-- **Now in a design-draft pass** (Session 10): finishing a full *draft* of the design before any
-  classroom testing, so the testing has a stable target. Order: content model → agent coverage →
-  metrics → course lifecycle. Agenda + open items in `03-open-questions.md`.
-  - **Decided so far:** guiding questions gain an `answer` field (**D-019**) and a teacher-approved
-    `est_minutes`; study paths move to the Study Session as an open optional pool, budget sums the
-    per-question `est_minutes` (**D-020**); the course gains a **Syllabus** top layer
-    `syllabus/syllabus.md` (Bologna-style), with Course Outcomes (`CO1…`) that Unit Objectives roll
-    up to (**D-021**). All **design only** — nothing in schema/validator/templates/agents yet;
-    implementation is the later "fill the gaps" step.
-  - **Next:** the homework / programming-assignment section (Q-026 — a distinct at-home track; carries
-    the deferred grading scheme), then agenda items 2–4 (agent coverage, metrics, course lifecycle).
+- **Working in vertical slices now** (D-022, Session 13): design → implement → test → update one
+  slice at a time. Order: **Core** (course init, syllabus, outcomes, units, study sessions, in-class,
+  *and* the entry quiz end to end) → **Assessment** (homework, programming assignments, exams) →
+  **Exports** (Gem builder + PPTX) → **Metrics** (later) → **Lifecycle** (much later). See ROADMAP's
+  "Build plan" section.
+  - **Core content model is locked:** `answer` field on guiding questions (**D-019**); study paths →
+    per-session pool, budget sums per-question `est_minutes` (**D-020**); **Syllabus** top layer
+    `syllabus/syllabus.md` (Bologna-style) with Course Outcomes `CO1…` (**D-021**). All **design
+    only** — nothing in schema/validator/templates/agents yet. The **implementation ledger** in
+    ROADMAP.md is authoritative for what exists vs. is merely designed; a `locked (design)` decision
+    needs a ledger row in the same commit.
+  - Core's content model also gained **D-023**: a question either has a recorded `answer` or is
+    `defer_to_class: true` (a pre-class thinking prompt resolved by an in-class activity).
+  - **Next:** one Core design item left — write the `est_minutes`-honesty responsibility into
+    `course-critic` (already flagged in DESIGN §10). Then Q-027 (minor), then **implement + test
+    Core** by working its ledger rows. Q-026 opens the Assessment slice afterwards.
 - **Phases 0 and 1 are built**: schemas, methodology, templates, scaffold, validator (14 passing
   tests), plus the agent layer — 7 agents, 2 skills, 6 commands, `GETTING-STARTED.md`.
 - Remote is `github.com/BGU-CSE/class-framework`, **private**. Transferred from the personal

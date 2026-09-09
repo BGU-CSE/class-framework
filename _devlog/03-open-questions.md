@@ -371,14 +371,16 @@ Pick up after the main content-model and homework passes.
 
 ---
 
-## Design-draft agenda (Session 10)
-Not questions so much as the ordered list of what the design draft must still close, recorded for
-continuity. Content model first because agents, metrics and lifecycle are all defined over it.
+## Design-draft agenda — superseded by the vertical-slice plan (D-022, Session 13)
+The Session-10 agenda (content model → agent coverage → metrics → lifecycle) is **reorganized** into
+vertical slices, each taken design → implement → test → update in turn (see ROADMAP "Build plan" and
+D-022). Agent coverage is now settled *within* each slice, not as a separate pass.
 
-1. **Content-model completeness** — in progress. Gap 1 done (D-019), Gap 2 done (D-020), Gap 3 done
-   (D-021); open: Q-026 (homework), Q-024 (narrowed, minor), Q-027 (minor).
-2. **Agent coverage** — do new components (e.g. programming assignments) need new agents?
-3. **Metrics** — do we measure agent performance and/or unit/course quality beyond pass-fail? Where
-   does it surface (validate output, a new `classkit metrics`)? Advisory or gating?
-4. **Course lifecycle** — the semester arc: creation → design → teach → revise → re-offer;
-   versioning within a course; carrying learning into the next offering.
+- **Core** (now) — content model **done** (Gap 1 D-019, Gap 2 D-020, Gap 3 D-021; D-019's open item
+  closed by D-023). Remaining: the D-020 critic-honesty item, and Q-027 (minor). Then implement + test.
+- **Assessment** — Q-026 (homework, programming assignments, exams).
+- **Exports** — Gem builder + PPTX.
+- **Metrics** — later; to improve a course/activities once Core is built and taught.
+- **Lifecycle** — much later; after the course is taught once.
+
+Q-024 (narrowed) rides along with whichever slice next touches study-time estimation.

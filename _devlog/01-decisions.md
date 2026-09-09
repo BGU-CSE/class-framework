@@ -453,6 +453,9 @@ knowing the answer is *mandatory* after the session) and deliberately **kept** �
 **Amended by D-020:** the time budget now lives on the question (`est_minutes`), not on study paths,
 and study paths move to the session. D-019's core (the `answer` field, untimed pointers) stands.
 
+**Open item resolved by D-023:** the escape for a question with no single locator is an explicit
+`defer_to_class: true`, not a fabricated reference.
+
 ---
 
 ## D-020 — Study Path is a per-session optional pool; the 25-min budget rides on per-question study time
@@ -535,3 +538,69 @@ of the 25-minute session check.
 `syllabus/`; the `outcomes` field on `unit.schema.json` objectives; the two coverage rules; the `CO`
 id convention added to `CLAUDE.md`; `curriculum-architect` set to author the syllabus. **Resolves
 Q-025;** grading-scheme details stay open under **Q-026**.
+
+---
+
+## D-022 — Design and build in vertical slices; Core first
+**Date:** 2026-08-28 · **Status:** locked (process/roadmap) · no ledger row (organizes artifacts,
+adds none)
+
+Avin reshaped the plan: rather than finish the whole design draft before any implementation, we run
+**design → implement → test → update one coherent slice at a time.** Each slice is completed end to
+end before the next is designed, so we reach the implement-and-test loop (where the framework's real
+risk lives — untested agents) sooner and on a small surface, and later slices are designed against a
+Core that has actually been exercised rather than against assumptions.
+
+**The slices, in order:**
+
+1. **Core** — course initiation, syllabus, Course Outcomes, units, and the whole learning part:
+   study sessions (guiding questions, `answer`, `est_minutes`, the study-path pool) and the in-class
+   hour, **including the entry quiz end to end** — generating its questions and producing *gradeable*
+   quizzes (the items carry answer keys / rubrics; running grading over live submissions stays out,
+   per "designs a course, does not run one"). The bar: Core delivers everything needed to *generate
+   and run* the learning phase. Its content model is locked as D-019/D-020/D-021.
+2. **Assessment** — homework, programming assignments, exams (Q-026); fills the syllabus's reserved
+   grading block. The entry quiz's items are Core; homework/exam items are here.
+3. **Exports** — the Gem *builder* and PPTX. (Gem-as-a-study-path stays Core; only the builder
+   defers.) Named "Exports" so each phase name is honest — a generator, not assessment.
+4. **Metrics** — *later*, to improve a course or its activities once Core is built and taught.
+5. **Lifecycle** — *much later*, after the course is taught once: semester arc, revision, re-offering.
+
+**Why the split is safe:** the later slices all hang off Core (they consume its guiding questions,
+answers, and the syllabus's reserved blocks), so Core does not depend on them. **Naming:** Avin chose
+"Core"; "Assessment" and "Exports" over the broader "Extensions" so each name is specific (Session
+13). Maps onto the risk-ordered ROADMAP phases: Core's test step is "first real course" (old Phase
+2), Exports is old Phase 4; pluggability/Moodle/multi-teacher (Phases 3/5/6) are unchanged.
+
+---
+
+## D-023 — A study-session question either has a recorded answer, or is explicitly deferred to the in-class meeting
+**Date:** 2026-08-28 · **Status:** locked (design) · **implementation pending** · resolves D-019's
+open item
+
+D-019 made `answer` required at error severity. That has no honest filler for a **judgment /
+decision question** with no single locator (*"how would you choose between a heap and a sorted array
+here?"*), and the pressure to fill the field is exactly what produces the fabricated reference
+invariant 7 forbids. Resolution — a **guarded hybrid** (Avin: "the leading way is B", most questions
+have a clear recorded answer, but keep the ability to ask a question that encourages thinking before
+class and "defer" the answer/discussion to the meeting):
+
+- **Rule (the norm).** A home-study guiding question carries a recorded `answer` (≥1 locator). This
+  is what most study-session questions should look like.
+- **Escape (the minority).** A question may instead be marked **`defer_to_class: true`** — a pre-class
+  *thinking prompt* whose correct answer / discussion is deliberately deferred to the in-class
+  meeting. Such a question carries **no `answer`**, and the student is not expected to know the answer
+  after the session; its `est_minutes` is thinking time and still counts toward the budget.
+- **Closing the loop (the discipline).** A `defer_to_class` question **must be referenced by ≥1
+  in-class activity** — the class must actually resolve it. So deferring *costs contact time*; it is
+  not a way to avoid writing an answer. New rule `deferred_question_resolved_in_class`.
+
+**Consistent with existing craft.** The `writing-guiding-questions` skill already flags "the question
+that needs the class hour" as a failure mode. D-023 refines it: such a question is allowed *only if*
+explicitly deferred **and** resolved in class; otherwise it is a mis-filed in-class activity. The
+critic also watches for overuse — a session of all-deferred questions teaches nothing at home.
+
+**Ledger (see ROADMAP):** `defer_to_class` on the goal schema; `answer_reference_present` becomes
+conditional on it; new `deferred_question_resolved_in_class` rule; methodology severities; template
+example; study-session-designer, lesson-planner and course-critic guidance; the skill's failure-mode
+wording; CLAUDE.md glossary; tests.
