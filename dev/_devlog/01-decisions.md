@@ -639,3 +639,37 @@ dev/
   (`src/`, `schemas/`, `methodologies/`, `templates/`, `defaults/`, `.claude/`).
 - References updated in `README.md`, `CLAUDE.md`, and the moved files. **Historical progress/decision
   entries were left intact** — a chronological log that said "DESIGN.md" at the time stays as it was.
+
+---
+
+## D-025 — `est_minutes` honesty is human judgment, aided by the time-constants as an advisory yardstick
+**Date:** 2026-08-28 · **Status:** locked (design) · **implementation pending** · resolves D-020's
+open item and Q-024
+
+Since D-020 the 25-minute guarantee rides on one teacher-typed `est_minutes` per question. Code
+checks the *sum*; it cannot check whether any single number is *honest* (type "3 min" for a 15-min
+question and the validator still goes green). So the only guard on plausibility is human judgment —
+the `course-critic`. The choice was whether that judgment stands alone, or gets a yardstick.
+
+**Decision (Avin chose "option 2", with an explicit fallback to option 1 if it proves fiddly):** the
+old time-constants come back as an **advisory yardstick — not a validator input, not a hard rule.**
+
+- `defaults/time-constants.yaml` is **kept and annotated advisory** (not deleted — resolves Q-024's
+  "annotate or delete").
+- The **study-session-designer** uses the constants to *propose* an `est_minutes` (e.g. "4 pages of
+  proofs ≈ 8 min"), which the teacher then approves/adjusts.
+- The **course-critic** uses the same constants to *sanity-check* each `est_minutes` against the
+  question's material, and flags implausible ones — the D-020 open-item responsibility, now written
+  down. The shared standard lives in the `estimating-study-time` skill so designer and critic judge
+  by one bar.
+- **No validator rule** derives or checks time from the constants; the validator still only sums
+  `est_minutes`. Advisory means a bad constant never fails a build — it only guides.
+
+**Honest caveat.** The constants are still placeholder numbers (Q-005), so the yardstick is only
+roughly calibrated. Because it is advisory, that is tolerable — a rough anchor beats pure vibes, and
+a wrong constant misguides rather than breaks. **Fallback:** if wiring this into the designer/critic
+proves more trouble than it is worth, revert to pure judgment (drop the yardstick) — Avin's call,
+recorded now so the option is not forgotten.
+
+**Ledger:** woven into the D-020 rows for `time-constants.yaml`, `course-critic.md`,
+`study-session-designer.md`, and the `estimating-study-time` skill (tagged D-025). No new artifacts.

@@ -706,6 +706,30 @@ Core. Q-026 opens the Assessment slice.
 
 ---
 
+## Session 15 — 2026-08-28 — `est_minutes` honesty gets a yardstick (→ D-025); Core spec finalized
+
+Closed the last Core design item (D-020's open item + Q-024). The budget rides on a teacher-typed
+`est_minutes` per question; code checks only the sum, so honesty is a human-judgment step owned by the
+`course-critic`. Decision (**D-025**, Avin's "option 2", with an explicit fallback to option 1 if it
+gets fiddly): the time-constants return as an **advisory yardstick** — the designer *proposes*
+`est_minutes` from them, the critic *sanity-checks* against them, shared via the `estimating-study-time`
+skill. No validator rule; advisory only, so a bad constant guides rather than breaks. Kept, not
+deleted (resolves Q-024). Caveat: constants are still placeholders (Q-005), so calibration is rough.
+
+Recorded D-025, wove its changes into the D-020 ledger rows (no new artifacts), softened
+`FRAMEWORK-SPEC.md §10`, resolved Q-024. Docs only.
+
+**Core spec is now finalized** — content model D-019/20/21/23/25, both open items closed; only the
+optional Q-027 minors remain. Next up is a choice: knock out Q-027, or declare Core done and start
+**implementing** it (work the ledger rows) + test.
+
+### Next
+
+Either the Q-027 minors, or begin Core implementation from the ledger (schemas → validator →
+templates → agents/skills → tests, kept green each step). Then Q-026 opens the Assessment slice.
+
+---
+
 ## Session 11 — 2026-08-28 — Implementation ledger
 
 ### What happened

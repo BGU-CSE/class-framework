@@ -29,11 +29,13 @@ For a new agent session, or a different coding agent, or a human collaborator pi
     only** — nothing in schema/validator/templates/agents yet. The **implementation ledger** in
     ROADMAP.md is authoritative for what exists vs. is merely designed; a `locked (design)` decision
     needs a ledger row in the same commit.
-  - Core's content model also gained **D-023**: a question either has a recorded `answer` or is
-    `defer_to_class: true` (a pre-class thinking prompt resolved by an in-class activity).
-  - **Next:** one Core design item left — write the `est_minutes`-honesty responsibility into
-    `course-critic` (already flagged in DESIGN §10). Then Q-027 (minor), then **implement + test
-    Core** by working its ledger rows. Q-026 opens the Assessment slice afterwards.
+  - Also **D-023** (a question has a recorded `answer` *or* `defer_to_class: true`, a pre-class
+    thinking prompt resolved by an in-class activity) and **D-025** (`est_minutes` honesty is critic
+    judgment, aided by the time-constants as an *advisory yardstick*). Both earlier open items closed.
+  - Dev-doc reorg: spec/roadmap/log moved under `dev/`; the spec is now `FRAMEWORK-SPEC.md` (**D-024**).
+  - **Core spec is finalized** — only optional Q-027 minors remain. **Next:** either knock out Q-027,
+    or start **implementing Core** by working the ledger rows in `dev/ROADMAP.md` (schemas → validator
+    → templates → agents/skills → tests, kept green each step) and test. Q-026 opens Assessment after.
 - **Phases 0 and 1 are built**: schemas, methodology, templates, scaffold, validator (14 passing
   tests), plus the agent layer — 7 agents, 2 skills, 6 commands, `GETTING-STARTED.md`.
 - Remote is `github.com/BGU-CSE/class-framework`, **private**. Transferred from the personal

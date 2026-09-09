@@ -299,7 +299,9 @@ Honest list, kept current.
   `course-critic` can judge whether a number is plausible against the material it covers. That is a
   real weakening compared with a derived estimate — accepted knowingly, because the derived version
   was never actually wired up (Q-024) — but it means the guarantee has a human-judgment step in it,
-  not a mechanical one.
+  not a mechanical one. The critic is given the time-constants as an *advisory yardstick* to calibrate
+  that judgment (D-025), so it is not pure guesswork — but those constants are themselves placeholders
+  (Q-005), so the calibration is only rough.
 - **The agent layer has never been run on a real course.** Every prompt in `.claude/` is untested
   against real materials. Expect substantial revision after the first unit. (ROADMAP Phase 2)
 - **The pluggable-methodology claim is unverified.** D-011 says another methodology works without

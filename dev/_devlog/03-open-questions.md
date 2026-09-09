@@ -313,7 +313,11 @@ path is per-question or a per-session route, and make the feasibility check matc
 
 ---
 
-## Q-024 — The study-time budget is not actually automated
+## ~~Q-024 — The study-time budget is not actually automated~~ RESOLVED
+**Resolved 2026-08-28 → D-025.** The time-constants stay as an *advisory yardstick*: the designer
+proposes `est_minutes` from them, the critic sanity-checks against them; no validator rule derives or
+checks time. Kept, not deleted; advisory, not load-bearing. Original framing below.
+
 **Narrowed 2026-08-28 by D-020.** The *core* 25-min guarantee no longer needs derived constants — it
 now sums one teacher-approved `est_minutes` per question. What remains of this question is optional:
 whether agents should *derive a proposed* `est_minutes` (or an optional per-path time to help
@@ -376,8 +380,9 @@ The Session-10 agenda (content model → agent coverage → metrics → lifecycl
 vertical slices, each taken design → implement → test → update in turn (see ROADMAP "Build plan" and
 D-022). Agent coverage is now settled *within* each slice, not as a separate pass.
 
-- **Core** (now) — content model **done** (Gap 1 D-019, Gap 2 D-020, Gap 3 D-021; D-019's open item
-  closed by D-023). Remaining: the D-020 critic-honesty item, and Q-027 (minor). Then implement + test.
+- **Core** (now) — content model **done** (D-019, D-020, D-021, D-023, D-025; both the D-019 and
+  D-020 open items closed). Remaining: Q-027 (minor, optional). **Core spec is finalized — ready to
+  implement + test.**
 - **Assessment** — Q-026 (homework, programming assignments, exams).
 - **Exports** — Gem builder + PPTX.
 - **Metrics** — later; to improve a course/activities once Core is built and taught.

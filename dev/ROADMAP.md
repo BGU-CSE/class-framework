@@ -104,11 +104,11 @@ below.
 | ⬜ | `src/classkit/validate.py` | retire `_estimate_path` and `path_estimate_missing`; both exist only to derive per-path times |
 | ⬜ | `src/classkit/validate.py` | `min_paths_per_goal` → a soft per-session minimum |
 | ⬜ | `methodologies/question-driven-25.yaml` | `study_paths.min_paths_per_goal` → per-session; add the budget tolerance |
-| ⬜ | `defaults/time-constants.yaml` | no longer load-bearing for the guarantee — annotate as advisory, or delete if nothing proposes estimates from it (ties to Q-024) |
+| ⬜ | `defaults/time-constants.yaml` | keep as an **advisory yardstick**, not a validator input: the designer proposes `est_minutes` from it, the critic sanity-checks against it. Annotate as advisory. (D-025, resolves Q-024) |
 | ⬜ | `templates/unit/session.md` | goals gain `est_minutes`; session gains a `paths:` pool |
-| ⬜ | `.claude/agents/study-session-designer.md` | rewrite path/time guidance: estimate per question, propose paths per session |
-| ⬜ | `.claude/agents/course-critic.md` | **new responsibility — see below** |
-| ⬜ | `.claude/skills/estimating-study-time/SKILL.md` | substantial rewrite: it is built entirely around per-path derivation, which no longer exists |
+| ⬜ | `.claude/agents/study-session-designer.md` | rewrite path/time guidance: estimate `est_minutes` per question, *proposing* it from the advisory constants; propose paths per session (D-020/D-025) |
+| ⬜ | `.claude/agents/course-critic.md` | **new responsibility:** judge each `est_minutes` for plausibility against the material, using the constants as a yardstick (D-020 open item, resolved by D-025) |
+| ⬜ | `.claude/skills/estimating-study-time/SKILL.md` | substantial rewrite: drop per-path derivation; describe estimating per question and using the constants as an advisory yardstick — the shared standard for both the designer and the critic (D-025) |
 | ⬜ | `.claude/agents/topic-researcher.md` | its durations now feed an untimed pool; revisit why it loads the estimating skill |
 | ⬜ | `CLAUDE.md` | glossary — "Study Path: a candidate route… typed and time-estimated" is now wrong on both counts |
 | ⬜ | `GETTING-STARTED.md` | `time_constants` is described as load-bearing for the 25-minute check; it no longer is |
@@ -118,7 +118,9 @@ below.
 Code can check that the arithmetic adds up; it cannot check that the numbers are honest. That makes
 `course-critic` the **only** check on whether an `est_minutes` is real — and its prompt does not
 currently say so. This must be written into the critic explicitly, and stated in `FRAMEWORK-SPEC.md §10`,
-or the guarantee silently weakens with nobody owning it.
+or the guarantee silently weakens with nobody owning it. **Resolved by D-025:** the check stays human
+judgment, but the critic (and the designer) get the time-constants as an *advisory yardstick*, so it
+is calibrated rather than pure vibes.
 
 ## D-021 — Syllabus as the top layer; Course Outcomes close the coverage chain
 
@@ -163,7 +165,8 @@ or the guarantee silently weakens with nobody owning it.
 | ⬜ | `FRAMEWORK-SPEC.md §10` | add: parts of this document are designed and not built; the critic now owns estimate honesty |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-08-28:** 4 decisions, 51 artifact changes, 0 built.
+**Count as of 2026-08-28:** 5 decisions, 51 artifact changes, 0 built. (D-025 refines D-020 rows —
+no new artifacts.)
 
 ## 🔨 Phase 2 — First real course
 
