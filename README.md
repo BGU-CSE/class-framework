@@ -43,12 +43,12 @@ summing to the hour, assessment items that test something nobody was asked to le
 layer — agents, skills and the teacher-facing commands — is in place and has not yet been used to
 build a real course. Nothing here is stable.
 
-Not built: PPTX export, Moodle sync. See [ROADMAP.md](ROADMAP.md) for the phases and what
+Not built: PPTX export, Moodle sync. See [dev/ROADMAP.md](dev/ROADMAP.md) for the phases and what
 each remaining one is for.
 
 **Teachers start at [GETTING-STARTED.md](GETTING-STARTED.md).** **Developers start at
-[DESIGN.md](DESIGN.md)** — how the system works and why it is shaped this way. The rest of this
-file is a summary.
+[dev/FRAMEWORK-SPEC.md](dev/FRAMEWORK-SPEC.md)** — how the system works and why it is shaped this
+way. The rest of this file is a summary.
 
 ## Starting a course
 
@@ -127,7 +127,7 @@ defaults/           time constants used to estimate how long a study path takes
 templates/          what scaffold copies into a course repo
 src/classkit/       the tooling
 tests/              scaffold → validate round-trip
-_devlog/            temporary build log; deleted before release
+dev/                framework-development docs (spec, roadmap, build log); not a teacher's concern
 ```
 
 There is deliberately **no `course/` directory here**. Course content lives only in course

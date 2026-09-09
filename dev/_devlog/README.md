@@ -26,7 +26,7 @@ gets deleted before release.
   (`../ROADMAP.md`) in the same commit.** The draft is being finished before the code follows,
   so the ledger is the only thing keeping track of what has been decided but not built.
 - When a question in `03-open-questions.md` gets answered, move it to `01-decisions.md`.
-- **Structure and flow belong in `../DESIGN.md`, not here.** This folder records *how we got here*;
-  DESIGN.md records *how it works now*. Only DESIGN.md survives this folder's deletion, so any
+- **Structure and flow belong in `../FRAMEWORK-SPEC.md`, not here.** This folder records *how we got here*;
+  FRAMEWORK-SPEC.md records *how it works now*. Only FRAMEWORK-SPEC.md survives this folder's deletion, so any
   rationale worth keeping must be reflected there too.
 - Keep course-specific content **out** of this folder — see the separation rule in `01-decisions.md` (D-002).

@@ -8,7 +8,7 @@ For a new agent session, or a different coding agent, or a human collaborator pi
 2. `01-decisions.md` — what's already settled. **Do not relitigate locked decisions.**
 3. `02-progress.md` (last block) — where we stopped.
 4. `03-open-questions.md` — what's unresolved.
-5. `../DESIGN.md` — how the system works now. Read this before the decision log; the log is
+5. `../FRAMEWORK-SPEC.md` — how the system works now. Read this before the decision log; the log is
    chronological and several decisions supersede earlier ones.
 6. `../ROADMAP.md` — the phases, what's done, and what each remaining one is for.
 
@@ -45,9 +45,9 @@ For a new agent session, or a different coding agent, or a human collaborator pi
   not even use most of them yet (Q-024). The feasibility check is only as honest as hand-entered
   `est_minutes` — right now that is arithmetic over a guess, worse than no check because it looks
   like verification.
-- **DESIGN.md scope:** the framework itself (content model, components, agents, metrics, lifecycle),
-  **not** the development process (merges, a developer's teacher-vs-developer hats). Keep process
-  out of DESIGN.md.
+- **FRAMEWORK-SPEC.md scope:** the framework itself (content model, components, agents, metrics,
+  lifecycle), **not** the development process (merges, a developer's teacher-vs-developer hats). Keep
+  process out of FRAMEWORK-SPEC.md.
 
 ## The two things most likely to be got wrong
 

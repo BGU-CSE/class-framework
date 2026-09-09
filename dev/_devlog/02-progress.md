@@ -679,6 +679,33 @@ opens the **Assessment** slice afterwards.
 
 ---
 
+## Session 14 — 2026-08-28 — Move dev docs under `dev/`; rename the spec (→ D-024)
+
+Repo hygiene, no design change. The spec, roadmap, and build log are framework-*development*
+artifacts that land in every teacher's clone (D-009). Moved them under one directory so the teacher's
+workspace stays clean and they are clearly ignorable:
+
+- `DESIGN.md` → `dev/FRAMEWORK-SPEC.md` (renamed — "Design" was ambiguous; the new name states its
+  role as the framework's spec).
+- `ROADMAP.md` → `dev/ROADMAP.md`; `_devlog/` → `dev/_devlog/`.
+- Root keeps only teacher/product-facing + load-bearing files (README, GETTING-STARTED, LICENSE,
+  CLAUDE.md [auto-loaded agent context — must stay], pyproject.toml, product dirs).
+
+Honest caveat recorded in D-024: a clone still copies `dev/`; true exclusion would need sparse-checkout
+or a separate repo, both worse. `dev/` also improves merge hygiene (teachers never edit it).
+
+Used `git mv` (history preserved). Updated living references in README, CLAUDE.md, and the moved
+files' cross-links; left historical progress/decision entries as-is. Tests unaffected (no code
+touched).
+
+### Next
+
+Unchanged: close Core's last design item — write the `est_minutes`-honesty responsibility into
+`course-critic` (noted in `dev/FRAMEWORK-SPEC.md §10`). Then Q-027 (minor), then implement + test
+Core. Q-026 opens the Assessment slice.
+
+---
+
 ## Session 11 — 2026-08-28 — Implementation ledger
 
 ### What happened

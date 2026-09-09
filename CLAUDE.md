@@ -67,17 +67,21 @@ src/classkit/
   validate.py             schema layer + semantic rules
   cli.py                  argparse entry point
 tests/                    scaffold → validate round-trip
-_devlog/                  build log — decisions, progress, open questions
+dev/                      framework-development docs — NOT part of a teacher's course:
+  FRAMEWORK-SPEC.md         the spec — how it works and why; read before structural changes
+  ROADMAP.md                phases + the implementation ledger (authoritative for what is built)
+  _devlog/                  build log — decisions, progress, open questions (deleted before release)
 ```
 
 ## Before changing anything structural
 
-Read `DESIGN.md` first — it explains the layering, the contracts between layers, and which
-constraints are load-bearing. **If your change alters structure or flow, update `DESIGN.md` in the
-same commit**; it is the document that survives `_devlog/` being deleted.
+Read `dev/FRAMEWORK-SPEC.md` first — it explains the layering, the contracts between layers, and
+which constraints are load-bearing. **If your change alters structure or flow, update
+`dev/FRAMEWORK-SPEC.md` in the same commit**; it is the document that survives `dev/_devlog/` being
+deleted.
 
-Then read `_devlog/01-decisions.md`. Locked decisions are not to be relitigated; several
-constraints that look arbitrary have a recorded reason. `_devlog/03-open-questions.md`
+Then read `dev/_devlog/01-decisions.md`. Locked decisions are not to be relitigated; several
+constraints that look arbitrary have a recorded reason. `dev/_devlog/03-open-questions.md`
 lists what is genuinely undecided.
 
 ## Adding a validation rule
@@ -124,6 +128,6 @@ When editing agents:
 
 PPTX export (D-006) and Moodle sync (D-004). Do not assume either exists.
 
-`ROADMAP.md` has the phases: what is done, what is next, and why each remaining phase exists.
+`dev/ROADMAP.md` has the phases: what is done, what is next, and why each remaining phase exists.
 Phase 2 (first real course) is the one that will invalidate assumptions — the agent layer has
 never been run against real materials.

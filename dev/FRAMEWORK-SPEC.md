@@ -1,4 +1,4 @@
-# Design
+# Framework specification
 
 How the framework works and why it is shaped this way. Written for developers joining the project.
 
@@ -19,7 +19,7 @@ survives it.
 |---|---|---|
 | `README.md` | Anyone | What is this and how do I use it? |
 | `GETTING-STARTED.md` | Teachers | How do I turn my course into a flipped one? |
-| **`DESIGN.md`** | **Developers** | **How does it work, and why is it built this way?** |
+| **`FRAMEWORK-SPEC.md`** | **Developers** | **How does it work, and why is it built this way?** |
 | `CLAUDE.md` | Agents editing the framework | What must I not break? |
 | `ROADMAP.md` | Everyone | What is done, what is next, why? |
 | `_devlog/` | Developers (temporary) | How did we get here? What is still undecided? |

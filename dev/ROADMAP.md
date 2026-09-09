@@ -65,7 +65,7 @@ multi-teacher hardening (Phase 6) stay as independent later concerns, unchanged.
 built yet, and nothing here should be built while the draft is still moving — a decision may still
 change. The ledger exists so that when implementation starts, no consequence has been forgotten.
 
-`DESIGN.md` describes the **target** design and reads as if it exists. **This ledger is authoritative
+`FRAMEWORK-SPEC.md` describes the **target** design and reads as if it exists. **This ledger is authoritative
 for what actually exists.** Anything listed below is designed, not built.
 
 **Rule:** a decision marked `locked (design)` in `_devlog/01-decisions.md` must have a row here in
@@ -117,7 +117,7 @@ below.
 **The responsibility shift this creates.** The budget is now one teacher-typed number per question.
 Code can check that the arithmetic adds up; it cannot check that the numbers are honest. That makes
 `course-critic` the **only** check on whether an `est_minutes` is real — and its prompt does not
-currently say so. This must be written into the critic explicitly, and stated in `DESIGN.md §10`,
+currently say so. This must be written into the critic explicitly, and stated in `FRAMEWORK-SPEC.md §10`,
 or the guarantee silently weakens with nobody owning it.
 
 ## D-021 — Syllabus as the top layer; Course Outcomes close the coverage chain
@@ -160,7 +160,7 @@ or the guarantee silently weakens with nobody owning it.
 
 | | Artifact | Change |
 |---|---|---|
-| ⬜ | `DESIGN.md §10` | add: parts of this document are designed and not built; the critic now owns estimate honesty |
+| ⬜ | `FRAMEWORK-SPEC.md §10` | add: parts of this document are designed and not built; the critic now owns estimate honesty |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
 **Count as of 2026-08-28:** 4 decisions, 51 artifact changes, 0 built.

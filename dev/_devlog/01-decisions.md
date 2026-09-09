@@ -604,3 +604,38 @@ critic also watches for overuse — a session of all-deferred questions teaches 
 conditional on it; new `deferred_question_resolved_in_class` rule; methodology severities; template
 example; study-session-designer, lesson-planner and course-critic guidance; the skill's failure-mode
 wording; CLAUDE.md glossary; tests.
+
+---
+
+## D-024 — Framework-development docs live under `dev/`; the spec is renamed `FRAMEWORK-SPEC.md`
+**Date:** 2026-08-28 · **Status:** locked (process/roadmap) · executed this session (no ledger row —
+done, not deferred)
+
+The spec, the roadmap+ledger, and the throwaway build log are framework-*development* artifacts, not
+part of a teacher's course. But a course repo is a clone of the framework (D-009), so these files
+land in every teacher's clone. To keep the teacher's workspace clean and clearly ignorable, they move
+under one directory:
+
+```
+dev/
+  FRAMEWORK-SPEC.md   (was DESIGN.md)
+  ROADMAP.md
+  _devlog/
+```
+
+- **Rename.** "Design" was ambiguous (visual design? whose design?); `FRAMEWORK-SPEC.md` names the
+  role — the specification of the framework, which is how we treat it. H1 and all cross-references
+  updated.
+- **Honest limits.** A `git clone` still copies `dev/`; truly excluding it would need sparse-checkout
+  (too advanced for non-technical teachers) or a separate repo (breaks clone-and-repoint *and* hides
+  the spec from developers). `dev/` gives clear separation and a **merge-hygiene bonus** — teachers
+  never edit `dev/`, so `git merge framework/main` stays conflict-free there (helps Q-007). That is
+  the realistic best, not literal exclusion.
+- **Persistence.** Unlike `_devlog/` (deleted at release, D-008), `FRAMEWORK-SPEC.md` and `ROADMAP.md`
+  persist — the durable spec and plan.
+- **Root now holds** only teacher/product-facing or load-bearing files: `README.md`,
+  `GETTING-STARTED.md`, `LICENSE`, **`CLAUDE.md`** (must stay at root — Claude Code auto-loads it as
+  the agents' operating context in the course repo), `pyproject.toml`, and the product dirs
+  (`src/`, `schemas/`, `methodologies/`, `templates/`, `defaults/`, `.claude/`).
+- References updated in `README.md`, `CLAUDE.md`, and the moved files. **Historical progress/decision
+  entries were left intact** — a chronological log that said "DESIGN.md" at the time stays as it was.
