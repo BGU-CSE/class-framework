@@ -328,10 +328,13 @@ Course-level setup runs once; then units are designed one at a time.
 
 ```
 /ingest            read materials/source/*, report what the course actually covers
-/plan-units        syllabus-designer writes syllabus/syllabus.md (goal, Course Outcomes,
-                   workload, prerequisites); curriculum-architect writes units/NN/unit.md
-                   (objectives → outcomes). ONE flow — they share the outcome list, or
-                   the syllabus and the unit map drift apart (D-029)
+/plan-units        ONE flow, two agents, sequential and file-based (D-029, D-031i):
+                   1. syllabus-designer writes syllabus/syllabus.md — goal, Course
+                      Outcomes (CO1…), workload, prerequisites. Written to disk first.
+                   2. curriculum-architect READS that syllabus and writes units/NN-slug/
+                      unit.md, each objective referencing the outcome ids it just read.
+                   The handoff is the file, not shared memory: the architect must never
+                   invent an outcome id, and either agent can be re-run alone.
 
 /design-unit 3
    ├─ 1. read course.yaml → methodology name
@@ -341,10 +344,11 @@ Course-level setup runs once; then units are designed one at a time.
    ├─ 2. study-session-designer  ─── loads writing-guiding-questions, estimating-study-time
    │        writes sessions/01..NN.md (guiding questions, est_minutes, answers or defer_to_class,
    │        and the session's study-path pool)
-   ├─ 3. lesson-planner              ← cannot run before step 2: no questions to build the hour
-   │        writes in-class.md          around; every activity references ≥1 guiding question
-   ├─ 4. assessment-writer  ─── loads writing-guiding-questions
+   ├─ 3. assessment-writer  ─── loads writing-guiding-questions
    │        writes the ENTRY-QUIZ items in assessments/items/U03-I*.md (usage: in-class-quiz)
+   ├─ 4. lesson-planner            ← runs after BOTH 2 and 3: it needs the guiding questions to
+   │        writes in-class.md        build the hour around, and the real item ids to put in
+   │                                  the quiz activity's `items` (D-031a)
    ├─ 5. classkit validate  → fix every error
    └─ 6. report to the teacher, including what was guessed
 
@@ -355,8 +359,10 @@ Three orderings are load-bearing rather than stylistic:
 
 - **`/plan-units` precedes `/design-unit`.** Session goals map to unit objectives, which map to
   Course Outcomes; the roof must exist first.
-- **The lesson planner runs after the session designer.** The hour is built from the week's guiding
-  questions, so it cannot be planned before they exist.
+- **The lesson planner runs after the session designer *and* the assessment writer.** The hour is
+  built from the week's guiding questions, so it cannot be planned before they exist; and its quiz
+  activity lists real item ids in `items`, so those items must exist first. Planning the hour before
+  the items forces the planner to invent ids for items nobody has written (D-031a).
 - **Review is a separate command and a different agent.** `/review-unit 3` runs `course-critic`,
   which did not write the work it judges.
 
@@ -377,12 +383,22 @@ report. A correction at a gate is applied before moving on, not deferred to the 
 Why: an agent that designs a whole unit before the teacher sees anything compounds a wrong
 assumption across four sessions, an hour, and a quiz. Gates keep the blast radius one step wide.
 
-**2. Never overwrite without permission.** Before writing anything, a command checks whether the
-target already has content. If it does, the command **stops and asks**, showing what exists and what
-it proposes to replace. This generalizes create-only scaffolding (invariant 5) from `scaffold` to
-every agent and command — agents write files directly, so without this rule a re-run silently
-destroys a teacher's edits. Silent loss of authored work is the one failure the framework must never
-have.
+**Where the gate lives.** A gate is *conversational* — the command states what it produced and waits
+for the teacher's reply. It must therefore sit in the **orchestrating command, between agent
+invocations**: a subagent cannot ask the teacher anything, so a gate placed inside an agent silently
+does nothing. The command runs one agent, shows the result, waits, then runs the next (D-031h).
+
+**2. Never overwrite without permission — and this is enforced in code, not by prompt.** Before
+writing anything, a command checks whether the target already has content; if it does, it **stops and
+asks**, showing what exists and what it proposes to replace.
+
+This rule is **mechanically enforced**: `classkit` provides the write path agents use, and that path
+*structurally refuses* to overwrite existing content without explicit confirmation — the same
+guarantee `write_new()` already gives `scaffold`, generalized to every agent and command (D-031b).
+A prompt instruction is not sufficient here. "Do not overwrite" is a negative constraint, and agents
+violate those on long autonomous runs; the failure it guards against — **silent loss of a teacher's
+authored work — is the one failure the framework must never have**, and it is unrecoverable. This is
+the one place where the framework does not trust an agent to follow an instruction.
 
 **3. Revision, not regeneration.** When output already exists, the default mode is **update**: change
 what the teacher asked to change, leave everything else intact, and report what changed. Regenerating
@@ -424,9 +440,10 @@ they are repeated here with their reasons.
    capped** (§8.4) — the cap is what stops the hour drifting back into a lecture. Legitimate
    exceptions exist (exam logistics, a current-events hook); an hour made of them does not. Never
    raise the cap to make a validation pass (D-028).
-5. **Nothing overwrites a teacher's work without permission.** Scaffolding is create-only
-   (`write_new()` is its only path to disk), and every command that would write over existing content
-   must detect it and ask first (§5.2, D-030).
+5. **Nothing overwrites a teacher's work without permission — enforced in code.** Scaffolding is
+   create-only (`write_new()` is its only path to disk), and every agent and command writes through a
+   `classkit` path that structurally refuses to overwrite existing content without explicit
+   confirmation (§5.2, D-030, D-031b). Not a prompt instruction: this failure is unrecoverable.
 6. **Templates must validate.** A fresh scaffold produces zero errors, or the tests fail.
 7. **Agents must not fabricate resources.** A made-up URL or page number validates cleanly and fails a
    student mid-session. Applies to `answer` locators and study paths alike.
@@ -455,6 +472,16 @@ Mechanically checked. `NN` is two digits; `N` is one or more.
 
 ### 8.2 Artifact field specifications
 
+#### File and directory naming
+
+| Path | Rule |
+|---|---|
+| `units/NN-slug/` | `NN` = the unit number, zero-padded to two digits. `slug` = the unit title lowercased, every run of non-alphanumeric characters replaced by `-`, leading/trailing `-` stripped; empty result becomes `untitled`. E.g. unit 3 "Asymptotic Analysis" → `03-asymptotic-analysis`. The directory is located by its `NN-` prefix, so the slug may be renamed by hand without breaking anything (D-031f). |
+| `units/NN-slug/sessions/NN.md` | `NN` = the session number within the unit, zero-padded to two digits |
+| `units/NN-slug/in-class.md` | fixed name, one per unit |
+| `syllabus/syllabus.md` | fixed name, one per course |
+| `assessments/items/UNN-INN.md` | the item's id |
+
 #### `course.yaml` — course configuration (plain YAML, no body)
 
 | Field | Type | Req | Notes |
@@ -468,6 +495,7 @@ Mechanically checked. `NN` is two digits; `N` is one or more.
 | `units` | integer 1–20 | ✓ | number of units (weeks); typically 12–13 |
 | `textbooks` | array\<obj\> | | each `{ key (✓), citation (✓), url }`; `key` is referenced by study paths and answers |
 | `time_constants` | object | | per-course overrides of `defaults/time-constants.yaml` (any subset) |
+| `in_class` | object | | **(target, D-031e)** per-course overrides of the methodology's in-class settings. Currently one key: `max_unmapped_minutes` (integer ≥0) — the cap on in-class time spent on activities that reference no guiding question. Overrides the methodology default (10). Setting it to the full hour length disables the guardrail, which is the teacher's right (D-014) |
 | `agents` | object | | course-local agent-role → replacement name (Q-007) |
 
 Deferred: a `gem` block (Exports phase).
@@ -478,7 +506,7 @@ Deferred: a `gem` block (Exports phase).
 |---|---|---|---|
 | `goal` | string | ✓ | one-paragraph aim of the course |
 | `outcomes` | array\<obj\> | ✓ (≥1) | each `{ id (`CO<N>`, ✓), statement (✓), bloom (enum, opt) }` — the coverage roof |
-| `workload` | object | ✓ | `{ credits (number), credit_system (string; ECTS is one instantiation — never hardcoded), total_hours (number, opt) }` |
+| `workload` | object | | **(target: no longer required; D-031d)** `{ credits (number), credit_system (string; ECTS is one instantiation — never hardcoded), total_hours (number, opt) }`. Optional so a teacher can draft and validate a syllabus before credits are settled; `syllabus_workload_missing` warns while it is absent |
 | `prerequisites` | array\<string\> | | course-level prerequisites (free text or course codes) |
 | `assessment` | array\<obj\> | | **reserved** grading scheme, e.g. `{ type, weight }` — specified in the Assessment phase; may be empty in Core |
 
@@ -535,8 +563,9 @@ Goal object (the Guiding Question):
 | `answer` | array\<obj\> | ✓ (≥1) **unless** `defer_to_class` | **(target, D-019)** precise locators of the correct answer; each `{ kind (enum), ref (string), note (opt) }`; `kind ∈ textbook \| slide \| video \| article \| web \| other`; never the answer in prose |
 | `defer_to_class` | boolean | | **(target, D-023)** default `false`. If `true`: no `answer`; a pre-class thinking prompt that **must** be referenced by ≥1 in-class activity |
 
-> A goal's `answer` (locators) is a different thing from an assessment item's `answer` (a model-answer
-> string, below). Same key name, different artifacts.
+> A goal's `answer` is a **list of locators** — where the answer can be found. It is not the answer
+> itself. The assessment item's model answer is a separate field named `model_answer` (D-031g), so the
+> two never collide.
 
 #### `units/NN-slug/in-class.md` — the in-class session (Lesson Plan)
 
@@ -558,7 +587,7 @@ Activity object:
 | `duration_minutes` | integer ≥1 | ✓ | |
 | `guiding_questions` | array\<`U<NN>-S<NN>-G<N>`\> | | **(target: no longer required; D-028)** the guiding questions of *this unit* the activity builds on. Normally non-empty; an activity with none is flagged, and unmapped time is capped (§8.4) |
 | `reason` | string | | **(target, D-028)** why this activity references no guiding question, e.g. `"exam logistics"`, `"current-events hook"`. Only meaningful when `guiding_questions` is absent or empty; the critic judges whether it is legitimate |
-| `items` | array\<`U<NN>-I<NN>`\> | | assessment items used (typically the entry quiz) |
+| `items` | array\<`U<NN>-I<NN>`\> | | assessment items used (typically the entry quiz). Every id **must resolve to an existing item of this unit** — checked by `activity_item_reference` (D-031a) |
 | `grouping` | enum | | `individual \| pairs \| small-group \| plenary` |
 | `materials` | array\<string\> | | |
 | `notes` | string | | |
@@ -577,7 +606,7 @@ Activity object:
 | `est_minutes` | number ≥0 | | time to *answer* the item (distinct from a goal's study time) |
 | `stem` | string | ✓ | the question as presented to the student |
 | `choices` | array\<obj\> | ✓ for `multiple-choice`/`multiple-select` | each `{ label (`^[A-Za-z]$`), text, correct (bool), rationale }`; every distractor's `rationale` names the misconception it detects |
-| `answer` | string | | model answer, for `open`/`numeric`/`code` |
+| `model_answer` | string | | **(target: renamed from `answer`; D-031g)** the model answer, for `open`/`numeric`/`code`. Renamed because a guiding question's `answer` is a *list of locators* and an item's was a *string* — one key, two meanings |
 | `rubric` | array\<obj\> | ✓ in practice for `open` | each `{ criterion, points, notes }` |
 
 #### `methodologies/*.yaml` — the methodology definition
@@ -590,7 +619,7 @@ Activity object:
 | `designer_agent` | string | | the agent implementing this methodology's session design |
 | `unit` | object | ✓ | `{ total_minutes (✓), objectives: {min,max} (✓) }` |
 | `home_study` | object | ✓ | `{ total_minutes, sessions_per_unit, session_minutes, goals_per_session: {min,max}, default_goal_type?, allowed_goal_types?, budget_tolerance_minutes? }` **(target: `budget_tolerance_minutes`; D-020)** |
-| `in_class` | object | ✓ | `{ scope (unit\|session), minutes, activities: {min,max}?, duration_tolerance_minutes? (default 5), require_opening_quiz? (default false), max_unmapped_minutes? (default 15), allowed_activity_types }` **(target: `max_unmapped_minutes`; D-028)** |
+| `in_class` | object | ✓ | `{ scope (unit\|session), minutes, activities: {min,max}?, duration_tolerance_minutes? (default 5), require_opening_quiz? (default false), max_unmapped_minutes? (default 10), allowed_activity_types }` **(target: `max_unmapped_minutes`; D-028, default lowered by D-031e)**. `max_unmapped_minutes` is overridable per course in `course.yaml` |
 | `study_paths` | object | | `{ allowed_kinds?, min_paths_per_session? }` **(target: renamed from `min_paths_per_goal`; D-020)** |
 | `rules` | object | | rule-code → `error \| warn \| off`; overrides the defaults in §8.4 |
 
@@ -642,11 +671,22 @@ not built yet.
 | `activity_type` | `activity.type ∈ allowed_activity_types` | error |
 | `require_opening_quiz` | if set, the first activity is a `quiz` | error |
 | `activity_references_guiding_question` | an activity references no guiding question (a legitimate exception, but worth seeing); also errors if it references a question **not of this unit** | warn **(target: was error; D-028)** |
-| `in_class_unmapped_time_cap` | total duration of activities referencing no guiding question ≤ `in_class.max_unmapped_minutes` | error **(target, D-028)** |
+| `in_class_unmapped_time_cap` | total duration of activities referencing no guiding question ≤ `max_unmapped_minutes` (course override, else methodology default 10) | error **(target, D-028/D-031e)** |
+| `activity_item_reference` | every id in an activity's `items` resolves to an existing item of this unit | error **(target, D-031a)** |
+| `syllabus_workload_missing` | the syllabus declares no `workload` | warn **(target, D-031d)** |
 | `item_reference` | an item's `unit` exists, its `guiding_questions` all exist, and a choice-format item has ≥1 `correct` | error |
-| `guiding_question_assessed` | every guiding question is tested by ≥1 assessment item | warn |
+| `guiding_question_assessed` | every guiding question is tested by ≥1 assessment item | **`off` in Core**; warn from the Assessment phase **(D-031c)** |
+| `unit_has_entry_quiz_items` | the unit has ≥1 assessment item with `usage: in-class-quiz` | warn **(target, D-031c)** |
 
 Retired by D-020: `path_estimate_missing`, and the per-path `_estimate_path` helper.
+
+**Why `guiding_question_assessed` is off in Core (D-031c).** In Core the only assessment items are
+entry-quiz items, and a short entry quiz cannot test all ~15–20 of a unit's guiding questions. The
+rule would therefore fire on every valid unit, and a warning that always fires teaches the teacher to
+ignore all warnings. It is switched off in `question-driven-25`'s `rules:` block and turns on in the
+Assessment phase, when homework and exams make full coverage a reasonable expectation.
+`unit_has_entry_quiz_items` is the Core-appropriate replacement: it checks the quiz exists at all,
+not that it covers everything.
 
 ### 8.5 The methodology contract
 
@@ -657,7 +697,9 @@ the produced `goals[]` and the session structure — never the methodology's ide
 - **Read from the methodology:** sessions per unit, session length and budget tolerance, goals per
   session, allowed goal types, unit total minutes and objective range, the in-class
   scope/minutes/activity range/allowed activity types/opening-quiz flag/unmapped-time cap, allowed
-  study-path kinds and the per-session minimum, and rule severities.
+  study-path kinds and the per-session minimum, and rule severities. A course may override selected
+  values in `course.yaml` (`time_constants`, `in_class.max_unmapped_minutes`); the methodology
+  supplies the default, the course has the last word.
 - **Downstream may** specialize on `goal.type` — a methodology emitting `task` or `reading` instead of
   `question` still works. **Downstream must not** branch on `methodology.id`, or assume the
   question-driven numbers. Code that does either is a bug against D-011 and invariant 3.
@@ -681,8 +723,10 @@ Honest list, kept current.
 - **The lecture-reversion guarantee is now a budget, not an absolute.** It used to be "every activity
   references a guiding question, no exceptions". Real hours contain legitimate unmapped activities, so
   D-028 replaced the absolute with a per-hour cap on unmapped time. That is more honest, but it moves
-  the guarantee from a bright line to a number someone chose — and a methodology can raise it. If the
-  cap is set generously, the protection quietly disappears.
+  the guarantee from a bright line to a number someone chose — and since D-031e that number is
+  overridable per course, so a teacher can raise it to the full hour and switch the protection off
+  entirely. That is deliberate (a course repo is sovereign, D-014) and it means the guarantee is a
+  *default*, not something the framework can insist on.
 - **The agent layer has never been run on a real course.** Every prompt in `.claude/` is untested
   against real materials. Expect substantial revision after the first unit.
 - **The pluggable-methodology claim is unverified.** D-011 says another methodology works without code

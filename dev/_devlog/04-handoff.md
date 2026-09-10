@@ -53,10 +53,15 @@ Then, for history and what is still open:
     **command interaction protocol** (§5.2 — stepwise with approval gates, never overwrite without
     permission, revise rather than regenerate; invariant 5 reworded); and a new **§3.2 "The shape of a
     flipped course"** stating the 150/100/50 structure and the goal of each part.
-  - **Next:** independent review of `VISION.md` + `FRAMEWORK-SPEC.md` (a review brief was drafted in
-    Session 16 — update it for VISION.md and the new section numbers). Fold findings, then
-    **implement Core** from the ledger rows in `dev/ROADMAP.md` (schemas → validator → templates →
-    agents/skills → tests, green each step). Q-027 minors and Q-026 (Assessment) come after.
+  - **Independently reviewed** (Session 19): an outside agent reviewed the spec — verdict *yes with
+    changes*, review kept at `dev/reviews/core-spec-review-01.md`, all findings adopted as **D-031**
+    (a)–(i). Biggest: the entry quiz is now written *before* the lesson plan (+ a new
+    `activity_item_reference` rule closing a silent dangling-reference hole), and never-overwrite is
+    **enforced in `classkit` code rather than by prompt**.
+  - **Next: implement Core.** No open design items remain beyond the optional Q-027 minors. Work the
+    ledger rows in `dev/ROADMAP.md` by layer — schemas → validator → templates →
+    agents/skills/commands → tests — keeping the suite green at each step. Then re-derive `README.md`
+    and `GETTING-STARTED.md` from the spec. Q-026 (Assessment slice) comes after.
   - **Known doc debt:** `README.md` still says every activity must reference a guiding question
     (contradicts D-028) and `GETTING-STARTED.md` does not describe the stepwise workflow (D-030).
     Both have ledger rows. Avin's principle: the README should be *derived from* the spec.

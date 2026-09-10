@@ -817,3 +817,74 @@ command interacts with the teacher. Three rules now bind **every** command in ev
    2 and 4 — and it is how a course is maintained year to year (answers D-029's update question).
 
 Invariant 5 is reworded to "nothing overwrites a teacher's work without permission".
+
+**Strengthened by D-031b:** the never-overwrite rule is enforced in code, not by prompt.
+
+---
+
+## D-031 — Core spec review findings adopted
+**Date:** 2026-09-10 · **Status:** locked (design) · **implementation pending** · source:
+`dev/reviews/core-spec-review-01.md` (independent review, Gemini 3.1 Pro, verdict *yes with changes*)
+
+An independent agent reviewed `VISION.md` + `FRAMEWORK-SPEC.md` with full repo access. Findings were
+accepted, with one re-diagnosis. Items are lettered so the spec can cite them precisely.
+
+**(a) The lesson planner now runs *after* the assessment writer.** The reviewer flagged a circular
+dependency: `lesson-planner` writes the quiz activity's `items: [U03-I01]`, but `assessment-writer`
+had not yet written those items, so the planner must invent ids.
+
+> **Re-diagnosis — the reviewer's mechanism was wrong, and the truth is worse.** It claimed validation
+> would fail at step 3 because `item_reference` requires referenced items to exist. It does not:
+> `item_reference` only iterates over items that *exist* and checks *their* fields, and nothing
+> validates `activity.items` at all. So an invented id does not fail — **it validates clean and leaves
+> a dangling reference in the course.** A silent hole, not a workflow deadlock.
+
+Two changes: the design flow swaps steps 3 and 4 (assessment-writer → lesson-planner, which then
+reads the real ids), and a **new rule `activity_item_reference` (error)** requires every id in
+`activity.items` to resolve to an existing item of that unit. Safe to swap because the entry quiz is
+defined by the week's guiding questions (written in step 2), not by the hour's plan.
+
+**(b) The never-overwrite rule is enforced in code.** It was specified as agent behaviour, with a
+"(consider)" ledger row for a helper. The reviewer is right that this is too weak for a rule whose
+failure is unrecoverable: "do not overwrite" is a negative constraint, and agents violate those on
+long runs. `classkit` now *must* provide the write path agents use, and it structurally refuses to
+overwrite without explicit confirmation — generalizing the guarantee `write_new()` already gives
+`scaffold`. Stated in §5.2 and invariants (spec + `CLAUDE.md`) as the one place the framework does not
+trust a prompt.
+
+**(c) `guiding_question_assessed` is `off` in Core.** In Core the only items are entry-quiz items, and
+a short quiz cannot test all ~15–20 guiding questions of a unit — so the rule would fire on every
+valid unit, training the teacher to ignore all warnings. Switched off in `question-driven-25`'s
+`rules:` block; turns on in the Assessment phase. New Core-appropriate `unit_has_entry_quiz_items`
+(warn) checks the quiz exists at all.
+
+**(d) Syllabus `workload` is optional.** Requiring it blocked a teacher from validating a syllabus
+before credits were settled. Now optional, with `syllabus_workload_missing` (warn) while absent.
+
+**(e) `max_unmapped_minutes`: default 10, and overridable per course.** The reviewer called 15 of 50
+(30%) too generous for a guardrail. Avin set the default to **10** and required it be **a parameter in
+the config file**, so a teacher can raise it — *"some teacher may decide to put it 50 and ignore it
+altogether, which is also fine"*. So: methodology supplies the default, `course.yaml` `in_class:` may
+override, the course has the last word (consistent with course sovereignty, D-014). Recorded in §9:
+the lecture-reversion guarantee is a *default*, not something the framework can insist on.
+
+**(f) Unit directory naming is specified.** `units/NN-slug/` was implemented in `scaffold.py` but never
+written down, so an implementer would guess. Now in §8.2: two-digit number, title slugified
+(lowercase, non-alphanumerics → `-`, trimmed, empty → `untitled`); the directory is found by its `NN-`
+prefix, so the slug can be renamed by hand.
+
+**(g) The assessment item's `answer` is renamed `model_answer`.** One key meant two things — a *list of
+locators* on a guiding question, a *string* on an item. Renamed now because the item schema already
+exists in code and renaming after implementation costs a migration.
+
+**(h) Approval gates live in the orchestrating command.** The reviewer asked how gates work given a
+command cannot suspend itself. Answer: they are conversational — but a **subagent cannot ask the
+teacher anything**, so a gate placed inside an agent silently does nothing. The command runs one
+agent, shows the result, waits, then runs the next. Stated in §5.2.
+
+**(i) The `/plan-units` handoff is sequential and file-based.** "They share the outcome list" was prose,
+not a mechanism. Now: `syllabus-designer` writes `syllabus.md` to disk first; `curriculum-architect`
+reads it and references the outcome ids it finds there. The file is the handoff, so neither agent
+invents an outcome id and either can be re-run alone.
+
+**Not adopted:** nothing. The review raised no finding we rejected.

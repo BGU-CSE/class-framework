@@ -190,7 +190,34 @@ is calibrated rather than pure vibes.
 | ⬜ | `.claude/agents/*.md` (all writers) | revision mode: when output exists, update in place and report the diff; regeneration is explicit |
 | ⬜ | `CLAUDE.md` | invariant 5 reworded ✅ (done in the same commit as the spec) |
 | ⬜ | `GETTING-STARTED.md` | describe the stepwise/approval workflow a teacher should expect |
-| ⬜ | *(consider)* `src/classkit/` | a helper the agents can call to detect existing content, so the check is not prompt-only |
+| ⬜ | `src/classkit/` | a write path that detects existing content, so the check is not prompt-only. **Upgraded from "consider" to required by D-031b — see its rows below.** |
+
+## D-031 — Core spec review findings
+
+Source: `_devlog/../reviews/core-spec-review-01.md`. Some rows amend rows above; implement together.
+
+| | Artifact | Change |
+|---|---|---|
+| ⬜ | `.claude/commands/design-unit.md` | **(a)** swap the order: assessment-writer (entry quiz) runs *before* lesson-planner |
+| ⬜ | `.claude/agents/lesson-planner.md` | **(a)** read the existing entry-quiz items; put their real ids in the quiz activity's `items`; never invent an id |
+| ⬜ | `src/classkit/validate.py` | **(a)** new rule `activity_item_reference` (error): every id in `activity.items` resolves to an existing item of that unit |
+| ⬜ | `src/classkit/` (new) | **(b)** a write path that structurally refuses to overwrite existing content without explicit confirmation — generalizes `write_new()` beyond scaffold. **Required, not optional** (supersedes the "(consider)" row under D-030) |
+| ⬜ | `.claude/agents/*.md` (all writers) | **(b)** must write through that path |
+| ⬜ | `methodologies/question-driven-25.yaml` | **(c)** `guiding_question_assessed: off`, with a comment that it turns on in the Assessment phase |
+| ⬜ | `src/classkit/validate.py` | **(c)** new rule `unit_has_entry_quiz_items` (warn) |
+| ⬜ | `schemas/syllabus.schema.json` | **(d)** `workload` optional (amends the D-021 row) |
+| ⬜ | `src/classkit/validate.py` | **(d)** new rule `syllabus_workload_missing` (warn) |
+| ⬜ | `methodologies/question-driven-25.yaml` | **(e)** `in_class.max_unmapped_minutes: 10` (was 15 in D-028) |
+| ⬜ | `schemas/course.schema.json` | **(e)** new optional `in_class` block with `max_unmapped_minutes` |
+| ⬜ | `src/classkit/model.py` | **(e)** course-level override wins over the methodology default |
+| ⬜ | `src/classkit/validate.py` | **(e)** the cap rule reads the effective (overridden) value |
+| ⬜ | `schemas/assessment-item.schema.json` | **(g)** rename `answer` → `model_answer` |
+| ⬜ | `templates/assessment/item-open.md` | **(g)** same rename |
+| ⬜ | `.claude/agents/assessment-writer.md` | **(g)** same rename |
+| ⬜ | `.claude/commands/*.md` (all) | **(h)** approval gates sit in the command, between agent invocations — never inside an agent |
+| ⬜ | `.claude/commands/plan-units.md` | **(i)** sequential file-based handoff: syllabus written first, architect reads it |
+| ⬜ | `.claude/agents/curriculum-architect.md` | **(i)** read outcome ids from `syllabus.md`; never invent one |
+| ⬜ | `tests/test_course_lifecycle.py` | tests for `activity_item_reference`, the course-level cap override, and the overwrite-refusal path |
 
 ## Cross-cutting
 
@@ -199,8 +226,9 @@ is calibrated rather than pure vibes.
 | ⬜ | `FRAMEWORK-SPEC.md §10` | add: parts of this document are designed and not built; the critic now owns estimate honesty |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-09-10:** 8 decisions, 70 artifact changes, 0 built. (D-025 refines D-020 rows —
-no new artifacts. D-026/D-027 are documentation decisions, already executed.)
+**Count as of 2026-09-10:** 9 decisions, 90 artifact changes, 0 built. (D-025 refines D-020 rows and
+D-031 amends several — no double-counting intended; D-026/D-027 are documentation decisions, already
+executed. D-031 rows supersede the "(consider)" overwrite-helper row under D-030.)
 
 ## 🔨 Phase 2 — First real course
 

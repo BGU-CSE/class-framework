@@ -839,6 +839,46 @@ README and GETTING-STARTED now contradict D-028/D-030 in places — ledger rows 
 
 ---
 
+## Session 19 — 2026-09-10 — Independent review, and its findings adopted (→ D-031)
+
+An independent agent (Gemini 3.1 Pro) reviewed `VISION.md` + `FRAMEWORK-SPEC.md` with full repo
+access, using the brief drafted in Session 16. Verdict: **yes with changes**. Review kept at
+`dev/reviews/core-spec-review-01.md`. All findings accepted; one re-diagnosed. Recorded as **D-031**,
+lettered (a)–(i) so the spec can cite them.
+
+**The re-diagnosis worth remembering.** The review's headline BLOCKING finding — a circular dependency
+where `lesson-planner` references quiz items that `assessment-writer` has not written yet — was right
+about the problem and **wrong about the mechanism**. It claimed validation would fail at step 3 via
+`item_reference`. Checking the code: `item_reference` only iterates over items that *exist* and checks
+*their* fields, and **nothing validates `activity.items` at all**. So an invented id does not fail — it
+validates clean and leaves a dangling reference. A silent hole, not a deadlock, and worse than
+reported. Fixed by both swapping the flow order *and* adding the missing rule.
+
+Adopted: **(a)** assessment-writer now runs before lesson-planner + new `activity_item_reference`
+rule · **(b)** never-overwrite enforced in `classkit` code, not by prompt (upgraded from a
+"(consider)" ledger row — a negative constraint agents violate on long runs, guarding an
+unrecoverable failure) · **(c)** `guiding_question_assessed` off in Core (would fire on every valid
+unit and teach teachers to ignore warnings) + new `unit_has_entry_quiz_items` · **(d)** syllabus
+`workload` optional + warn · **(e)** `max_unmapped_minutes` default 15 → **10**, and now **overridable
+in `course.yaml`** — Avin: *"some teacher may decide to put it 50 and ignore it altogether, which is
+also fine"* · **(f)** unit directory `NN-slug` naming specified (was implemented, never written down)
+· **(g)** assessment item `answer` → `model_answer` (killing the one-key-two-meanings collision) ·
+**(h)** approval gates live in the orchestrating command — a subagent cannot ask the teacher anything
+· **(i)** `/plan-units` handoff is sequential and file-based.
+
+Also updated `CLAUDE.md` invariant 5. Ledger: 20 new rows (9 decisions, 90 changes, 0 built). Docs
+only; tests still pass (14).
+
+### Next
+
+**Implement Core.** The spec has now been reviewed by Avin and independently, and no open design
+items remain for Core beyond the optional Q-027 minors. Work the ledger rows in `dev/ROADMAP.md`
+bottom-up by layer — schemas → validator → templates → agents/skills/commands → tests — keeping the
+suite green at each step. `README.md` and `GETTING-STARTED.md` need re-deriving from the spec at the
+end (Avin's principle: the README is a result of the spec).
+
+---
+
 ## Session 11 — 2026-08-28 — Implementation ledger
 
 ### What happened

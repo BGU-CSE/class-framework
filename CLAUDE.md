@@ -49,9 +49,11 @@ U01-I01          Assessment Item
    time in an hour is capped** (`in_class.max_unmapped_minutes`). Legitimate exceptions exist —
    exam logistics, a current-events hook — but an hour made of them is a lecture. Never raise the
    cap to make a validation pass (D-028).
-5. **Nothing overwrites a teacher's work without permission.** Scaffolding is create-only
-   (`write_new()` is the only way scaffold touches disk), and **every command that would write
-   over existing content must detect it and ask first** (D-030).
+5. **Nothing overwrites a teacher's work without permission — enforced in code, not by prompt.**
+   Scaffolding is create-only (`write_new()` is the only way scaffold touches disk), and **every
+   agent and command writes through a `classkit` path that structurally refuses to overwrite
+   existing content** without explicit confirmation (D-030, D-031b). Silent loss of a teacher's
+   authored work is unrecoverable — this is the one place the framework does not trust a prompt.
 6. **Templates must validate.** A fresh scaffold has to produce a course with zero errors,
    or `tests/test_course_lifecycle.py` fails. Change a schema → change the template.
 
