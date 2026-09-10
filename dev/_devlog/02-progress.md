@@ -977,3 +977,74 @@ at. Overlaps **Q-004** (what format the pilot materials are in) — answer them 
 ### Next
 
 Steps 0 and 1 are unblocked and can start whenever. Step 2 needs Q-028 designed first.
+
+---
+
+## Session 21 — 2026-09-10 — Implementation starts: steps 0 and 1 built
+
+First session where the ledger moves. Implemented steps 0 and 1 of the plan agreed in Session 20,
+working from the spec alone (the decision log deliberately not read — the session doubled as a test
+of the spec's self-containment claim). Suite: 14 → 36 tests, green at every commit.
+
+### Step 0 — the overwrite-safe write path (D-031b) — commit `d346fee`
+
+New `src/classkit/write.py`. `write()` cannot replace a file that already has content: it returns a
+`refused` outcome and touches nothing, so **a caller that ignores the return value still loses
+nothing**. That was the design choice worth making — an exception protects only callers who catch
+it. Replacing needs a deliberate second act (`overwrite=True` / `--overwrite`).
+
+Two cases deliberately *not* refusals: whitespace-only files, and byte-identical rewrites
+(`unchanged`, a no-op) — otherwise a command could not safely re-emit its own approved output.
+Writes go temp-file + `os.replace`, because a truncating crash is the same unrecoverable loss the
+invariant exists to prevent.
+
+`classkit write PATH [--from FILE] [--overwrite] [--dry-run]` is the surface agents reach it
+through — **the spec never said there had to be one**, and without it the mechanism is code nothing
+can call (see the gap report, G-1). Exit 3 = refused, distinct from 2 = broke.
+`scaffold.write_new()` refactored onto the same primitive as its create-only special case.
+Specified as the new spec **§8.6**.
+
+**Not done, and it matters:** every writing agent still has `Write`/`Edit` in its front-matter tool
+list, so it can bypass this entirely. The guarantee becomes structural only when those tools come
+*off* the agents — which no ledger row currently says (G-4). The per-agent rows should be amended
+before step 3 lands, or D-031b quietly ships as a better prompt.
+
+### Step 1 — scaffold the syllabus (D-021, D-031d) — commit `2eb4311`
+
+`schemas/syllabus.schema.json` + `templates/course/syllabus.md` + model loading (`Course.syllabus`,
+`Course.outcomes`) + schema-layer wiring + `syllabus_workload_missing` (warn). `syllabus/.gitkeep` is
+gone; the slot holds a real file. A fresh `scaffold course` validates with **zero errors** and one
+warning — the workload it is waiting for, which is exactly what D-031d designed.
+
+The template ships `CO1`/`CO2`, matching the two objectives a scaffolded unit gets, and `workload`
+commented out.
+
+**Step boundary decided (G-8):** step 1 took the syllabus *artifact* end to end; the *coverage
+chain* (`outcomes` on objectives, `objective_maps_to_outcome`, `outcome_coverage`) stays in step 3,
+because those rules check a field on the unit that step 3 adds.
+
+### The gap report — `../reviews/impl-gaps-step-0-1.md`
+
+16 points where the spec did not determine the answer. Three need Avin's call before step 3:
+
+- **G-9 — nothing catches a *missing* syllabus.** §8.4 has `in_class_missing` for units and no
+  equivalent here. Worse, once step 3 lands, a course with no syllabus has no Course Outcomes and
+  `outcome_coverage` is *vacuously satisfied* — the rule that closes the coverage chain passes
+  loudest when the roof is gone. I did not invent the rule code (that edits the normative table);
+  `syllabus_workload_missing` fires on the missing file so the absence is at least visible.
+- **G-12 — `outcome_coverage` on a course that is not finished yet.** A freshly scaffolded course
+  has outcomes and *zero units*, so read literally every outcome is uncovered → error → invariant 6
+  breaks at the first commit of step 3. Probably the rule should be scoped to a complete unit map.
+- **G-15 — the "rendered syllabus" is referenced three times and specified nowhere.** No command, no
+  path, no phase, no ledger row — and it is the whole anti-drift argument for not repeating identity
+  fields in the syllabus. Specify it or move it to the deferred list.
+
+The through-line: the spec held up on *what to build* (nothing in §8 was wrong) and was thin on
+**interactions with half-built courses**, **absence**, and **mechanism for what it delegates to
+code**. G-15 and Q-028 are the same failure twice — a component named in passing, never specified,
+invisible to document review.
+
+### Next
+
+Step 2 (ingest) is still blocked on **Q-028**. Step 3 is unblocked *except* for G-9 and G-12, which
+should be answered first — both are about rules step 3 introduces.

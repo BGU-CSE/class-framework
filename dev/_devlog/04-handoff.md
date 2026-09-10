@@ -19,7 +19,33 @@ Then, for history and what is still open:
 6. `02-progress.md` (last block) — where we stopped.
 7. `03-open-questions.md` — what's unresolved.
 
-## Current state — 2026-08-27
+## Current state — 2026-09-10
+
+**Implementation has started.** Steps 0 and 1 of the plan in `../ROADMAP.md` are built and
+committed; the suite is 36 tests, green. `dev/ROADMAP.md`'s ledger is ticked: 13 of 90 rows built.
+
+- **Step 0 — the overwrite-safe write path (D-031b).** `src/classkit/write.py`: `write()` returns a
+  `refused` outcome rather than raising, so a caller that ignores the return value still cannot
+  destroy a teacher's file. `classkit write PATH [--from FILE] [--overwrite] [--dry-run]` is the
+  agent-facing surface (exit 3 = refused). `scaffold.write_new()` now rides on it. Specified as
+  spec **§8.6**. **Caveat:** every writing agent still declares `Write`/`Edit` in its front matter,
+  so it can bypass the path — the guarantee is structural only once those tools come off, which no
+  ledger row yet says (gap G-4).
+- **Step 1 — the syllabus (D-021, D-031d).** `classkit scaffold course` now writes
+  `syllabus/syllabus.md`: goal, `CO1`/`CO2`, prerequisites, reserved `assessment`, `workload`
+  commented out. New `schemas/syllabus.schema.json`; `Course.syllabus` / `Course.outcomes` in the
+  model; schema-checked; `syllabus_workload_missing` (warn). A fresh scaffold validates with **zero
+  errors** and that one warning.
+- **Read `../reviews/impl-gaps-step-0-1.md` before step 3.** 16 gaps found while implementing.
+  Three need a decision from Avin, and all three concern rules step 3 introduces: **G-9** (nothing
+  catches a *missing* syllabus, and `outcome_coverage` will be vacuously satisfied when it is
+  missing), **G-12** (`outcome_coverage` on a course whose unit map is not complete yet — read
+  literally it errors on a freshly scaffolded course and breaks invariant 6), **G-15** (the
+  "rendered syllabus" is referenced three times in the spec and specified nowhere).
+- **Next:** step 2 (ingest) is blocked on **Q-028**. Step 3 (syllabus + units, `/plan-units`) is
+  unblocked once G-9 and G-12 are answered.
+
+## Earlier state — 2026-08-27
 
 - Working dir `/Users/avin/Antigravity-Code/class-framework` (moved from `/Users/avin/Claude/...`
   when the project was picked up on a **different machine**). Git repo on branch `main`.
@@ -58,7 +84,7 @@ Then, for history and what is still open:
     (a)–(i). Biggest: the entry quiz is now written *before* the lesson plan (+ a new
     `activity_item_reference` rule closing a silent dangling-reference hole), and never-overwrite is
     **enforced in `classkit` code rather than by prompt**.
-  - **Next: implement Core.** No open design items remain beyond the optional Q-027 minors. Work the
+  - **Next: implement Core.** *(Started — see "Current state" above.)* No open design items remain beyond the optional Q-027 minors. Work the
     ledger rows in `dev/ROADMAP.md` by layer — schemas → validator → templates →
     agents/skills/commands → tests — keeping the suite green at each step. Then re-derive `README.md`
     and `GETTING-STARTED.md` from the spec. Q-026 (Assessment slice) comes after.
@@ -66,7 +92,8 @@ Then, for history and what is still open:
     (contradicts D-028) and `GETTING-STARTED.md` does not describe the stepwise workflow (D-030).
     Both have ledger rows. Avin's principle: the README should be *derived from* the spec.
 - **Phases 0 and 1 are built**: schemas, methodology, templates, scaffold, validator (14 passing
-  tests), plus the agent layer — 7 agents, 2 skills, 6 commands, `GETTING-STARTED.md`.
+  tests at the time; 36 now), plus the agent layer — 7 agents, 2 skills, 6 commands,
+  `GETTING-STARTED.md`.
 - Remote is `github.com/BGU-CSE/class-framework`, **private**. Transferred from the personal
   account `chenavin` on 2026-08-25 (see Q-020); GitHub redirects the old URL, but local clones
   should still `git remote set-url` to the new location.
