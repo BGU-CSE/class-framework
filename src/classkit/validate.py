@@ -25,10 +25,12 @@ DEFAULT_SEVERITY = {
     "path_estimate_missing": "warn",
     "unit_count": "warn",
     "schema_unavailable": "warn",
+    "syllabus_workload_missing": "warn",
 }
 
 SCHEMA_FOR = {
     "course": "course.schema.json",
+    "syllabus": "syllabus.schema.json",
     "unit": "unit.schema.json",
     "session": "study-session.schema.json",
     "in-class": "in-class-session.schema.json",
@@ -80,6 +82,7 @@ class Validator:
 
     def run(self) -> list[Finding]:
         self.check_schemas()
+        self.check_syllabus()
         self.check_unit_count()
         for unit in self.course.units:
             self.check_unit(unit)
@@ -116,6 +119,8 @@ class Validator:
                 self.report("schema", where, f"{location}: {error.message}")
 
         check("course", self.course.root / "course.yaml", self.course.config)
+        if self.course.syllabus is not None:
+            check("syllabus", self.course.syllabus.path, self.course.syllabus.data)
         check(
             "methodology",
             self.framework_root / "methodologies" / f"{self.course.methodology.get('id')}.yaml",
@@ -131,6 +136,34 @@ class Validator:
             check("item", item.path, item.data)
 
     # -- layer 2: semantics ------------------------------------------------
+
+    def check_syllabus(self) -> None:
+        """The syllabus's own checks. The coverage chain between Course Outcomes and unit
+        objectives is checked separately, once objectives carry `outcomes`.
+
+        `workload` is optional (D-031d) so a teacher can draft and validate a syllabus
+        before credits are settled — but a syllabus that never gains one is a syllabus
+        nobody can plan against, so its absence is a standing warning rather than silence.
+        """
+        syllabus = self.course.syllabus
+        where = self.course.root / "syllabus" / "syllabus.md"
+
+        if syllabus is None:
+            self.report(
+                "syllabus_workload_missing",
+                where,
+                "there is no syllabus/syllabus.md, so the course declares no workload. "
+                "Run `classkit scaffold course` to create the skeleton.",
+            )
+            return
+
+        if not syllabus.data.get("workload"):
+            self.report(
+                "syllabus_workload_missing",
+                syllabus.path,
+                "the syllabus declares no workload. Fill in `workload` (credits, "
+                "credit_system, and optionally total_hours) once they are settled.",
+            )
 
     def check_unit_count(self) -> None:
         declared = self.course.config.get("units")

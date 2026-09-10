@@ -77,7 +77,6 @@ def _methodology_values(methodology: dict) -> dict:
 # -- course ----------------------------------------------------------------
 
 COURSE_DIRECTORIES = [
-    "syllabus",
     "units",
     "assessments/items",
     "assessments/quizzes",
@@ -91,6 +90,11 @@ COURSE_DIRECTORIES = [
 # primary input to /ingest and the curriculum-architect, so it ships with a README explaining
 # what belongs there — an empty unexplained directory gets ignored.
 SOURCE_README = "materials/source/README.md"
+
+# The syllabus is the course-level top layer (D-021), so it is part of the first thing a
+# teacher sees rather than something a later command conjures. Scaffold writes the skeleton
+# once into the reserved `syllabus/` slot and, being create-only, never touches it again.
+SYLLABUS = "syllabus/syllabus.md"
 
 
 def scaffold_course(
@@ -112,6 +116,12 @@ def scaffold_course(
     write_new(
         course_root / SOURCE_README,
         _template(framework_root, "course", "materials-source-README.md"),
+        result,
+    )
+
+    write_new(
+        course_root / SYLLABUS,
+        _template(framework_root, "course", "syllabus.md"),
         result,
     )
 

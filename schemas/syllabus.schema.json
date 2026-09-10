@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/BGU-CSE/class-framework/schemas/syllabus.schema.json",
+  "title": "Syllabus",
+  "description": "YAML front matter of course/syllabus/syllabus.md — the course-level top layer (D-021). Bologna-style: the course goal, its Course Outcomes, workload and prerequisites. Identity fields (title, code, textbooks) are NOT repeated here; they live in course.yaml, and a rendered syllabus stitches them in along with a live unit overview, so the two cannot drift.",
+  "type": "object",
+  "required": ["goal", "outcomes"],
+  "additionalProperties": false,
+  "properties": {
+    "goal": {
+      "type": "string",
+      "description": "One-paragraph aim of the course."
+    },
+    "outcomes": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Course Outcomes — the roof of the coverage chain (D-021). Every Unit Objective rolls up to at least one of these, and every one of these is covered by at least one Unit Objective, so 'do the units together deliver what the course promised?' is checkable at course scope.",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^CO\\d+$",
+            "description": "e.g. 'CO1'. Referenced by unit objectives."
+          },
+          "statement": {
+            "type": "string",
+            "description": "What a student who passes the course can do. An outcome, not a subject label."
+          },
+          "bloom": {
+            "enum": ["remember", "understand", "apply", "analyze", "evaluate", "create"],
+            "description": "Optional Bloom level."
+          }
+        }
+      }
+    },
+    "workload": {
+      "type": "object",
+      "description": "Optional (D-031d): a teacher may draft and validate a syllabus before credits are settled. While it is absent, `syllabus_workload_missing` warns. Note that no credit system is hardcoded — ECTS is one instantiation of `credit_system`, not the framework's assumption (invariant 2).",
+      "required": ["credits", "credit_system"],
+      "additionalProperties": false,
+      "properties": {
+        "credits": { "type": "number", "minimum": 0 },
+        "credit_system": {
+          "type": "string",
+          "description": "The system the credits are counted in, e.g. 'ECTS', 'BGU points', 'US semester hours'."
+        },
+        "total_hours": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total student hours the course is meant to cost, contact and independent study together."
+        }
+      }
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Course-level prerequisites: free text, or the codes of other courses. Unit-level prerequisites live on the unit."
+    },
+    "assessment": {
+      "type": "array",
+      "description": "RESERVED for the Assessment phase — the grading scheme. May be empty in Core, and its item shape is deliberately not yet fixed, so a course that fills it early is not invalidated by the phase that specifies it.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "description": "e.g. 'exam', 'homework', 'project'." },
+          "weight": { "type": "number", "minimum": 0, "description": "Share of the final grade." }
+        }
+      }
+    }
+  }
+}

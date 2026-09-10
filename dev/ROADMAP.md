@@ -77,8 +77,8 @@ Each step should end in something runnable and inspectable, not just green tests
 
 | Step | Delivers | Ledger rows drawn from |
 |---|---|---|
-| **0. Foundation** | The overwrite-safe write path. Nothing else — this is deliberately thin. | D-031b |
-| **1. Initialize** | `classkit scaffold course` produces a complete, valid course skeleton *including* `syllabus/syllabus.md`. The teacher's first contact with the framework. | D-021 (template + scaffold rows) |
+| **0. Foundation** ✅ | The overwrite-safe write path. Nothing else — this is deliberately thin. | D-031b |
+| **1. Initialize** ✅ | `classkit scaffold course` produces a complete, valid course skeleton *including* `syllabus/syllabus.md`. The teacher's first contact with the framework. | D-021 (schema, template, model, scaffold rows), D-031d |
 | **2. Ingest** ⚠️ | Reading the teacher's real materials. **Design not settled — see Q-028.** Cannot start until it is. | *(none yet — the spec does not specify ingest)* |
 | **3. Syllabus and units** | `/plan-units` end to end: syllabus schema and rules, `outcomes` on objectives, `syllabus-designer` + `curriculum-architect`, the file-based handoff. | D-021, D-029, D-031d, D-031i |
 | **4. Study sessions** | `answer`, `est_minutes`, `defer_to_class`, session-level `paths`, the budget rule, `study-session-designer`, the rewritten `estimating-study-time` skill. | D-019, D-020, D-023, D-025 |
@@ -97,12 +97,13 @@ opportunity to test against real material, which is where the useful information
 
 # Implementation ledger
 
-**The design draft is finished first; this ledger is worked through afterwards.** Nothing here is
-built yet, and nothing here should be built while the draft is still moving — a decision may still
-change. The ledger exists so that when implementation starts, no consequence has been forgotten.
+**The design draft is finished first; this ledger is worked through afterwards.** The draft is
+finished and implementation has started, working the steps in the plan above. The ledger exists so
+that no consequence of a decision is forgotten; tick a row in the commit that lands it.
 
 `FRAMEWORK-SPEC.md` describes the **target** design and reads as if it exists. **This ledger is authoritative
-for what actually exists.** Anything listed below is designed, not built.
+for what actually exists.** Anything still marked ⬜ below is designed, not built; when a row lands,
+the matching **(target)** tag comes off §8 of the spec in the same commit.
 
 **Rule:** a decision marked `locked (design)` in `_devlog/01-decisions.md` must have a row here in
 the same commit. Add rows as the draft continues; tick them as implementation lands.
@@ -162,18 +163,18 @@ is calibrated rather than pure vibes.
 
 | | Artifact | Change |
 |---|---|---|
-| ⬜ | `schemas/syllabus.schema.json` | **new** — `goal`, `outcomes[]` (`CO1…`, statement, optional bloom), `workload` (credits, credit_system, total_hours), `prerequisites`, reserved `assessment` block |
+| ✅ | `schemas/syllabus.schema.json` | **new** — `goal`, `outcomes[]` (`CO1…`, statement, optional bloom), `workload` (credits, credit_system, total_hours), `prerequisites`, reserved `assessment` block |
 | ⬜ | `schemas/unit.schema.json` | `outcomes: [CO1…]` on each Unit Objective |
-| ⬜ | `src/classkit/model.py` | load `syllabus/syllabus.md` into the course model |
-| ⬜ | `src/classkit/validate.py` | `SCHEMA_FOR` entry so the syllabus is schema-checked |
+| ✅ | `src/classkit/model.py` | load `syllabus/syllabus.md` into the course model — `Course.syllabus` and `Course.outcomes` |
+| ✅ | `src/classkit/validate.py` | `SCHEMA_FOR` entry so the syllabus is schema-checked |
 | ⬜ | `src/classkit/validate.py` | two rules: `outcome_coverage` (no orphan Course Outcome) and `objective_maps_to_outcome` (no orphan objective) |
-| ⬜ | `templates/course/syllabus.md` | **new** — Bologna-style default, generic (ECTS is one instantiation, not hardcoded — invariant 2) |
-| ⬜ | `src/classkit/scaffold.py` | write the syllabus into the reserved `syllabus/` slot, create-only |
-| ⬜ | `CLAUDE.md` | `CO1` ID convention; glossary entries for Syllabus and Course Outcome |
+| ✅ | `templates/course/syllabus.md` | **new** — Bologna-style default, generic (ECTS is one instantiation, not hardcoded — invariant 2). Scaffolds `CO1`/`CO2` to match a scaffolded unit's two objectives, so the step-3 coverage rules land on a clean skeleton |
+| ✅ | `src/classkit/scaffold.py` | write the syllabus into the reserved `syllabus/` slot, create-only (the `syllabus/.gitkeep` it replaced is gone) |
+| ✅ | `CLAUDE.md` | `CO1` ID convention; glossary entries for Syllabus and Course Outcome |
 | ⬜ | `.claude/agents/curriculum-architect.md` | authors the syllabus; sets `outcomes` on the objectives it writes |
 | ⬜ | `.claude/commands/plan-units.md` | the syllabus is part of planning the semester |
-| ⬜ | `GETTING-STARTED.md` | the syllabus is a thing teachers edit; the settings section names only `course.yaml` |
-| ⬜ | `tests/test_course_lifecycle.py` | scaffold produces a valid syllabus; both coverage rules fire when broken |
+| ✅ | `GETTING-STARTED.md` | the syllabus is a thing teachers edit; the settings section names only `course.yaml` |
+| 🔨 | `tests/test_course_lifecycle.py` | scaffold produces a valid syllabus ✅; both coverage rules fire when broken ⬜ (step 3) |
 
 **Later, not now:** `workload.total_hours` enables a course-scope workload check — all home-study
 `est_minutes` + in-class + homework against the declared workload. It needs homework (Q-026) first.
@@ -204,7 +205,7 @@ is calibrated rather than pure vibes.
 | ⬜ | `methodologies/question-driven-25.yaml` | add `in_class.max_unmapped_minutes: 15`; severities for both rules |
 | ⬜ | `.claude/agents/lesson-planner.md` | most activities build on guiding questions; unmapped ones need a `reason` and cost against the cap |
 | ⬜ | `.claude/agents/course-critic.md` | judge whether an unmapped activity's `reason` is legitimate, and whether the hour leans on the cap |
-| ⬜ | `CLAUDE.md` | invariant 4 reworded ✅ (done in the same commit as the spec) |
+| ✅ | `CLAUDE.md` | invariant 4 reworded (done in the same commit as the spec) |
 | ⬜ | `README.md` | "every in-class Activity must reference at least one Guiding Question" is now wrong |
 | ⬜ | `tests/test_course_lifecycle.py` | an unmapped activity warns; exceeding the cap errors; a foreign-unit reference still errors |
 
@@ -224,7 +225,7 @@ is calibrated rather than pure vibes.
 | ⬜ | `.claude/commands/*.md` (all) | stepwise execution with an approval gate per step; announce → produce → show → wait |
 | ⬜ | `.claude/agents/*.md` (all writers) | before writing, detect existing content and ask; never silently overwrite |
 | ⬜ | `.claude/agents/*.md` (all writers) | revision mode: when output exists, update in place and report the diff; regeneration is explicit |
-| ⬜ | `CLAUDE.md` | invariant 5 reworded ✅ (done in the same commit as the spec) |
+| ✅ | `CLAUDE.md` | invariant 5 reworded (done in the same commit as the spec) |
 | ⬜ | `GETTING-STARTED.md` | describe the stepwise/approval workflow a teacher should expect |
 | ✅ | `src/classkit/` | a write path that detects existing content, so the check is not prompt-only. **Upgraded from "consider" to required by D-031b — see its rows below**, where it landed. |
 
@@ -241,8 +242,8 @@ Source: `_devlog/../reviews/core-spec-review-01.md`. Some rows amend rows above;
 | ⬜ | `.claude/agents/*.md` (all writers) | **(b)** must write through that path |
 | ⬜ | `methodologies/question-driven-25.yaml` | **(c)** `guiding_question_assessed: off`, with a comment that it turns on in the Assessment phase |
 | ⬜ | `src/classkit/validate.py` | **(c)** new rule `unit_has_entry_quiz_items` (warn) |
-| ⬜ | `schemas/syllabus.schema.json` | **(d)** `workload` optional (amends the D-021 row) |
-| ⬜ | `src/classkit/validate.py` | **(d)** new rule `syllabus_workload_missing` (warn) |
+| ✅ | `schemas/syllabus.schema.json` | **(d)** `workload` optional (amends the D-021 row) |
+| ✅ | `src/classkit/validate.py` | **(d)** new rule `syllabus_workload_missing` (warn) — also fires when there is no syllabus at all |
 | ⬜ | `methodologies/question-driven-25.yaml` | **(e)** `in_class.max_unmapped_minutes: 10` (was 15 in D-028) |
 | ⬜ | `schemas/course.schema.json` | **(e)** new optional `in_class` block with `max_unmapped_minutes` |
 | ⬜ | `src/classkit/model.py` | **(e)** course-level override wins over the methodology default |
@@ -262,9 +263,11 @@ Source: `_devlog/../reviews/core-spec-review-01.md`. Some rows amend rows above;
 | ⬜ | `FRAMEWORK-SPEC.md §10` | add: parts of this document are designed and not built; the critic now owns estimate honesty |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-09-10:** 9 decisions, 90 artifact changes, 0 built. (D-025 refines D-020 rows and
-D-031 amends several — no double-counting intended; D-026/D-027 are documentation decisions, already
-executed. D-031 rows supersede the "(consider)" overwrite-helper row under D-030.)
+**Count as of 2026-09-10:** 9 decisions, 90 artifact changes, **13 built, 1 in progress, 76 not
+started** — implementation steps 0 (the write path) and 1 (scaffold the syllabus) are done. (D-025
+refines D-020 rows and D-031 amends several — no double-counting intended; D-026/D-027 are
+documentation decisions, already executed. D-031 rows supersede the "(consider)" overwrite-helper
+row under D-030.)
 
 ## 🔨 Phase 2 — First real course
 

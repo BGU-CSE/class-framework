@@ -461,7 +461,7 @@ Mechanically checked. `NN` is two digits; `N` is one or more.
 
 | ID | Meaning | Example |
 |---|---|---|
-| `CO<N>` | Course Outcome (in the syllabus) **(target, D-021)** | `CO1` |
+| `CO<N>` | Course Outcome (in the syllabus) | `CO1` |
 | `U<NN>` | Unit | `U01` |
 | `U<NN>-O<N>` | Unit Objective | `U01-O1` |
 | `U<NN>-S<NN>` | Study Session | `U01-S02` |
@@ -500,13 +500,13 @@ Mechanically checked. `NN` is two digits; `N` is one or more.
 
 Deferred: a `gem` block (Exports phase).
 
-#### `syllabus/syllabus.md` — the top layer **(target, new; D-021)**
+#### `syllabus/syllabus.md` — the top layer (D-021)
 
 | Field | Type | Req | Notes |
 |---|---|---|---|
 | `goal` | string | ✓ | one-paragraph aim of the course |
 | `outcomes` | array\<obj\> | ✓ (≥1) | each `{ id (`CO<N>`, ✓), statement (✓), bloom (enum, opt) }` — the coverage roof |
-| `workload` | object | | **(target: no longer required; D-031d)** `{ credits (number), credit_system (string; ECTS is one instantiation — never hardcoded), total_hours (number, opt) }`. Optional so a teacher can draft and validate a syllabus before credits are settled; `syllabus_workload_missing` warns while it is absent |
+| `workload` | object | | `{ credits (✓), credit_system (✓; string — ECTS is one instantiation, never hardcoded), total_hours (number, opt) }`. Optional so a teacher can draft and validate a syllabus before credits are settled; `syllabus_workload_missing` warns while it is absent (D-031d) |
 | `prerequisites` | array\<string\> | | course-level prerequisites (free text or course codes) |
 | `assessment` | array\<obj\> | | **reserved** grading scheme, e.g. `{ type, weight }` — specified in the Assessment phase; may be empty in Core |
 
@@ -673,7 +673,7 @@ not built yet.
 | `activity_references_guiding_question` | an activity references no guiding question (a legitimate exception, but worth seeing); also errors if it references a question **not of this unit** | warn **(target: was error; D-028)** |
 | `in_class_unmapped_time_cap` | total duration of activities referencing no guiding question ≤ `max_unmapped_minutes` (course override, else methodology default 10) | error **(target, D-028/D-031e)** |
 | `activity_item_reference` | every id in an activity's `items` resolves to an existing item of this unit | error **(target, D-031a)** |
-| `syllabus_workload_missing` | the syllabus declares no `workload` | warn **(target, D-031d)** |
+| `syllabus_workload_missing` | there is no `syllabus/syllabus.md`, or it declares no `workload` | warn |
 | `item_reference` | an item's `unit` exists, its `guiding_questions` all exist, and a choice-format item has ≥1 `correct` | error |
 | `guiding_question_assessed` | every guiding question is tested by ≥1 assessment item | **`off` in Core**; warn from the Assessment phase **(D-031c)** |
 | `unit_has_entry_quiz_items` | the unit has ≥1 assessment item with `usage: in-class-quiz` | warn **(target, D-031c)** |

@@ -4,7 +4,7 @@ Layout, as created by `classkit scaffold course`:
 
     course/
       course.yaml
-      syllabus/
+      syllabus/syllabus.md
       units/
         01-slug/
           unit.md
@@ -63,8 +63,19 @@ class Course:
     config: dict
     methodology: dict
     time_constants: dict
+    #: `syllabus/syllabus.md` — the course-level top layer (D-021). `None` when the file
+    #: does not exist: the syllabus is scaffolded, but a course tree can be edited by hand
+    #: and the loader reports what is there rather than assuming.
+    syllabus: Doc | None = None
     units: list[Unit] = field(default_factory=list)
     items: list[Doc] = field(default_factory=list)
+
+    @property
+    def outcomes(self) -> list[dict]:
+        """The Course Outcomes declared in the syllabus, in order."""
+        if self.syllabus is None:
+            return []
+        return [o for o in (self.syllabus.data.get("outcomes") or []) if isinstance(o, dict)]
 
 
 class LayoutError(Exception):
@@ -130,6 +141,11 @@ def load_course(course_root: Path, framework_root: Path) -> Course:
         methodology=methodology,
         time_constants=constants,
     )
+
+    syllabus_file = course_root / "syllabus" / "syllabus.md"
+    if syllabus_file.is_file():
+        s_data, s_body = load(syllabus_file)
+        course.syllabus = Doc(syllabus_file, s_data, s_body)
 
     units_dir = course_root / "units"
     if units_dir.is_dir():

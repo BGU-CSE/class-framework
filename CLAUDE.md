@@ -10,6 +10,8 @@ Two words are **banned** because each used to mean two things: **"topic"**, and 
 
 | Term | Meaning |
 |---|---|
+| **Syllabus** | The course-level top layer, `syllabus/syllabus.md`. Course goal, Course Outcomes, workload, prerequisites. One per course. |
+| **Course Outcome** | What a student who passes the course can do. `CO1`, `CO2`, … The roof of the coverage chain: every Unit Objective rolls up to ≥1 outcome. |
 | **Unit** | One week's subject. 12–13 per semester. |
 | **Unit Objective** | Abstract, teacher-facing goal. 2–4 per unit. Not the working layer. |
 | **Study Session** | The ~25-min at-home unit. 4 per Unit. |
@@ -24,6 +26,7 @@ Two words are **banned** because each used to mean two things: **"topic"**, and 
 Mechanically checked by the schemas and the validator.
 
 ```
+CO1              Course Outcome (in the syllabus)
 U01              Unit
 U01-O1           Unit Objective
 U01-S02          Study Session

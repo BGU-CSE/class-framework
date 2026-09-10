@@ -42,6 +42,19 @@ later works exactly the same either way.
 classkit scaffold course --code "202-1-2051" --title "Introduction to Data Structures"
 ```
 
+That creates `course/`: the settings in `course.yaml`, an empty `units/`, a place for your existing
+material, and **`course/syllabus/syllabus.md`** — the course's top layer. The syllabus holds the
+course goal and its **Course Outcomes** (`CO1`, `CO2`, …): what a student who passes can do. Those
+outcomes are the roof of everything below them — each unit's objectives roll up to them, so the
+validator can ask whether your units together deliver what the course promised.
+
+It is scaffolded with placeholders and is yours to edit. Its `workload` block is left commented out
+deliberately, so you can draft a syllabus before credits are settled; `classkit validate` warns
+until you fill it in. That is a reminder, not a failure.
+
+Scaffolding never overwrites. Re-run it whenever you want the pieces you are missing — everything
+you have already written is left exactly as it is.
+
 ## 3. Add your existing material
 
 Drop whatever you already have into **`course/materials/source/`** — slides, PDFs, the syllabus,
@@ -54,7 +67,9 @@ paths cite it by key.
 
 ## 4. Set your settings
 
-Everything tunable is in **`course/course.yaml`**:
+The course's *aim* — its goal, outcomes, prerequisites and workload — lives in
+`course/syllabus/syllabus.md`, which you edit directly. Everything *tunable* is in
+**`course/course.yaml`**:
 
 | Setting | What it controls |
 |---|---|

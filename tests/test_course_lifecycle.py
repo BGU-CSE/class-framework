@@ -57,6 +57,14 @@ def session(course_root: Path, number: int) -> Path:
     return next(course_root.glob(f"units/01-*/sessions/{number:02d}.md"))
 
 
+def syllabus(course_root: Path) -> Path:
+    return course_root / "syllabus" / "syllabus.md"
+
+
+def warnings(course_root: Path, code: str) -> list:
+    return [f for f in findings(course_root) if f.code == code and f.level == "warn"]
+
+
 def edit(path: Path, old: str, new: str) -> None:
     text = path.read_text(encoding="utf-8")
     assert old in text, f"fixture drifted: {old!r} not found in {path.name}"
@@ -94,6 +102,87 @@ def test_scaffold_fills_in_only_what_is_missing(course_root: Path):
 
     assert [p.name for p in result.created] == ["03.md"]
     assert len(result.skipped) == 5
+
+
+# -- the syllabus, the course-level top layer (D-021) -----------------------
+
+def test_scaffold_creates_a_syllabus(course_root: Path):
+    assert syllabus(course_root).is_file()
+
+
+def test_the_scaffolded_syllabus_declares_course_outcomes(course_root: Path):
+    course = load_course(course_root, FRAMEWORK_ROOT)
+
+    assert course.syllabus is not None
+    assert [o["id"] for o in course.outcomes] == ["CO1", "CO2"]
+
+
+def test_scaffold_does_not_overwrite_an_authored_syllabus(course_root: Path):
+    written_by_hand = "---\ngoal: \"Mine\"\noutcomes: [{id: CO1, statement: \"Mine\"}]\n---\n"
+    syllabus(course_root).write_text(written_by_hand, encoding="utf-8")
+
+    scaffold_course(
+        course_root,
+        FRAMEWORK_ROOT,
+        code="TEST-101",
+        title="Test Course",
+        institution="Test University",
+        instructor="Test Instructor",
+        units=13,
+        methodology="question-driven-25",
+    )
+
+    assert syllabus(course_root).read_text(encoding="utf-8") == written_by_hand
+
+
+def test_a_syllabus_outcome_with_a_malformed_id_fails_the_schema(course_root: Path):
+    edit(syllabus(course_root), "  - id: CO1", "  - id: OUTCOME-1")
+    assert "schema" in codes(course_root)
+
+
+def test_a_syllabus_without_outcomes_fails_the_schema(course_root: Path):
+    path = syllabus(course_root)
+    text = path.read_text(encoding="utf-8")
+    head, _, rest = text.partition("outcomes:")
+    path.write_text(head + "outcomes: []\n---" + rest.partition("---")[2], encoding="utf-8")
+
+    assert "schema" in codes(course_root)
+
+
+# -- workload is optional, and its absence is a standing warning (D-031d) ---
+
+def test_a_scaffolded_syllabus_has_no_workload_yet(course_root: Path):
+    """Optional so a teacher can draft and validate before credits are settled — but the
+    absence must be visible, so it warns rather than passing in silence."""
+    assert warnings(course_root, "syllabus_workload_missing")
+    assert "syllabus_workload_missing" not in codes(course_root)
+
+
+def test_declaring_a_workload_silences_the_warning(course_root: Path):
+    edit(
+        syllabus(course_root),
+        "# workload:\n#   credits: 5\n#   credit_system: \"ECTS\"\n#   total_hours: 150",
+        "workload:\n  credits: 5\n  credit_system: \"ECTS\"\n  total_hours: 150",
+    )
+
+    assert warnings(course_root, "syllabus_workload_missing") == []
+    assert errors(course_root) == []
+
+
+def test_a_workload_missing_its_credit_system_fails_the_schema(course_root: Path):
+    edit(
+        syllabus(course_root),
+        "# workload:\n#   credits: 5\n#   credit_system: \"ECTS\"\n#   total_hours: 150",
+        "workload:\n  credits: 5",
+    )
+
+    assert "schema" in codes(course_root)
+
+
+def test_a_deleted_syllabus_is_reported_not_ignored(course_root: Path):
+    syllabus(course_root).unlink()
+
+    assert warnings(course_root, "syllabus_workload_missing")
 
 
 # -- the validator catches what it exists to catch -------------------------
