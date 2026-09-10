@@ -1090,3 +1090,37 @@ complete, plus a spec clause saying which course *state* each rule applies to). 
 
 Avin to settle G-9 and G-12, then step 3 (`/plan-units`). Step 2 (ingest) still blocked on Q-028.
 D-032 reopens step 1's schema/template — fold it into the next implementation session.
+
+---
+
+## Session 21b — 2026-09-10 — G-9 and G-12 settled (→ D-033); step 3 unblocked
+
+Avin accepted both recommendations.
+
+**Rules must declare which course state they judge.** The underlying omission: §8.4 defined every
+rule against a *finished* course, while a course is half-built for almost all of its life — every
+implementation step, and a teacher's whole authoring semester — and invariant 6 *requires* a fresh
+scaffold to validate clean. Now split explicitly:
+
+- **Consistency rules** (always active): schema, ids, dangling references, duration sums, counts.
+- **Completeness rules** (only once units on disk == `course.yaml` units): `outcome_coverage`.
+  While incomplete the rule does not fire and `validate` reports it as *skipped, and why* — visible
+  rather than silent.
+
+A deliberate asymmetry falls out of this, worth remembering: *objective → outcome* is a consistency
+rule (wrong the moment it is written), *outcome → objective* is a completeness rule (merely
+unfinished). Both directions are still checked; they become meaningful at different times.
+
+**`syllabus_missing` = error.** `scaffold` always creates the syllabus, so absence means deletion,
+not drafting — and a course with no syllabus has no Course Outcomes, making `outcome_coverage`
+*vacuously true*: the rule that closes the coverage chain would pass most confidently exactly when
+the roof is gone. Same class of silent hole as D-031a's dangling `activity.items`.
+
+Also added the consistency/completeness instruction to `CLAUDE.md`'s "Adding a validation rule", so
+the next rule author does not repeat the omission.
+
+### Next
+
+**Step 3 (`/plan-units`) is unblocked** — no open questions remain for it. Its implementation session
+should also fold in D-032 (the Bologna syllabus fields, which reopen step 1's schema and template).
+Step 2 (ingest) remains blocked on **Q-028**, still unanswered by choice.

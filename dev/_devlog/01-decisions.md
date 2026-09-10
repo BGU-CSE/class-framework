@@ -926,3 +926,46 @@ is a field in `syllabus.md`; derived content is assembled at render time.** So i
 configuration (title, code, institution, instructors, language, textbook list) stay in `course.yaml`
 as the single source of truth, and the unit overview stays derived from the `unit.md` files. Copying
 either into the syllabus would create exactly the drift D-021 was designed to prevent.
+
+---
+
+## D-033 — Validation rules declare which course *state* they judge; `syllabus_missing` is an error
+**Date:** 2026-09-10 · **Status:** locked (design) · **implementation pending** · resolves gaps
+**G-12** and **G-9** from `reviews/impl-gaps-step-0-1.md`
+
+Both gaps came out of implementing steps 0–1, and both are instances of one omission: **§8.4 defined
+every rule against a *finished* course**, while a course spends almost all of its life half built —
+every implementation step, and a teacher's whole authoring semester. Invariant 6 even *requires* a
+freshly scaffolded course to validate clean.
+
+**(1) Rules are of two kinds, and each must say which it is.**
+
+- **Consistency rules — always active.** Does what is *present* hold together? Schema, ids, dangling
+  references, duration sums, counts against methodology ranges. A half-written course can still be
+  internally consistent.
+- **Completeness rules — active only when the course is complete.** Has everything promised been
+  delivered? Unanswerable while material is still being written.
+
+**The course is complete when units on disk == `course.yaml` `units`** — the condition `unit_count`
+already computes. While incomplete, a completeness rule does not fire and `classkit validate`
+**reports that it was skipped, and why**, so the gap is visible rather than silent.
+
+**`outcome_coverage` is the completeness case.** Read against a 3-of-13-unit course, every
+not-yet-covered outcome is an error: it would fail every scaffolded course (breaking invariant 6 at
+step 3's first commit) and shout through an entire authoring semester until the teacher turned it
+off. A rule teachers disable protects nothing.
+
+**The asymmetry this creates in the coverage chain is deliberate and worth keeping in mind:**
+*objective → outcome* is a **consistency** rule (an objective rolling up to nothing is wrong the
+moment it is written), while *outcome → objective* is a **completeness** rule (an outcome nothing
+covers yet is just unfinished work). Both directions are still checked — they simply become
+meaningful at different times.
+
+**(2) `syllabus_missing` — new rule, severity `error`.** There was `in_class_missing` for a unit and
+nothing for the syllabus, although §4 makes it a required artifact. Two reasons error is right rather
+than warn: `scaffold course` always creates it, so absence means deletion, not drafting; and a course
+with no syllabus has **no Course Outcomes**, making `outcome_coverage` *vacuously true* — the rule
+that closes the coverage chain would pass most confidently exactly when the roof is gone. That is the
+same class of silent hole as the dangling `activity.items` reference found in D-031a.
+
+Both rules land in **step 3**, with the rest of the coverage chain.

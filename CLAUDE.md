@@ -103,6 +103,13 @@ Add the check to `Validator`, give it a code, and put its default severity in
 `rules:` block. Every rule needs a test in `tests/test_course_lifecycle.py` that breaks a
 scaffolded course and asserts the code fires — a rule that never fires is worse than no rule.
 
+**Say which course state the rule judges** (D-033). A course is half-built for almost all of its
+life, and invariant 6 requires a fresh scaffold to validate clean. A **consistency** rule (does
+what is present hold together?) is always active. A **completeness** rule (was everything promised
+delivered?) runs only once the course is complete — units on disk == `course.yaml` `units` — and is
+reported as *skipped* until then. Getting this wrong produces a rule that fails every scaffolded
+course and that teachers switch off.
+
 ## Running things
 
 ```bash

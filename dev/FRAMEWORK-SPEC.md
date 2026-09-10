@@ -681,7 +681,8 @@ not built yet.
 | `goal_maps_to_objective` | each `goal.objectives` names an objective the unit defines | error |
 | `objective_coverage` | every unit objective addressed by ≥1 guiding question | error |
 | `objective_maps_to_outcome` | every unit objective names ≥1 Course Outcome | error **(target, D-021)** |
-| `outcome_coverage` | every Course Outcome covered by ≥1 unit objective | error **(target, D-021)** |
+| `outcome_coverage` | every Course Outcome covered by ≥1 unit objective. **Completeness rule — runs only when the unit map is complete** (see below) | error **(target, D-021/D-033)** |
+| `syllabus_missing` | the course has no `syllabus/syllabus.md` | error **(target, D-033)** |
 | `answer_reference_present` | each goal has ≥1 `answer` unless `defer_to_class` | error **(target, D-019/23)** |
 | `deferred_question_resolved_in_class` | each `defer_to_class` goal is referenced by ≥1 activity | error **(target, D-023)** |
 | `session_budget_feasibility` | `sum(est_minutes) + overhead ≤ budget`, within tolerance (renamed from `session_path_feasibility`) | error **(target, D-020)** |
@@ -700,6 +701,40 @@ not built yet.
 | `unit_has_entry_quiz_items` | the unit has ≥1 assessment item with `usage: in-class-quiz` | warn **(target, D-031c)** |
 
 Retired by D-020: `path_estimate_missing`, and the per-path `_estimate_path` helper.
+
+**Which course state a rule applies to (D-033).** A course spends almost all of its life *half
+built* — steps 1–6 of the implementation plan, and a teacher's whole authoring semester, happen in
+that state, and invariant 6 requires a freshly scaffolded course to validate clean. Every rule must
+therefore say which state it judges. There are two kinds:
+
+- **Consistency rules — always active, at every state.** They ask whether what *is* present holds
+  together: schema conformance, id consistency, dangling references (`goal_maps_to_objective`,
+  `objective_maps_to_outcome`, `activity_references_guiding_question`, `item_reference`,
+  `activity_item_reference`, `answer_reference_present`, `deferred_question_resolved_in_class`),
+  duration sums, and counts against methodology ranges. A course half-written can still be
+  internally consistent, so these fire from the first unit onwards.
+- **Completeness rules — active only once the course is complete.** They ask whether *everything
+  promised* has been delivered, which is unanswerable while material is still being written.
+  `outcome_coverage` is the case in point: read against a 3-of-13-unit course, every not-yet-covered
+  outcome is an error, so the rule would fail every scaffolded course (breaking invariant 6) and
+  shout through an entire authoring semester until the teacher switched it off.
+
+**The course is complete when the number of units on disk equals `course.yaml`'s `units`** — the
+condition `unit_count` already computes. While it is incomplete, a completeness rule does not fire,
+and `classkit validate` **reports that it was skipped and why** ("outcome_coverage: skipped — course
+incomplete, 3 of 13 units"), so a skipped check is visible rather than silent.
+
+Note the asymmetry this produces in the coverage chain, which is deliberate: **objective → outcome is
+a consistency rule** (an objective that rolls up to nothing is wrong the moment it is written, and is
+caught immediately), while **outcome → objective is a completeness rule** (an outcome nothing covers
+yet is simply unfinished work). The chain is checked in both directions, but the two directions
+become meaningful at different times.
+
+**Why `syllabus_missing` is an error, not a warning (D-033).** `scaffold course` always creates the
+syllabus, so it can only be absent if it was deleted. Worse, a course with no syllabus has **no
+Course Outcomes**, which makes `outcome_coverage` *vacuously true* — the rule that closes the
+coverage chain would pass most confidently exactly when the roof is gone. An error is the honest
+severity for a silently-empty guarantee.
 
 **Why `guiding_question_assessed` is off in Core (D-031c).** In Core the only assessment items are
 entry-quiz items, and a short entry quiz cannot test all ~15–20 of a unit's guiding questions. The

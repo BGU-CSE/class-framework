@@ -269,6 +269,19 @@ Reopens step 1's artifact — the schema and template exist, these extend them.
 | ⬜ | `.claude/agents/syllabus-designer.md` | authors the full descriptor; leaves unknown fields out rather than inventing them (invariant 7) |
 | ⬜ | *(Exports slice)* | the **rendered syllabus** — one document combining `syllabus.md` + identity fields from `course.yaml` + a unit overview derived from the units. Deferred; listed here so it is not lost |
 
+## D-033 — Rule states; `syllabus_missing`
+
+All land in **step 3**, with the coverage chain.
+
+| | Artifact | Change |
+|---|---|---|
+| ⬜ | `src/classkit/validate.py` | a course-complete predicate (`units on disk == course.yaml units`) that completeness rules gate on |
+| ⬜ | `src/classkit/validate.py` | `outcome_coverage` runs only when the course is complete; when skipped, `validate` reports it as skipped and why |
+| ⬜ | `src/classkit/validate.py` | new rule `syllabus_missing` (error) |
+| ⬜ | `src/classkit/validate.py` | validator output can express "skipped" alongside error/warn |
+| ⬜ | `tests/test_course_lifecycle.py` | a fresh scaffold does not fire `outcome_coverage`; a *complete* course with an uncovered outcome does; deleting the syllabus fires `syllabus_missing` |
+| ⬜ | `CLAUDE.md` | "Adding a validation rule" must say to declare consistency vs completeness |
+
 ## Cross-cutting
 
 | | Artifact | Change |
@@ -277,7 +290,7 @@ Reopens step 1's artifact — the schema and template exist, these extend them.
 | ⬜ | `schemas/course.schema.json`, `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block is scaffolded and documented although Exports is deferred (G-16). Either remove it from the template or keep it and drop "Deferred" from §8.2 — decide when the Exports slice starts; harmless until then |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-09-10:** 10 decisions, 97 artifact changes, **14 built, 1 in progress, 82 not
+**Count as of 2026-09-10:** 11 decisions, 103 artifact changes, **14 built, 1 in progress, 88 not
 started** — implementation steps 0 (the write path) and 1 (scaffold the syllabus) are done, though
 D-032 reopens step 1's artifact to complete the Bologna descriptor. (D-025
 refines D-020 rows and D-031 amends several — no double-counting intended; D-026/D-027 are
