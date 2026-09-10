@@ -51,8 +51,9 @@ U01-I01          Assessment Item
    cap to make a validation pass (D-028).
 5. **Nothing overwrites a teacher's work without permission — enforced in code, not by prompt.**
    Scaffolding is create-only (`write_new()` is the only way scaffold touches disk), and **every
-   agent and command writes through a `classkit` path that structurally refuses to overwrite
-   existing content** without explicit confirmation (D-030, D-031b). Silent loss of a teacher's
+   agent and command writes through `classkit.write.write()` / `classkit write`, which structurally
+   refuses to overwrite existing content** without explicit confirmation (`--overwrite`) — see
+   `dev/FRAMEWORK-SPEC.md` §8.6 (D-030, D-031b). Silent loss of a teacher's
    authored work is unrecoverable — this is the one place the framework does not trust a prompt.
 6. **Templates must validate.** A fresh scaffold has to produce a course with zero errors,
    or `tests/test_course_lifecycle.py` fails. Change a schema → change the template.
@@ -70,6 +71,7 @@ src/classkit/
   frontmatter.py          Markdown + YAML front-matter parsing
   model.py                locating and loading a course tree
   scaffold.py             create-only content generation
+  write.py                the overwrite-safe write path — every agent and command writes here
   validate.py             schema layer + semantic rules
   cli.py                  argparse entry point
 tests/                    scaffold → validate round-trip

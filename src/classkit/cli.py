@@ -16,6 +16,7 @@ from .scaffold import (
     scaffold_unit,
 )
 from .validate import validate
+from .write import write
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -60,6 +61,29 @@ def build_parser() -> argparse.ArgumentParser:
     new_item.add_argument("unit", help="unit id, e.g. U05")
     new_item.add_argument(
         "--format", default="multiple-choice", choices=["multiple-choice", "open"]
+    )
+
+    # The overwrite-safe write path (D-031b), for agents and commands. Refuses to
+    # replace a file that already has content unless --overwrite says so explicitly.
+    put = subcommands.add_parser(
+        "write",
+        help="write a file, refusing to overwrite existing content without --overwrite",
+    )
+    put.add_argument("path", help="file to write")
+    put.add_argument(
+        "--from",
+        dest="source",
+        help="read the content from this file (default: standard input)",
+    )
+    put.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="explicit confirmation that replacing the existing content is intended",
+    )
+    put.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="report what would happen without writing anything",
     )
 
     return parser
@@ -136,10 +160,42 @@ def run_scaffold(args, framework_root: Path) -> int:
     return 0
 
 
+def run_write(args) -> int:
+    """`classkit write` — the one way agents and commands put content on disk.
+
+    Exit codes: 0 written (or already identical), 3 refused because the target already
+    has content. 3 is distinct from the generic failure code so a caller can tell
+    "you must ask the teacher first" apart from "something broke".
+    """
+    content = (
+        Path(args.source).read_text(encoding="utf-8")
+        if args.source
+        else sys.stdin.read()
+    )
+
+    outcome = write(
+        Path(args.path), content, overwrite=args.overwrite, dry_run=args.dry_run
+    )
+
+    if outcome.refused:
+        print(f"refused: {outcome.path}", file=sys.stderr)
+        print(f"  {outcome.message}", file=sys.stderr)
+        if outcome.preview:
+            print("\n  what is there now:", file=sys.stderr)
+            for line in outcome.preview.splitlines():
+                print(f"    | {line}", file=sys.stderr)
+        return 3
+
+    print(f"{outcome.status}  {outcome.path}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
     try:
+        if args.command == "write":
+            return run_write(args)
         framework_root = find_framework_root()
         if args.command == "validate":
             return run_validate(args, framework_root)

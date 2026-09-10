@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .model import load_methodology, load_yaml
+from .write import write
 
 _PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
 
@@ -41,13 +42,15 @@ def render(template: str, values: dict) -> str:
 
 
 def write_new(path: Path, content: str, result: Result) -> None:
-    """Write `content` to `path` unless something is already there."""
-    if path.exists():
-        result.skipped.append(path)
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
-    result.created.append(path)
+    """Write `content` to `path` unless something is already there.
+
+    The create-only special case of the overwrite-safe write path (`write.write`):
+    scaffolding never passes `overwrite`, so it has no way to replace a teacher's file
+    at all. A path that already holds content — or already holds exactly this content —
+    is recorded as skipped and reported, never silently passed over.
+    """
+    outcome = write(path, content, overwrite=False)
+    (result.created if outcome.wrote else result.skipped).append(path)
 
 
 def _template(framework_root: Path, *parts: str) -> str:

@@ -226,7 +226,7 @@ is calibrated rather than pure vibes.
 | ⬜ | `.claude/agents/*.md` (all writers) | revision mode: when output exists, update in place and report the diff; regeneration is explicit |
 | ⬜ | `CLAUDE.md` | invariant 5 reworded ✅ (done in the same commit as the spec) |
 | ⬜ | `GETTING-STARTED.md` | describe the stepwise/approval workflow a teacher should expect |
-| ⬜ | `src/classkit/` | a write path that detects existing content, so the check is not prompt-only. **Upgraded from "consider" to required by D-031b — see its rows below.** |
+| ✅ | `src/classkit/` | a write path that detects existing content, so the check is not prompt-only. **Upgraded from "consider" to required by D-031b — see its rows below**, where it landed. |
 
 ## D-031 — Core spec review findings
 
@@ -237,7 +237,7 @@ Source: `_devlog/../reviews/core-spec-review-01.md`. Some rows amend rows above;
 | ⬜ | `.claude/commands/design-unit.md` | **(a)** swap the order: assessment-writer (entry quiz) runs *before* lesson-planner |
 | ⬜ | `.claude/agents/lesson-planner.md` | **(a)** read the existing entry-quiz items; put their real ids in the quiz activity's `items`; never invent an id |
 | ⬜ | `src/classkit/validate.py` | **(a)** new rule `activity_item_reference` (error): every id in `activity.items` resolves to an existing item of that unit |
-| ⬜ | `src/classkit/` (new) | **(b)** a write path that structurally refuses to overwrite existing content without explicit confirmation — generalizes `write_new()` beyond scaffold. **Required, not optional** (supersedes the "(consider)" row under D-030) |
+| ✅ | `src/classkit/write.py` (new) | **(b)** a write path that structurally refuses to overwrite existing content without explicit confirmation — generalizes `write_new()` beyond scaffold. **Required, not optional** (supersedes the "(consider)" row under D-030). Built with the `classkit write` CLI surface agents use, and `scaffold.write_new()` refactored onto it; specified in `FRAMEWORK-SPEC.md` §8.6. Tests in `tests/test_write_path.py` |
 | ⬜ | `.claude/agents/*.md` (all writers) | **(b)** must write through that path |
 | ⬜ | `methodologies/question-driven-25.yaml` | **(c)** `guiding_question_assessed: off`, with a comment that it turns on in the Assessment phase |
 | ⬜ | `src/classkit/validate.py` | **(c)** new rule `unit_has_entry_quiz_items` (warn) |

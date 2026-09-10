@@ -395,7 +395,7 @@ asks**, showing what exists and what it proposes to replace.
 This rule is **mechanically enforced**: `classkit` provides the write path agents use, and that path
 *structurally refuses* to overwrite existing content without explicit confirmation — the same
 guarantee `write_new()` already gives `scaffold`, generalized to every agent and command (D-031b).
-A prompt instruction is not sufficient here. "Do not overwrite" is a negative constraint, and agents
+The mechanism and its outcomes are specified in §8.6. A prompt instruction is not sufficient here. "Do not overwrite" is a negative constraint, and agents
 violate those on long autonomous runs; the failure it guards against — **silent loss of a teacher's
 authored work — is the one failure the framework must never have**, and it is unrecoverable. This is
 the one place where the framework does not trust an agent to follow an instruction.
@@ -705,6 +705,47 @@ the produced `goals[]` and the session structure — never the methodology's ide
   question-driven numbers. Code that does either is a bug against D-011 and invariant 3.
 - **Adding a methodology** is a new YAML file named in `course.yaml`; no code change (§2.5). *This is
   the load-bearing claim of the multi-teacher premise, and it is still unverified — see §9.*
+
+### 8.6 The write path
+
+Invariant 5 and §5.2 rule 2 say a teacher's work is never overwritten without permission, and that
+the guarantee is enforced in code. This is the code (D-031b). Every agent and every command puts
+content on disk through it — from Python as `classkit.write.write()`, from a shell as
+`classkit write`.
+
+**The refusal is structural.** With default arguments the call *cannot* replace a file that already
+has content: it returns a `refused` outcome and touches nothing. A caller that ignores the return
+value therefore still loses nothing. Replacing content requires a separate, deliberate act —
+`overwrite=True`, `--overwrite` — which is the "explicit confirmation" §5.2 requires; the command
+shows the teacher what is there (the refusal quotes the opening of the existing file) and asks
+before taking it.
+
+| Outcome | When | Wrote? |
+|---|---|---|
+| `created` | the target did not exist | yes |
+| `replaced` | the target existed and either held no content, or `overwrite` was given | yes |
+| `unchanged` | the target already holds exactly this content | no (no-op) |
+| `refused` | the target has content and `overwrite` was not given | **no** |
+
+Two cases are deliberately *not* refusals, because nothing can be lost in either: a file holding
+only whitespace, and a file already holding exactly the content being written — so re-running a
+command is safe. Anything unreadable as text counts as content; refusing is the safe direction.
+
+```
+classkit write PATH [--from FILE] [--overwrite] [--dry-run]
+```
+
+Content comes from standard input unless `--from` names a file. Exit codes: `0` written or already
+identical, `3` refused — distinct from the generic failure code `2`, so a caller can tell *"ask the
+teacher first"* apart from *"something broke"*. `--dry-run` answers "may I write here?" without
+writing, which is what a command uses to check a target before it generates anything.
+
+`scaffold` is this path's create-only special case: `write_new()` calls it and never passes
+`overwrite`, so scaffolding has no way to replace a teacher's file at all.
+
+> **The guarantee is only as structural as the agents' tool sets.** An agent that still has `Write`
+> or `Edit` in its front matter can bypass this path entirely. Routing each writing agent through it
+> — and removing those tools — is a per-agent change, made in the step where that agent is built.
 
 ---
 
