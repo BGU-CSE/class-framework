@@ -47,8 +47,9 @@ Not built: PPTX export, Moodle sync. See [dev/ROADMAP.md](dev/ROADMAP.md) for th
 each remaining one is for.
 
 **Teachers start at [GETTING-STARTED.md](GETTING-STARTED.md).** **Developers start at
-[dev/FRAMEWORK-SPEC.md](dev/FRAMEWORK-SPEC.md)** — how the system works and why it is shaped this
-way. The rest of this file is a summary.
+[dev/VISION.md](dev/VISION.md)** — why the project exists and what it produces — then
+[dev/FRAMEWORK-SPEC.md](dev/FRAMEWORK-SPEC.md), which specifies what the framework must contain. The
+rest of this file is a summary.
 
 ## Starting a course
 

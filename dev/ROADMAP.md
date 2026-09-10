@@ -158,6 +158,40 @@ is calibrated rather than pure vibes.
 | ⬜ | `CLAUDE.md` | glossary: a Guiding Question has an `answer` **or** `defer_to_class: true` |
 | ⬜ | `tests/test_course_lifecycle.py` | a goal with neither fires `answer_reference_present`; a deferred goal not referenced in-class fires the new rule |
 
+## D-028 — Activity/guiding-question link relaxed; unmapped in-class time capped
+
+| | Artifact | Change |
+|---|---|---|
+| ⬜ | `schemas/in-class-session.schema.json` | `guiding_questions` no longer required on an activity; add optional `reason` string |
+| ⬜ | `src/classkit/validate.py` | `activity_references_guiding_question` → **warn** when empty; still **error** when a referenced id is not of this unit |
+| ⬜ | `src/classkit/validate.py` | new rule `in_class_unmapped_time_cap` (error): Σ duration of activities with no guiding question ≤ `in_class.max_unmapped_minutes` |
+| ⬜ | `methodologies/question-driven-25.yaml` | add `in_class.max_unmapped_minutes: 15`; severities for both rules |
+| ⬜ | `.claude/agents/lesson-planner.md` | most activities build on guiding questions; unmapped ones need a `reason` and cost against the cap |
+| ⬜ | `.claude/agents/course-critic.md` | judge whether an unmapped activity's `reason` is legitimate, and whether the hour leans on the cap |
+| ⬜ | `CLAUDE.md` | invariant 4 reworded ✅ (done in the same commit as the spec) |
+| ⬜ | `README.md` | "every in-class Activity must reference at least one Guiding Question" is now wrong |
+| ⬜ | `tests/test_course_lifecycle.py` | an unmapped activity warns; exceeding the cap errors; a foreign-unit reference still errors |
+
+## D-029 — `syllabus-designer` agent
+
+| | Artifact | Change |
+|---|---|---|
+| ⬜ | `.claude/agents/syllabus-designer.md` | **new** — owns `syllabus/syllabus.md`: goal, Course Outcomes, workload, prerequisites |
+| ⬜ | `.claude/commands/plan-units.md` | run syllabus-designer and curriculum-architect as **one flow** sharing the outcome list |
+| ⬜ | `.claude/agents/curriculum-architect.md` | scope narrowed to the unit map and unit objectives; consumes the outcome list |
+| ⬜ | `.claude/agents/course-critic.md` | syllabus judgment: outcomes that are real outcomes not topic labels, a meaningful goal, plausible workload |
+
+## D-030 — Command interaction protocol
+
+| | Artifact | Change |
+|---|---|---|
+| ⬜ | `.claude/commands/*.md` (all) | stepwise execution with an approval gate per step; announce → produce → show → wait |
+| ⬜ | `.claude/agents/*.md` (all writers) | before writing, detect existing content and ask; never silently overwrite |
+| ⬜ | `.claude/agents/*.md` (all writers) | revision mode: when output exists, update in place and report the diff; regeneration is explicit |
+| ⬜ | `CLAUDE.md` | invariant 5 reworded ✅ (done in the same commit as the spec) |
+| ⬜ | `GETTING-STARTED.md` | describe the stepwise/approval workflow a teacher should expect |
+| ⬜ | *(consider)* `src/classkit/` | a helper the agents can call to detect existing content, so the check is not prompt-only |
+
 ## Cross-cutting
 
 | | Artifact | Change |
@@ -165,8 +199,8 @@ is calibrated rather than pure vibes.
 | ⬜ | `FRAMEWORK-SPEC.md §10` | add: parts of this document are designed and not built; the critic now owns estimate honesty |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-08-28:** 5 decisions, 51 artifact changes, 0 built. (D-025 refines D-020 rows —
-no new artifacts.)
+**Count as of 2026-09-10:** 8 decisions, 70 artifact changes, 0 built. (D-025 refines D-020 rows —
+no new artifacts. D-026/D-027 are documentation decisions, already executed.)
 
 ## 🔨 Phase 2 — First real course
 

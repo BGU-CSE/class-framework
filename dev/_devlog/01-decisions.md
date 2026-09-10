@@ -673,3 +673,147 @@ recorded now so the option is not forgotten.
 
 **Ledger:** woven into the D-020 rows for `time-constants.yaml`, `course-critic.md`,
 `study-session-designer.md`, and the `estimating-study-time` skill (tagged D-025). No new artifacts.
+
+---
+
+## D-026 — `FRAMEWORK-SPEC.md` is the standalone normative spec; the decision log is rationale only
+**Date:** 2026-08-28 · **Status:** locked (process/doc) · no ledger row
+
+To let a memory-less agent implement or verify a phase from one file, `FRAMEWORK-SPEC.md` was
+promoted from a design *overview* to a *normative specification*: it now carries the exact fields,
+IDs, validation rules, time model, and methodology contract for the Core phase (new §11 reference
+section), with narrative §1–§10 revised for Core scope and deferred parts marked.
+
+**Division of labour going forward:** the **spec** is the normative "what" and is self-sufficient for
+implementation (it survives `_devlog/` deletion); the **decision log** keeps the "why/history",
+reached by `D-nnn` breadcrumbs that are traceability, not required reading. This deliberately
+duplicates the decisions' *outcomes* into the spec — intended, and required by CLAUDE.md's rule that
+rationale worth keeping be reflected in the spec. When a decision changes normative content, update
+the spec in the same commit.
+
+**Extended by D-027:** the "why" layer was split out into `VISION.md`; the spec keeps the "what".
+
+---
+
+## D-027 — `VISION.md` carries the project's purpose; the spec is restructured top-down
+**Date:** 2026-09-10 · **Status:** locked (process/doc) · no ledger row
+
+Avin read the consolidated spec and found the big picture missing: *"the goal of the project and the
+framework we are developing is not clear enough — §1 The problem and §2 The one idea are not
+expressing my goals well."* Correct. Those sections argued for *flipping a lecture course* and for the
+*Guiding Question mechanism* — both true, but scoped to one pedagogical instantiation. Nothing stated
+what the framework itself is for. The project-level statement existed only in `README.md`'s opening
+line and had never reached the dev docs.
+
+**The goal, as Avin stated it (this is the correction that matters).** The primary driver is **not**
+mechanically catching mistakes — that is a *feature*. The driver is **AI-native course development**:
+when a teacher builds a new course, changes its methodology, or revises it (which happens every year),
+they should have a structural framework plus AI agents that a coding agent can access and use, making
+the recurring jobs — writing a quiz, adding a unit, changing goals, searching content — easier and
+better-structured. The hope is better courses, and so better learning and teaching. **"A course as a
+software project" is the means of execution, not the driver.**
+
+**Decisions.**
+
+- **New `dev/VISION.md`**, for developers and agents (teachers use `README.md` to decide adoption).
+  Formal top-down sections: *Project outcome* (the deliverable is a git repository a teacher clones
+  and works in with an AI tool — listing what it contains) · *Motivation* · *Approach* (AI-native;
+  structure exists to make agents effective; validation exists because agents author) · *Scope and
+  audience* (flipped-classroom now, pluggable later as an open door not a claim; for teachers
+  comfortable with git and an AI coding tool — not every teacher) · *How the framework is used* (the
+  7-step teacher workflow) · *Specification and development process* (spec-driven, Core first, then
+  test on a real course and update spec + implementation).
+- **`FRAMEWORK-SPEC.md` restructured top-down** and scoped to the "what": §1 Scope of this
+  specification (phase table, spec-ahead-of-code note, doc map) · §2 Framework architecture
+  (framework-wide: four layers, code-verifies/agents-judge, repository model, authoring format,
+  extension points) · §3 The Core phase (what it covers; its pedagogy; the Guiding Question) · §4–§7
+  content model, control flow, data flow, invariants · §8 the normative reference · §9 known
+  weaknesses.
+- **Nothing was discarded.** The old §1/§2 survive as §3.2/§3.3 — demoted from "the project's mission"
+  to "Core's pedagogy and Core's mechanism", which is what they always were. The validator keeps its
+  design and gains a better justification: agents author, so something must catch what agents get
+  wrong.
+- **Detail level:** the normative field tables stay at full detail — that is what makes spec-driven
+  development possible. The narrative sections carry the top-down clarity.
+
+---
+
+## D-028 — An in-class activity need not reference a guiding question; unmapped time is capped instead
+**Date:** 2026-09-10 · **Status:** locked (design) · **implementation pending** · amends invariant 4
+
+Avin: *"an in-class activity doesn't* must *reference a guiding question. This is the default and true
+for most activities, but must is too strong. I can discuss the final exam, or present something from
+the news that was not in the guiding questions. Let's not make it an error, we can flag it."*
+
+Correct — and the absolute rule was overreaching. But a plain downgrade to `warn` would have gutted
+the framework's central structural claim: a 50-minute hour of entirely unmapped activities would pass
+with a few warnings, which is exactly the lecture-reversion failure §3.3 exists to catch. So the rule
+is **relaxed per activity and enforced per hour** (Avin chose this over the simpler plain-warn):
+
+- **`activity.guiding_questions` is no longer required.** An activity with none is **`warn`**, not
+  error. It may carry an optional **`reason`** string (`"exam logistics"`, `"current-events hook"`);
+  the critic judges whether the reason is legitimate.
+- **Referencing a question from a *different* unit remains an error** — that is a dangling reference,
+  not an exception.
+- **New rule `in_class_unmapped_time_cap` (error):** the total duration of activities referencing no
+  guiding question must be ≤ `in_class.max_unmapped_minutes` (new methodology field, default 15 of
+  50). One 8-minute exam discussion is frictionless; an hour that has drifted off the home study
+  still fails loudly.
+
+**Invariant 4 is reworded** from "every Activity references ≥1 Guiding Question" to "**the class hour
+is built on the home study**; unmapped time is capped — never raise the cap to make a validation
+pass." Same intent, honest about exceptions.
+
+**Recorded weakness (§9).** The guarantee moves from a bright line to a number someone chose, and a
+methodology can raise it. If the cap is set generously the protection quietly disappears. Accepted
+knowingly.
+
+---
+
+## D-029 — The syllabus gets its own agent, run in one flow with unit planning
+**Date:** 2026-09-10 · **Status:** locked (design) · **implementation pending**
+
+Avin: the syllabus needs a specific agent to create it and to test it, and a way to update it
+partially.
+
+- **New agent `syllabus-designer`** owns `syllabus/syllabus.md` — the course goal, Course Outcomes,
+  workload, prerequisites. `curriculum-architect` keeps the unit map and unit objectives.
+- **They run as one flow under `/plan-units`, sharing the outcome list.** The coupling is the reason:
+  Course Outcomes and Unit Objectives form the coverage chain, so an agent that writes outcomes
+  without seeing the unit map (or vice versa) makes the two drift apart. Splitting the *agents* is
+  fine; splitting the *flow* is not.
+- **Testing it has two halves.** Mechanical: the schema plus `outcome_coverage` and
+  `objective_maps_to_outcome` (already specified). Judgment: `course-critic` gains syllabus
+  responsibilities — are the outcomes real outcomes rather than topic labels, is the goal meaningful,
+  is the declared workload plausible against the course's actual content.
+- **Partial update** is not syllabus-specific; it is handled by the general revision rule in D-030.
+
+---
+
+## D-030 — Command interaction protocol: stepwise with approval, never overwrite, revise not regenerate
+**Date:** 2026-09-10 · **Status:** locked (design) · **implementation pending** · extends invariant 5
+
+Avin: *"I envision /design-unit as a step-by-step operation where the chat tells the teacher what it
+is doing next, gets remarks or approval, produces the step and only after approval moves to the next
+step. Also, when running any command, it must check if the output already exists and get permission
+to overwrite."*
+
+The spec described commands as pipelines that run start to finish and said nothing about how a
+command interacts with the teacher. Three rules now bind **every** command in every phase (new §5.2):
+
+1. **Stepwise, with approval gates.** Announce the step → produce it → show it → **wait for approval
+   or correction** → next. `/design-unit N` becomes sessions → *approve* → in-class hour → *approve* →
+   entry-quiz items → *approve* → validate. Corrections are applied at the gate, not deferred.
+   *Why:* an agent that designs a whole unit before the teacher sees anything compounds a wrong
+   assumption across four sessions, an hour and a quiz. Gates keep the blast radius one step wide.
+2. **Never overwrite without permission.** Before writing, check whether the target already has
+   content; if so, stop and ask, showing what exists and what would replace it. This **generalizes
+   invariant 5 from `scaffold` to every agent and command** — agents write files directly, so without
+   this a re-run silently destroys a teacher's edits. Silent loss of authored work is the one failure
+   the framework must never have.
+3. **Revision, not regeneration.** When output exists the default is *update*: change what was asked,
+   leave the rest, report the diff. Regeneration is an explicit choice. This is what makes partial
+   edits possible — one Course Outcome without rewriting the syllabus, session 3 without touching 1,
+   2 and 4 — and it is how a course is maintained year to year (answers D-029's update question).
+
+Invariant 5 is reworded to "nothing overwrites a teacher's work without permission".

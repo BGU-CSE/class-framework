@@ -730,6 +730,115 @@ templates → agents/skills → tests, kept green each step). Then Q-026 opens t
 
 ---
 
+## Session 16 — 2026-08-28 — Consolidate the spec into a standalone normative Core spec (→ D-026)
+
+Avin wants the spec usable by a memory-less agent to implement or verify Core from one file, before
+handing it to an independent reviewer. Rewrote `dev/FRAMEWORK-SPEC.md` (D-026):
+
+- Added a **scope banner** (Core defined; Assessment/Exports/Metrics/Lifecycle named as deferred) and
+  kept the target-vs-built note.
+- Revised §1–§10 for Core scope; §5 control flow rewritten to the real Core sequence
+  (`/ingest` → `/plan-units` → `/design-unit` incl. the entry quiz → `/review-unit`); §4 and §6 mark
+  Core-active vs deferred agents/data.
+- Added **§11 — Core specification reference (normative):** 11.1 ID conventions (incl. `CO`); 11.2
+  field specs for every Core artifact (`course.yaml`, `syllabus.md` [target], `unit.md`,
+  `sessions/NN.md`, `in-class.md`, entry-quiz assessment item, `methodologies/*.yaml`); 11.3 time &
+  feasibility model; 11.4 the full validation-rule table with default severities; 11.5 the
+  methodology contract. Fields not yet in `schemas/` are tagged **(target)**.
+
+Read `schemas/assessment-item.schema.json` to spec the entry-quiz item accurately. Docs only; the
+decision log's normative outcomes are now duplicated into the spec by design (D-026).
+
+### Next
+
+Avin reviews the consolidated spec; then hand it to an independent agent using the review brief
+(prompt drafted earlier). Fold review findings into the spec, then implement Core from the ledger.
+Open: whether to keep `workload` required in the syllabus, and that `guiding_question_assessed`
+(warn) fires broadly in Core since only entry-quiz items exist — both good review-bait.
+
+---
+
+## Session 17 — 2026-09-10 — Split out `VISION.md`; restructure the spec top-down (→ D-027)
+
+Avin reviewed the consolidated spec: the technical content was there, but the big picture was
+missing — *"the goal of the project and the framework we are developing is not clear enough"*, and
+§1/§2 "are not expressing my goals well". Diagnosis: those sections argued for *flipping a lecture
+course* and for the *Guiding Question mechanism* — one pedagogical instantiation — while nothing said
+what the framework itself is for. The project-level statement lived only in `README.md`'s first line.
+
+**The goal, corrected by Avin (the substantive change).** The driver is **AI-native course
+development**, not mechanical validation — that is a feature. A teacher building, re-methodologising,
+or (annually) revising a course should have structure + agents a coding tool can use, making the
+recurring jobs easier: write a quiz, add a unit, change goals, search content. Ends: better courses →
+better learning and teaching. *Course-as-software-project is the means, not the driver.* Also settled:
+scope is flipped-classroom now (pluggability is an open door, not a present claim); the audience is
+teachers comfortable with git and an AI tool; VISION is for developers/agents, teachers read README.
+
+**Written:**
+
+- **`dev/VISION.md`** (new) — Project outcome (the deliverable is a git repo you clone and work in
+  with an AI tool, and what it contains) · Motivation · Approach · Scope and audience · How the
+  framework is used (7-step teacher workflow) · Specification and development process.
+- **`dev/FRAMEWORK-SPEC.md`** restructured top-down: §1 Scope (phase table, spec-ahead-of-code, doc
+  map) · §2 Framework architecture (framework-wide) · §3 The Core phase (coverage, pedagogy, the
+  Guiding Question) · §4–§7 content model / control flow / data flow / invariants · §8 normative
+  reference · §9 known weaknesses. Old §1/§2 survive as §3.2/§3.3, demoted to *Core's* pedagogy and
+  mechanism. Normative field tables kept at full detail.
+
+References updated in `README.md` (developers start at VISION, then SPEC), `CLAUDE.md`, and the
+handoff reading order. Docs only; no code.
+
+### Next
+
+Avin reviews the restructured spec. Then the independent review (brief drafted in Session 16 — needs
+VISION.md added to its reading list), fold findings, then implement Core from the ledger.
+
+---
+
+## Session 18 — 2026-09-10 — Avin's spec review: four changes (→ D-028, D-029, D-030)
+
+Avin approved `VISION.md` unchanged and gave four comments on the spec. All four were acted on.
+
+**1. Activity → guiding question was too strong (→ D-028).** *"An in-class activity doesn't* must
+*reference a guiding question… I can discuss the final exam, or present something from the news."*
+Rather than plainly downgrading the rule — which would have gutted the lecture-reversion guarantee,
+since an entire unmapped hour would then pass with warnings — Avin chose the **capped** design:
+per-activity `warn` with an optional `reason`, plus a new **error** rule
+`in_class_unmapped_time_cap` against `in_class.max_unmapped_minutes` (default 15 of 50). Invariant 4
+reworded in both the spec and `CLAUDE.md`. Recorded as a weakness in §9: the guarantee is now a
+number someone chose rather than a bright line.
+
+**2. The syllabus needs its own agent (→ D-029).** New `syllabus-designer`, but run **in one flow**
+with `curriculum-architect` under `/plan-units` — outcomes and unit objectives form the coverage
+chain, so splitting the flow would let them drift. "Testing it" split into mechanical (existing
+coverage rules) and judgment (new critic responsibilities). Partial update deferred to D-030.
+
+**3. Commands should be stepwise and must not overwrite (→ D-030).** New spec **§5.2 "How commands
+behave"**: (a) stepwise with an approval gate per step — `/design-unit` becomes sessions → approve →
+hour → approve → items → approve → validate; (b) **never overwrite without permission**, which
+generalizes invariant 5 from `scaffold` to every agent and command (agents write files directly, so a
+re-run could silently destroy a teacher's edits); (c) **revision, not regeneration** — update in
+place and report the diff, which is what makes partial edits and year-to-year maintenance work.
+
+**4. The flipped-class structure was not stated plainly.** Correct — §4's tree carried the numbers but
+mixed them with file paths, and §3 argued about failure modes without ever drawing the shape. New
+**§3.2 "The shape of a flipped course"**: unit = one week = 150 min = 100 home + 50 class; home = 4 ×
+25-min sessions of 3–5 guiding questions; class = 3–6 activities opening with the entry quiz — **with
+the goal of each part stated** (home = acquisition, class = application, not re-explanation). Adds
+what the README cannot: *the shape is Core, the numbers are the methodology's* (invariant 2). Old §3.2
+and §3.3 became §3.3 and §3.4. Avin's principle recorded: **the README should be a result of the
+spec** — it needs re-deriving once the spec settles.
+
+Ledger: 19 new artifact rows across D-028/29/30 (now 8 decisions, 70 changes, 0 built).
+
+### Next
+
+Independent review of `VISION.md` + `FRAMEWORK-SPEC.md` (update the Session-16 brief: add VISION.md,
+and the spec's new section numbers). Then fold findings and implement Core from the ledger. Note the
+README and GETTING-STARTED now contradict D-028/D-030 in places — ledger rows exist for both.
+
+---
+
 ## Session 11 — 2026-08-28 — Implementation ledger
 
 ### What happened

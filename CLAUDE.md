@@ -44,10 +44,14 @@ U01-I01          Assessment Item
 3. **Downstream consumes `goals[]`, never the methodology.** The study-session schema is the
    contract between a methodology and everything else. Code that branches on
    `methodology.id == "question-driven-25"` is a bug.
-4. **Every Activity references ≥1 Guiding Question.** This is not decoration — it is the
-   structural reason the class hour cannot revert to a lecture. Never relax it to make a
-   validation pass.
-5. **Scaffolding never overwrites.** `write_new()` is the only way scaffold touches disk.
+4. **The class hour is built on the home study.** Activities reference that unit's Guiding
+   Questions. An activity referencing none is permitted but flagged, and the **total unmapped
+   time in an hour is capped** (`in_class.max_unmapped_minutes`). Legitimate exceptions exist —
+   exam logistics, a current-events hook — but an hour made of them is a lecture. Never raise the
+   cap to make a validation pass (D-028).
+5. **Nothing overwrites a teacher's work without permission.** Scaffolding is create-only
+   (`write_new()` is the only way scaffold touches disk), and **every command that would write
+   over existing content must detect it and ask first** (D-030).
 6. **Templates must validate.** A fresh scaffold has to produce a course with zero errors,
    or `tests/test_course_lifecycle.py` fails. Change a schema → change the template.
 
@@ -68,7 +72,8 @@ src/classkit/
   cli.py                  argparse entry point
 tests/                    scaffold → validate round-trip
 dev/                      framework-development docs — NOT part of a teacher's course:
-  FRAMEWORK-SPEC.md         the spec — how it works and why; read before structural changes
+  VISION.md                 why the project exists, what it produces, how it is developed
+  FRAMEWORK-SPEC.md         the spec — what the framework must contain; read before structural changes
   ROADMAP.md                phases + the implementation ledger (authoritative for what is built)
   _devlog/                  build log — decisions, progress, open questions (deleted before release)
 ```
