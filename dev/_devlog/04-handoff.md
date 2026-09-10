@@ -36,14 +36,31 @@ committed; the suite is 36 tests, green. `dev/ROADMAP.md`'s ledger is ticked: 13
   commented out. New `schemas/syllabus.schema.json`; `Course.syllabus` / `Course.outcomes` in the
   model; schema-checked; `syllabus_workload_missing` (warn). A fresh scaffold validates with **zero
   errors** and that one warning.
-- **Read `../reviews/impl-gaps-step-0-1.md` before step 3.** 16 gaps found while implementing.
-  Three need a decision from Avin, and all three concern rules step 3 introduces: **G-9** (nothing
-  catches a *missing* syllabus, and `outcome_coverage` will be vacuously satisfied when it is
-  missing), **G-12** (`outcome_coverage` on a course whose unit map is not complete yet — read
-  literally it errors on a freshly scaffolded course and breaks invariant 6), **G-15** (the
-  "rendered syllabus" is referenced three times in the spec and specified nowhere).
-- **Next:** step 2 (ingest) is blocked on **Q-028**. Step 3 (syllabus + units, `/plan-units`) is
-  unblocked once G-9 and G-12 are answered.
+- **All 16 gaps from `../reviews/impl-gaps-step-0-1.md` are now closed** (Sessions 21 / 21b). The
+  three that needed Avin: **G-15 → D-032** (rendering a syllabus for people to read defers to
+  Exports, but `syllabus.md` itself must be a complete **Bologna descriptor** — adds optional
+  `level`, `course_type`, `offered`, `teaching_methods`, `reading`); **G-12 + G-9 → D-033** (rules
+  now declare which course *state* they judge — *consistency* rules always run, *completeness* rules
+  like `outcome_coverage` only once units on disk == declared units and are reported as **skipped**
+  until then; plus `syllabus_missing` as an error). **G-4** (agents still hold `Write`/`Edit` and can
+  bypass the write path) is a ledger row now: each agent drops those tools in the step that touches
+  it.
+
+## What is next — 2026-09-10
+
+1. **Avin will hand-test steps 0 and 1** in a clean clone. **The procedure is written and verified:
+   `../MANUAL-TESTING.md`** — clean-environment setup, exact commands, expected output, and a table
+   of *expected noise* so known-but-unbuilt decisions are not reported as bugs.
+2. **Step 3 (`/plan-units`) is unblocked** — no open questions remain for it. Its implementation
+   session should **also fold in D-032**, which reopens step 1's syllabus schema and template.
+3. **Step 2 (ingest) is still blocked on Q-028**, deliberately unanswered until we reach it. Avin
+   expects it to be the hard one (organizing heterogeneous materials, additions over time, and
+   possibly post-processing raw slides into something `answer` locators can point at).
+
+**How implementation sessions are run:** a *fresh, context-free* session, working from
+`../FRAMEWORK-SPEC.md` alone, which doubles as a test of the spec's self-containment claim (D-026).
+The kickoff prompt pattern and the required "spec-gap report" deliverable are described in Session
+18's block in `02-progress.md`; the two reports so far are in `../reviews/`.
 
 ## Earlier state — 2026-08-27
 

@@ -82,6 +82,7 @@ dev/                      framework-development docs — NOT part of a teacher's
   VISION.md                 why the project exists, what it produces, how it is developed
   FRAMEWORK-SPEC.md         the spec — what the framework must contain; read before structural changes
   ROADMAP.md                phases + the implementation ledger (authoritative for what is built)
+  MANUAL-TESTING.md         how to hand-test the framework as a teacher, in a clean clone
   _devlog/                  build log — decisions, progress, open questions (deleted before release)
 ```
 
@@ -119,6 +120,9 @@ pytest
 
 `classkit validate` needs a course, so it does nothing useful in this repo. Test against a
 throwaway scaffold in a temp directory.
+
+For **hand-testing as a teacher would** — a clean clone, the real commands, expected output and
+expected noise — follow `dev/MANUAL-TESTING.md`.
 
 ## The agent layer
 

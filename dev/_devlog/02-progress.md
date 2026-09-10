@@ -1124,3 +1124,34 @@ the next rule author does not repeat the omission.
 **Step 3 (`/plan-units`) is unblocked** — no open questions remain for it. Its implementation session
 should also fold in D-032 (the Bologna syllabus fields, which reopen step 1's schema and template).
 Step 2 (ingest) remains blocked on **Q-028**, still unanswered by choice.
+
+---
+
+## Session 21c — 2026-09-10 — Manual-testing procedure written and verified
+
+Avin will hand-test steps 0 and 1 next, from a possibly different machine, and asked how to do it in
+a clean environment.
+
+Wrote **`dev/MANUAL-TESTING.md`**, and **verified every command in it** by actually doing the run:
+cloned the repo into a scratch directory, made a venv, `pip install -e .`, scaffolded a course and a
+unit, validated, and exercised the write path. The document carries the real output, not
+reconstructed output.
+
+Points worth keeping:
+
+- **A clean environment is just a fresh clone in a scratch directory** — the framework *is* the
+  working environment (D-009), so there is nothing else to set up. Repointing `origin` and pushing
+  are the two things a real teacher does that a tester should skip.
+- **An "expected noise" table** was the most necessary part. A scaffolded course with one unit emits
+  **14 warnings**, 12 of them `guiding_question_assessed` — already decided to be `off` in Core
+  (D-031c) but not built until step 5. Without that table the tester reasonably reports a working
+  framework as broken. Anything *else*, especially any error on a fresh scaffold, is a real finding.
+- Verified live: scaffold is create-only on re-run (0 created, 6 untouched); the write path refuses
+  an unconfirmed overwrite with exit 3 and leaves the original intact, treats identical bytes as a
+  no-op, and `--dry-run` answers "may I write here?" without writing.
+
+Also pointed `CLAUDE.md`'s "Running things" at the new document.
+
+### Next
+
+Unchanged: Avin hand-tests steps 0–1; step 3 is unblocked (fold in D-032); step 2 waits on Q-028.
