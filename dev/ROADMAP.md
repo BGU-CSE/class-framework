@@ -239,7 +239,7 @@ Source: `_devlog/../reviews/core-spec-review-01.md`. Some rows amend rows above;
 | ⬜ | `.claude/agents/lesson-planner.md` | **(a)** read the existing entry-quiz items; put their real ids in the quiz activity's `items`; never invent an id |
 | ⬜ | `src/classkit/validate.py` | **(a)** new rule `activity_item_reference` (error): every id in `activity.items` resolves to an existing item of that unit |
 | ✅ | `src/classkit/write.py` (new) | **(b)** a write path that structurally refuses to overwrite existing content without explicit confirmation — generalizes `write_new()` beyond scaffold. **Required, not optional** (supersedes the "(consider)" row under D-030). Built with the `classkit write` CLI surface agents use, and `scaffold.write_new()` refactored onto it; specified in `FRAMEWORK-SPEC.md` §8.6. Tests in `tests/test_write_path.py` |
-| ⬜ | `.claude/agents/*.md` (all writers) | **(b)** must write through that path |
+| ⬜ | `.claude/agents/*.md` (all writers) | **(b)** must write through that path — **and drop `Write`/`Edit` from their `tools:` front matter** (G-4). Removing the tools is what makes the guarantee structural; leaving them makes `classkit write` merely *available*, which is the prompt-only situation D-031b exists to replace. Each agent is amended in the step where it is touched |
 | ⬜ | `methodologies/question-driven-25.yaml` | **(c)** `guiding_question_assessed: off`, with a comment that it turns on in the Assessment phase |
 | ⬜ | `src/classkit/validate.py` | **(c)** new rule `unit_has_entry_quiz_items` (warn) |
 | ✅ | `schemas/syllabus.schema.json` | **(d)** `workload` optional (amends the D-021 row) |
@@ -254,17 +254,32 @@ Source: `_devlog/../reviews/core-spec-review-01.md`. Some rows amend rows above;
 | ⬜ | `.claude/commands/*.md` (all) | **(h)** approval gates sit in the command, between agent invocations — never inside an agent |
 | ⬜ | `.claude/commands/plan-units.md` | **(i)** sequential file-based handoff: syllabus written first, architect reads it |
 | ⬜ | `.claude/agents/curriculum-architect.md` | **(i)** read outcome ids from `syllabus.md`; never invent one |
-| ⬜ | `tests/test_course_lifecycle.py` | tests for `activity_item_reference`, the course-level cap override, and the overwrite-refusal path |
+| ⬜ | `tests/test_course_lifecycle.py` | tests for `activity_item_reference` and the course-level cap override |
+| ✅ | `tests/test_write_path.py` (new) | the overwrite-refusal path — its own file, not the scaffold→validate round-trip (G-6) |
+
+## D-032 — Syllabus completeness (Bologna); rendering deferred
+
+Reopens step 1's artifact — the schema and template exist, these extend them.
+
+| | Artifact | Change |
+|---|---|---|
+| ⬜ | `schemas/syllabus.schema.json` | add optional `level`, `course_type`, `offered {year_of_study, semester}`, `teaching_methods[]`, `reading {required[], recommended[]}` |
+| ⬜ | `templates/course/syllabus.md` | scaffold the new fields (commented out, like `workload`) and give the body a matching section skeleton, so a teacher sees the whole descriptor and fills it in stages |
+| ⬜ | `GETTING-STARTED.md` | the syllabus is where Bologna descriptor information lives |
+| ⬜ | `.claude/agents/syllabus-designer.md` | authors the full descriptor; leaves unknown fields out rather than inventing them (invariant 7) |
+| ⬜ | *(Exports slice)* | the **rendered syllabus** — one document combining `syllabus.md` + identity fields from `course.yaml` + a unit overview derived from the units. Deferred; listed here so it is not lost |
 
 ## Cross-cutting
 
 | | Artifact | Change |
 |---|---|---|
 | ⬜ | `FRAMEWORK-SPEC.md §10` | add: parts of this document are designed and not built; the critic now owns estimate honesty |
+| ⬜ | `schemas/course.schema.json`, `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block is scaffolded and documented although Exports is deferred (G-16). Either remove it from the template or keep it and drop "Deferred" from §8.2 — decide when the Exports slice starts; harmless until then |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-09-10:** 9 decisions, 90 artifact changes, **13 built, 1 in progress, 76 not
-started** — implementation steps 0 (the write path) and 1 (scaffold the syllabus) are done. (D-025
+**Count as of 2026-09-10:** 10 decisions, 97 artifact changes, **14 built, 1 in progress, 82 not
+started** — implementation steps 0 (the write path) and 1 (scaffold the syllabus) are done, though
+D-032 reopens step 1's artifact to complete the Bologna descriptor. (D-025
 refines D-020 rows and D-031 amends several — no double-counting intended; D-026/D-027 are
 documentation decisions, already executed. D-031 rows supersede the "(consider)" overwrite-helper
 row under D-030.)

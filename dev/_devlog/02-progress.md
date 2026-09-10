@@ -1048,3 +1048,45 @@ invisible to document review.
 
 Step 2 (ingest) is still blocked on **Q-028**. Step 3 is unblocked *except* for G-9 and G-12, which
 should be answered first — both are about rules step 3 introduces.
+
+---
+
+## Session 21 — 2026-09-10 — Implementation gap report triaged (→ D-032)
+
+Read `reviews/impl-gaps-step-0-1.md` (16 gaps from implementing steps 0 and 1 against the spec
+alone). Avin's instruction: make simple technical fixes directly, discuss anything pedagogical.
+
+**Closed without discussion (13).** Nine the implementer had already resolved and specced (the write
+CLI surface, "has content" semantics incl. the whitespace-file case Avin cited as exactly the sort of
+corner case not worth his time, confirmation mechanics, refusal-returns-not-raises, atomicity,
+methodology-vs-DEFAULT_SEVERITY, syllabus body structure, the step 1/3 boundary, `workload`
+sub-field requiredness). Four fixed this session: **G-6** test file location; **G-11** a spec clause
+protecting the deliberately-open `assessment` item shape so a later implementer does not "fix" it;
+**G-16** a ledger row for the stray `gem` block; **G-4** — the per-agent ledger row now says writing
+agents must **drop `Write`/`Edit` from their tool front matter**, since availability of
+`classkit write` is not enforcement, and without that D-031b delivers only a better prompt.
+
+**Resolved by Avin (→ D-032), from G-15.** The "rendered syllabus" was referenced three times and
+specified nowhere. Avin split it: *"if by rendering you mean creating a PDF for students then we can
+defer it — but the .md file needs to contain potentially all the information the Bologna style has
+(even if we fill it in steps, or decide to skip some)."*
+
+- **Rendering → Exports.** It is a generator, like PPTX and the Gem. Added to the Exports row in
+  §1.1; the three references that implied it already existed were reworded.
+- **`syllabus.md` becomes a complete Bologna descriptor now.** Added optional `level`,
+  `course_type`, `offered`, `teaching_methods`, `reading`. Only `goal` and `outcomes` stay required.
+  `teaching_methods` is the one that earns its place pedagogically — for a flipped course it is the
+  field that says what the course actually *is*.
+- **Stated the rule that decides what belongs in the file:** *authored content is a field in
+  `syllabus.md`; derived content is assembled at render time.* Identity/config stays in
+  `course.yaml`; the unit overview stays derived from `unit.md`. Copying either in would create the
+  drift D-021 exists to prevent.
+
+**Still open — asked, not yet answered:** G-9 (`syllabus_missing` rule — recommended `error`) and
+G-12 (`outcome_coverage` on a half-built course — recommended: apply only once the unit map is
+complete, plus a spec clause saying which course *state* each rule applies to). **Both block step 3.**
+
+### Next
+
+Avin to settle G-9 and G-12, then step 3 (`/plan-units`). Step 2 (ingest) still blocked on Q-028.
+D-032 reopens step 1's schema/template — fold it into the next implementation session.

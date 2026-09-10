@@ -22,7 +22,7 @@ tested on a real course, and corrected before the next phase is specified (D-022
 |---|---|---|
 | **Core** | Course initiation, syllabus, course outcomes, units, at-home study sessions, the in-class hour **including the entry quiz** | **Specified below** |
 | Assessment | Homework, programming assignments, exams, the grading scheme | Deferred |
-| Exports | The class Gem builder, PPTX | Deferred |
+| Exports | The class Gem builder, PPTX, **the rendered syllabus** (one human-readable document — e.g. PDF — combining `syllabus.md`, the identity fields from `course.yaml`, and a unit overview derived from the units) | Deferred |
 | Metrics | Measures for improving a course or its activities | Deferred |
 | Lifecycle | Semester arc, revision, re-offering | Deferred |
 
@@ -277,8 +277,8 @@ time-summed: the 25-minute guarantee rides on the per-question `est_minutes`, no
 Course = Syllabus + 12–13 Units                     course.yaml (config) · syllabus/syllabus.md
 ├── Syllabus — Bologna-style top layer              syllabus/syllabus.md
 │     goal · Course Outcomes (CO1…) · workload/credits · assessment scheme (reserved) ·
-│     prerequisites. Its rendered view stitches in a unit overview from the units
-│     below, so it can't drift. (D-021)
+│     prerequisites, level, teaching methods, reading. A complete Bologna
+│     descriptor; unit contents are derived from the units below. (D-021, D-032)
 └── each of 12–13 Units — one week's subject, 150 min   units/NN-slug/unit.md
     ├── Unit Objectives (2–4)                       U01-O1  → outcomes: [CO1…]
     │     each rolls up to ≥1 Course Outcome (D-021); teacher-facing, not the working layer.
@@ -311,8 +311,11 @@ the skeleton once into the reserved `syllabus/` slot and never overwrites.
 Course Outcomes are the **roof of the coverage chain**: every Unit Objective rolls up to ≥1 outcome,
 and every outcome is covered by ≥1 objective, so *"do the units together deliver what the course
 promised?"* becomes checkable at course scope. Identity fields (title, code, textbooks) stay in
-`course.yaml` to avoid duplication; a *rendered* syllabus stitches in the unit overview live, so it
-cannot drift. There is no `course.md`.
+`course.yaml` to avoid duplication, and the unit overview is derived from the `unit.md` files rather
+than copied, so neither can drift. Producing a **rendered syllabus** — one human-readable document
+(e.g. PDF) combining all three for students or an accreditation committee — is deferred to the
+Exports phase (§1.1); the front matter is designed so that renderer has everything it needs. There is
+no `course.md`.
 
 **Vocabulary is fixed and synonym-free** (D-012). Two words are banned because each once meant two
 things: **"topic"**, and bare **"question"** — say *Guiding Question* or *Assessment Item*. The full
@@ -413,7 +416,7 @@ sessions 1, 2 and 4 — and it is how a course is maintained year to year.
 | Artifact | Written by | Consumed by | Phase |
 |---|---|---|---|
 | `course.yaml` | teacher | every agent, all tooling | Core |
-| `syllabus/syllabus.md` | syllabus-designer | validator, critic, (rendered) syllabus export | Core |
+| `syllabus/syllabus.md` | syllabus-designer | validator, critic | Core (the rendered syllabus export is Exports) |
 | `methodologies/*.yaml` | framework (or a teacher adding one) | designer, planner, validator | Core |
 | `defaults/time-constants.yaml` | framework, overridable per course | designer, critic (advisory) | Core |
 | `materials/source/*` | teacher | `/ingest`, curriculum-architect, designer | Core |
@@ -508,12 +511,30 @@ Deferred: a `gem` block (Exports phase).
 | `outcomes` | array\<obj\> | ✓ (≥1) | each `{ id (`CO<N>`, ✓), statement (✓), bloom (enum, opt) }` — the coverage roof |
 | `workload` | object | | `{ credits (✓), credit_system (✓; string — ECTS is one instantiation, never hardcoded), total_hours (number, opt) }`. Optional so a teacher can draft and validate a syllabus before credits are settled; `syllabus_workload_missing` warns while it is absent (D-031d) |
 | `prerequisites` | array\<string\> | | course-level prerequisites (free text or course codes) |
-| `assessment` | array\<obj\> | | **reserved** grading scheme, e.g. `{ type, weight }` — specified in the Assessment phase; may be empty in Core |
+| `assessment` | array\<obj\> | | **reserved** grading scheme, e.g. `{ type, weight }` — specified in the Assessment phase; may be empty in Core. Its item shape is **deliberately left open** (`additionalProperties` *not* false), unlike every other object in `schemas/`: closing a shape we have not designed would invalidate a course that fills the block early. Do not "fix" this before the Assessment phase specifies it (G-11) |
+| `level` | string | | **(target, D-032)** e.g. `undergraduate`, `graduate`. Free string, not an enum — degree structures differ by institution |
+| `course_type` | string | | **(target, D-032)** e.g. `compulsory`, `elective`, `elective in track X` |
+| `offered` | object | | **(target, D-032)** `{ year_of_study (number/string), semester (string) }` — when in the programme the course sits |
+| `teaching_methods` | array\<string\> | | **(target, D-032)** how the course is taught, e.g. `flipped classroom`, `weekly in-class problem solving`. Bologna expects this, and for a flipped course it is the descriptor that actually distinguishes it |
+| `reading` | object | | **(target, D-032)** `{ required: [string], recommended: [string] }`. Entries may be a `textbooks[].key` from `course.yaml` (preferred — no duplication) or free-text for anything not listed there |
 
 `bloom` enum, everywhere it appears: `remember | understand | apply | analyze | evaluate | create`.
 
+**Completeness (D-032).** The syllabus front matter is intended to carry **everything a Bologna-style
+course descriptor needs**, so that a teacher never has to keep syllabus information somewhere else.
+Only `goal` and `outcomes` are required; everything else may be filled in stages, or deliberately
+skipped. Two categories are deliberately *not* fields here:
+
+- **Identity and configuration** — title, code, institution, instructors, language, textbook list —
+  live in `course.yaml`, the single source of truth. Repeating them here would create drift.
+- **The unit overview / course contents** — derived from the `unit.md` files, which are authoritative.
+
+Both are pulled in when the syllabus is rendered for people to read (deferred — see §1.1). The rule:
+**authored content is a field here; derived content is assembled at render time.**
+
 Body: prose aim and narrative. Identity fields (title, code, textbooks) are **not** repeated here —
-they live in `course.yaml`; the rendered syllabus pulls them in, plus a live unit overview.
+they live in `course.yaml`. A future rendered syllabus (Exports) pulls them in, along with a unit
+overview assembled from the units.
 
 #### `units/NN-slug/unit.md` — a unit
 

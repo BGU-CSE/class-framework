@@ -888,3 +888,41 @@ reads it and references the outcome ids it finds there. The file is the handoff,
 invents an outcome id and either can be re-run alone.
 
 **Not adopted:** nothing. The review raised no finding we rejected.
+
+---
+
+## D-032 — `syllabus.md` is a complete Bologna descriptor; *rendering* it is deferred to Exports
+**Date:** 2026-09-10 · **Status:** locked (design) · **implementation pending** · amends D-021 ·
+resolves gap **G-15** from `reviews/impl-gaps-step-0-1.md`
+
+The implementation gap report found "the rendered syllabus" referenced three times in the spec and
+specified nowhere — no command, no format, no phase, no ledger row — while being load-bearing in the
+*argument* for why identity fields are not repeated in the syllabus.
+
+Avin drew the distinction: *"If by rendering you mean creating a PDF for students (from the .md file)
+then we can defer it to later. But the .md file needs to contain potentially all the information the
+Bologna style has (even if we fill it in steps, or decide to skip some information)."*
+
+**Two separate things, split accordingly.**
+
+1. **Rendering — deferred to Exports.** Producing one human-readable document (PDF or similar) that
+   combines `syllabus.md`, the identity fields from `course.yaml`, and a unit overview derived from
+   the units. It is a *generator*, like PPTX and the Gem bundle, so it belongs with them. Added to the
+   Exports row in §1.1, and the three references that implied it already exists were reworded.
+2. **The `.md` itself must be a complete Bologna descriptor — now.** The previous field set (goal,
+   outcomes, workload, prerequisites, reserved assessment) was short of what a Bologna course
+   descriptor carries, which would have forced a teacher to keep syllabus information somewhere
+   outside the framework. Added, all optional: `level`, `course_type`, `offered` (year/semester),
+   `teaching_methods`, `reading` (required/recommended, preferring `textbooks[].key` references).
+
+**`teaching_methods` is the one that earns its place pedagogically** — for a flipped course it is the
+field that actually says what the course *is*, and Bologna descriptors expect it.
+
+**Only `goal` and `outcomes` stay required**; everything else may be filled in stages or skipped
+deliberately (Avin's condition).
+
+**The rule that decides what is a field here** — worth stating because it recurs: **authored content
+is a field in `syllabus.md`; derived content is assembled at render time.** So identity and
+configuration (title, code, institution, instructors, language, textbook list) stay in `course.yaml`
+as the single source of truth, and the unit overview stays derived from the `unit.md` files. Copying
+either into the syllabus would create exactly the drift D-021 was designed to prevent.
