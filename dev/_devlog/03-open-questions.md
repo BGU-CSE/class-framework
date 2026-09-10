@@ -366,6 +366,39 @@ flipped-class content model is settled.
 
 ---
 
+## Q-028 — Ingest is under-specified, and is probably not simple
+**Raised 2026-09-10 by Avin, while planning the implementation order.** *"The course starts (after
+clone) with a script and the ingest. Both need to be implemented and checked. I suspect the ingest
+will not be simple… you put all in one place (slides, exams, old syllabus, links?), there's some
+organization, etc. It may also require some post-processing to help the future agents that will use
+the material."*
+
+**This is a Core gap.** `/ingest` is listed as a Core command, but the spec gives it one line in §5.1
+and one data-flow row in §6. Everything about how it actually works is unspecified. Missed by both
+the author and the independent review (Session 19) — the review checked what the spec *said*, and
+nothing said anything here to check.
+
+Open, none answered yet:
+
+- **What arrives, and in what shape?** Slides, old exams, a previous syllabus, a textbook reference,
+  links, lecture notes. Formats vary (PPTX / PDF / Word / URLs). Overlaps **Q-004**, which asks the
+  same thing for the pilot course — answer them together.
+- **How is `materials/source/` organized?** A flat drop, or a convention (by unit? by kind?)? Who
+  imposes it — the teacher, or `/ingest`?
+- **Materials arrive over time**, not once. What happens on the second, fifth, tenth addition — is
+  ingest re-run, incremental, or does it maintain an index?
+- **Does raw material need post-processing to be usable by later agents?** A 60-slide PPTX is not
+  something an agent can cite precisely, but `answer` locators (D-019) demand exactly that precision —
+  *"slide 18"* has to mean something. This may be the crux: without some extracted, addressable
+  representation, the answer-locator design has nothing solid to point at.
+- **What does `/ingest` output?** A report only, or a durable artifact (an index, a coverage map) that
+  `/plan-units` and the session designer then read?
+
+**Sequencing:** its own implementation step (Step 2 in the plan in `ROADMAP.md`), and its design has
+to be settled before that step can start. Not blocking Steps 0–1.
+
+---
+
 ## Q-027 — Minor flipped-class checks (parked)
 **Raised 2026-08-27, relocated here 2026-08-28.** Small structural checks the flipped-class model
 does not yet make, none blocking: (1) a session's `duration_minutes` is unconstrained — nothing ties

@@ -59,6 +59,42 @@ multi-teacher hardening (Phase 6) stay as independent later concerns, unchanged.
 
 ---
 
+# Implementation plan — the order to work the ledger
+
+The ledger below is grouped **by decision**, which is right for traceability and wrong as a work
+plan. This is the order to actually build it.
+
+**Principle: workflow order outside, layer order inside.** Steps follow the teacher's workflow
+(`VISION.md` §5); within a step, work layer by layer — schema → template → validator rule → agent /
+command → test — and leave the suite green (invariant 6: a fresh scaffold must validate).
+
+*Why not build layer-by-layer across the whole framework?* Because that defers every agent to the
+end, and **the agent layer is the riskiest part** — no prompt in `.claude/` has ever run against real
+materials (§9). Layer-first would finish the parts we are most confident about and only then expose
+the uncertain one. This is the same vertical-slice reasoning as D-022, one level down.
+
+Each step should end in something runnable and inspectable, not just green tests.
+
+| Step | Delivers | Ledger rows drawn from |
+|---|---|---|
+| **0. Foundation** | The overwrite-safe write path. Nothing else — this is deliberately thin. | D-031b |
+| **1. Initialize** | `classkit scaffold course` produces a complete, valid course skeleton *including* `syllabus/syllabus.md`. The teacher's first contact with the framework. | D-021 (template + scaffold rows) |
+| **2. Ingest** ⚠️ | Reading the teacher's real materials. **Design not settled — see Q-028.** Cannot start until it is. | *(none yet — the spec does not specify ingest)* |
+| **3. Syllabus and units** | `/plan-units` end to end: syllabus schema and rules, `outcomes` on objectives, `syllabus-designer` + `curriculum-architect`, the file-based handoff. | D-021, D-029, D-031d, D-031i |
+| **4. Study sessions** | `answer`, `est_minutes`, `defer_to_class`, session-level `paths`, the budget rule, `study-session-designer`, the rewritten `estimating-study-time` skill. | D-019, D-020, D-023, D-025 |
+| **5. Entry quiz** | `model_answer` rename, `usage` scoping, `unit_has_entry_quiz_items`, `assessment-writer` scoped to the entry quiz. | D-031c, D-031g |
+| **6. In-class hour** | Optional `guiding_questions` + `reason`, the unmapped-time cap and its course override, `activity_item_reference`, `lesson-planner`. | D-028, D-031a, D-031e |
+| **7. Review and gates** | `course-critic` updates (estimate honesty, deferral abuse, syllabus judgment), approval gates in every command. | D-025, D-029, D-030, D-031h |
+| **8. Docs** | Re-derive `README.md` and `GETTING-STARTED.md` **from the spec** — they currently contradict D-028 and D-030. | D-028, D-030 rows |
+
+**Step 5 must precede step 6** — that is D-031a: the entry-quiz items have to exist before the lesson
+plan can reference their ids.
+
+**A real course can be attempted after step 4** (or step 6 for a full unit). That is the first
+opportunity to test against real material, which is where the useful information is.
+
+---
+
 # Implementation ledger
 
 **The design draft is finished first; this ledger is worked through afterwards.** Nothing here is

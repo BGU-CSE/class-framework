@@ -871,11 +871,8 @@ only; tests still pass (14).
 
 ### Next
 
-**Implement Core.** The spec has now been reviewed by Avin and independently, and no open design
-items remain for Core beyond the optional Q-027 minors. Work the ledger rows in `dev/ROADMAP.md`
-bottom-up by layer — schemas → validator → templates → agents/skills/commands → tests — keeping the
-suite green at each step. `README.md` and `GETTING-STARTED.md` need re-deriving from the spec at the
-end (Avin's principle: the README is a result of the spec).
+**Implement Core** — see Session 20 for the agreed order, and Q-028 for the gap found while planning
+it.
 
 ---
 
@@ -936,3 +933,47 @@ commit.
 
 Proposed exit criterion for the draft: every entity in the content model has an ID convention, a
 schema owner, an agent that writes it, and at least one validator rule that can fail on it.
+
+---
+
+## Session 20 — 2026-09-10 — Implementation order agreed; Q-028 (ingest) found
+
+### The order to build Core
+
+Avin asked whether to implement by **workflow step** or **by layer**, and what the trade-offs are.
+Agreed: **workflow order outside, layer order inside each step** (schema → template → rule → agent →
+test, green each step), with one deliberately thin shared foundation first.
+
+The deciding argument: building layer-by-layer defers every agent to the end, and **the agent layer
+is the riskiest part** — no prompt has ever run against real materials (spec §9). Layer-first would
+complete the parts we are most confident about (schemas, validator — already written and tested) and
+only then expose the uncertain one. Workflow order surfaces the risk early, on a small surface. Same
+vertical-slice reasoning as D-022, one level down. Written into `ROADMAP.md` as an implementation
+plan sitting above the ledger (the ledger is grouped by decision, which is right for traceability and
+wrong as a work plan).
+
+Steps: 0 foundation (overwrite-safe write path only) · 1 initialize (`scaffold course`) · 2 ingest ·
+3 syllabus + units · 4 study sessions · 5 entry quiz · 6 in-class hour · 7 review + gates · 8 docs.
+Step 5 before 6 is forced by D-031a. A real course can be attempted after step 4.
+
+### The gap Avin found (→ Q-028)
+
+**Correction to Session 19's claim that "no open design items remain for Core".** That was wrong.
+Avin: *"the course starts (after clone) with a script and the ingest… I suspect the ingest will not
+be simple."* Both were missing from the proposed order, and more importantly **ingest is barely
+specified at all** — one line in §5.1, one data-flow row in §6, and nothing about how materials are
+organized, what formats arrive, how material added later is folded in, or what post-processing later
+agents need.
+
+Missed by the author *and* by the independent review — the review checked what the spec said, and
+nothing said anything here to check. Worth remembering as a limit of document review: it cannot flag
+a section that does not exist.
+
+Raised as **Q-028**, deliberately not answered this session (Avin: *"don't answer me now"*). One
+connection worth recording: `answer` locators (D-019) demand precision like *"slide 18"*, so if raw
+materials are not processed into something addressable, the locator design has nothing solid to point
+at. Overlaps **Q-004** (what format the pilot materials are in) — answer them together.
+
+### Next
+
+Steps 0 and 1 are unblocked and can start whenever. Step 2 needs Q-028 designed first.
