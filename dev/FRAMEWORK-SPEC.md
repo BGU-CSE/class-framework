@@ -172,8 +172,10 @@ Outcomes) **(target, D-029)**, `curriculum-architect` (the unit map and unit obj
 `study-session-designer` (sessions, guiding questions, answers, `est_minutes`, the study-path pool),
 `lesson-planner` (the in-class hour), `assessment-writer` (entry-quiz items only, in Core),
 `topic-researcher` (finds real resources), `course-critic` (review). Commands: `/ingest`,
-`/plan-units`, `/design-unit N`, `/review-unit N`. Deferred: `gem-builder` and `/build-gem`
-(Exports); the homework/exam roles of `assessment-writer` and `/write-items` (Assessment).
+`/plan-units`, `/design-unit N`, `/review-unit N`, and **`/write-items N` scoped to entry-quiz
+items** — `/design-unit` already writes the unit's entry quiz, so `/write-items` in Core is for
+adding to or reworking it. Deferred: `gem-builder` and `/build-gem` (Exports); the homework and exam
+roles of `assessment-writer` and `/write-items` (Assessment).
 
 ### 3.2 The shape of a flipped course
 

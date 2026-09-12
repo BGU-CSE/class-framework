@@ -16,11 +16,10 @@ textbooks: []
   # - key: CLRS
   #   citation: "Cormen, Leiserson, Rivest, Stein — Introduction to Algorithms, 4th ed."
 
-gem:
-  scope: unit
-  tutoring_stance: socratic
-
 # Per-course overrides of defaults/time-constants.yaml. Any subset.
+# ADVISORY ONLY: these help the agents propose a study time for a guiding question,
+# and help the critic spot one that looks wrong. The session budget is the sum of the
+# per-question `est_minutes` you approve — not anything derived from these.
 time_constants: {}
 
 # Course-local agent overrides: framework role -> your replacement agent name.

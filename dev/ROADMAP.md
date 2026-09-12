@@ -89,7 +89,7 @@ Each step should end in something runnable and inspectable, not just green tests
 | **5. Entry quiz** | `model_answer` rename, `usage` scoping, `unit_has_entry_quiz_items`, `assessment-writer` scoped to the entry quiz. | D-031c, D-031g |
 | **6. In-class hour** | Optional `guiding_questions` + `reason`, the unmapped-time cap and its course override, `activity_item_reference`, `lesson-planner`. | D-028, D-031a, D-031e |
 | **7. Review and gates** | `course-critic` updates (estimate honesty, deferral abuse, syllabus judgment), approval gates in every command. | D-025, D-029, D-030, D-031h |
-| **8. Docs** | Re-derive `README.md` and `GETTING-STARTED.md` **from the spec** — they currently contradict D-028 and D-030. | D-028, D-030 rows |
+| **8. Docs** 🔨 | Re-derive `README.md` and `GETTING-STARTED.md` **from the spec**. Done once (Session 24) ahead of schedule, because Avin follows `GETTING-STARTED.md` when hand-testing — so it has to be true *now*, not at the end. Revisit as later steps land. | D-028, D-030 rows |
 
 **Step 5 must precede step 6** — that is D-031a: the entry-quiz items have to exist before the lesson
 plan can reference their ids.
@@ -291,7 +291,7 @@ All land in **step 3**, with the coverage chain.
 | | Artifact | Change |
 |---|---|---|
 | ⬜ | `FRAMEWORK-SPEC.md §10` | add: parts of this document are designed and not built; the critic now owns estimate honesty |
-| ⬜ | `schemas/course.schema.json`, `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block is scaffolded and documented although Exports is deferred (G-16). Either remove it from the template or keep it and drop "Deferred" from §8.2 — decide when the Exports slice starts; harmless until then |
+| ✅ | `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block was scaffolded and documented although Exports is deferred (G-16). **Removed from the template and the settings table** — shipping configuration for a feature that does not exist confuses a teacher reading their own `course.yaml`. The optional field stays in `course.schema.json`, so a course that sets it still validates |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
 **Count as of 2026-09-10:** 11 decisions, 103 artifact changes, **14 built, 1 in progress, 88 not

@@ -1268,3 +1268,54 @@ hat section.
 
 Unchanged: hand-test steps 0–1 (`dev/MANUAL-TESTING.md`). Step 3 unblocked (fold in D-032). Step 2
 waits on Q-028.
+
+---
+
+## Session 24 — 2026-09-12 — Root docs re-derived from the spec (step 8, pulled forward)
+
+Avin is about to hand-test steps 0–1 and will **follow `GETTING-STARTED.md` while doing it**, so the
+root docs have to be true now rather than at step 8. Checked both against the spec and found real
+misalignments — most of them places where the docs still described the design as it stood *before*
+D-020/D-028/D-031.
+
+**Wrong in `README.md`:**
+- "Every in-class Activity **must** reference at least one Guiding Question" — D-028 relaxed this to
+  a warning with a capped total.
+- "Every Study Session must have at least one *complete* Study Path … that fits inside the session's
+  time budget" — D-020 replaced that with the sum of per-question `est_minutes`.
+- Study Paths drawn under Guiding Questions — D-020 moved them to the session.
+- No Syllabus or Course Outcomes anywhere — the top layer (D-021) was missing from the model.
+- Status said "Phase 1"; `gem-builder` and `/build-gem` unmarked as deferred.
+
+**Wrong in `GETTING-STARTED.md`:**
+- *"`time_constants` … decides whether the validator believes a 25-minute session is doable"* — no
+  longer true since D-020/D-025: it is **advisory**, used to *propose* an estimate the teacher
+  approves and to help the critic spot a bad one. The validator sums `est_minutes`.
+- `/design-unit` described as designer → lesson-planner → assessment-writer; **D-031a swapped the
+  last two** (the planner needs real quiz-item ids).
+- `/plan-units` described as writing unit skeletons only — it writes the syllabus first (D-029/i).
+- Both "what the validator will not let you get away with" bullets were the pre-D-020/D-028 wording.
+- The stepwise / never-overwrite / revise-not-regenerate protocol (D-030) was absent, although it is
+  teacher-visible behaviour they should hold the commands to.
+- The `gem` setting was documented for a deferred phase.
+
+**Also fixed, because he will read the file it produces:** `templates/course/course.yaml` shipped a
+`gem:` block for a phase that does not exist (G-16, now ticked) — removed, and `time_constants`
+annotated in the template as advisory. The optional field stays in `course.schema.json`, so a course
+that sets it still validates. Fresh scaffold still validates with 0 errors.
+
+**Spec change this surfaced (§3.1):** `/write-items`' role in Core was ambiguous — it was listed
+only under deferred work, yet `/design-unit` already writes the entry quiz. Now stated explicitly:
+in Core `/write-items N` is scoped to entry-quiz items (adding to or reworking what `/design-unit`
+produced); its homework and exam roles defer to Assessment.
+
+**Honesty about what is built:** `GETTING-STARTED.md` gained a banner saying the `/` commands are
+being implemented one at a time and the ledger is authoritative, and the one documented setting that
+does not exist yet (`in_class.max_unmapped_minutes`) is marked *not built yet*. Without that, a
+teacher following step 5 during this test would hit commands that are not there and reasonably
+conclude the framework is broken.
+
+### Next
+
+Unchanged: hand-test steps 0–1 with `dev/MANUAL-TESTING.md` (and now `GETTING-STARTED.md`). Step 3
+unblocked (fold in D-032). Step 2 waits on Q-028.
