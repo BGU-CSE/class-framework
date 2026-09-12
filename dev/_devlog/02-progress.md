@@ -1236,3 +1236,35 @@ FRAMEWORK-DEVELOPER. Hook emits valid JSON in both modes. Also fixed the last de
 
 Unchanged: hand-test steps 0–1 (`dev/MANUAL-TESTING.md`) — now with a correctly-addressed
 `CLAUDE.md`. Step 3 unblocked (fold in D-032). Step 2 waits on Q-028.
+
+---
+
+## Session 23b — 2026-09-12 — `classkit mode`: switching hats is a command now
+
+Avin: *"maybe we should have a skill or a command that makes sure you start a session as a teacher
+(no `.developer` file), and if you want to switch you run a special command that adds the file and
+makes sure it is ignored?"* Yes — and the "makes sure it is ignored" half is the point, because that
+is precisely the bug this session hit: `.gitignore` was untracked on this machine, so the rule
+existed only locally.
+
+Built `classkit mode` (`src/classkit/mode.py`): report the current hat; `developer` **verifies the
+ignore rule before creating the marker** and refuses with an explanation if it is missing; `teacher`
+removes it. Idempotent both ways, and it prints that a running session must be restarted — the
+SessionStart hook reads the marker once, at startup.
+
+**Code rather than a slash command**, deliberately: the ignore check is mechanical and must not be
+skippable (D-018, code verifies), and a `/developer-mode` command would live in `.claude/commands/`
+and therefore appear in every teacher's command list.
+
+Six tests (`tests/test_mode.py`), suite now **42**. The one that earns its place asserts the marker
+is ignored **in the real framework checkout**, not a fixture — so if `.gitignore` is ever dropped or
+untracked again, the suite fails instead of the framework silently mis-hatting every teacher.
+Verified by hand that the CLI and the hook agree in both directions.
+
+Documented as step 1 of `dev/CLAUDE.md`'s developer setup, and referenced from the root `CLAUDE.md`
+hat section.
+
+### Next
+
+Unchanged: hand-test steps 0–1 (`dev/MANUAL-TESTING.md`). Step 3 unblocked (fold in D-032). Step 2
+waits on Q-028.

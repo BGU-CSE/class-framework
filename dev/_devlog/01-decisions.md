@@ -964,6 +964,25 @@ Honest cost: a project hook may prompt a teacher for approval on first open. Jud
 is one "yes", the script is four lines of readable shell, and a teacher arguably *should* be told
 what runs in their repo.
 
+**Switching hats is a command, not a ritual (added 2026-09-12, Avin's suggestion).** The setup step
+was `touch dev/.developer` — folklore a new developer had to find, with nothing checking that the
+marker was actually ignored. That is exactly the bug this session hit: `.gitignore` turned out to be
+untracked on this machine (a global exclude of `.gitignore` itself), so the rule existed only
+locally. So the switch moved into the tooling:
+
+- `classkit mode` — report the current hat
+- `classkit mode developer` — **verify the ignore rule first**, then create the marker; refuse with an
+  explanation if the rule is missing, because a committed marker would put every teacher's clone into
+  framework-developer mode
+- `classkit mode teacher` — remove it
+
+**Code, not a slash command**, deliberately (D-018: code verifies): the ignore check is mechanical and
+must not be skippable, and a `/developer-mode` command in `.claude/commands/` would also appear in
+every teacher's command list. Documented as step 1 of `dev/CLAUDE.md`'s setup. Six tests in
+`tests/test_mode.py`, including one that asserts the marker is ignored **in the real checkout**, so
+the rule cannot be silently dropped again. The command also prints that a running session must be
+restarted — the hook reads the marker once, at startup.
+
 **Two repos revisited at release,** not discarded: see Q-031.
 
 ---

@@ -13,7 +13,8 @@ You are in **FRAMEWORK-DEVELOPER** mode only if either:
   `methodologies/`, `.claude/`, or `dev/`.
 
 In that case **stop and read `dev/CLAUDE.md` before doing anything** — it carries the invariants you
-must not break.
+must not break. A developer switches hats with **`classkit mode developer`** (and back with
+`classkit mode teacher`); `classkit mode` alone reports the current one.
 
 **State your mode in your first reply, and again whenever it changes** (it should change rarely —
 essentially only when a developer sets up a checkout). A `SessionStart` hook

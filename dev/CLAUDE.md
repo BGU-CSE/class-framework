@@ -4,6 +4,25 @@
 schemas, tooling, templates, agents — without breaking its invariants. If you are helping a teacher
 build a *course*, stop: that is the root `CLAUDE.md`.
 
+## Setting up a developer checkout
+
+```bash
+pip install -e ".[dev]"
+classkit mode developer     # step 1 — creates the gitignored dev/.developer marker
+```
+
+`classkit mode` shows the current hat; `classkit mode teacher` switches back. The marker is
+**gitignored on purpose** — it must never reach a teacher's clone, which is exactly what makes its
+presence a reliable signal. `classkit mode developer` **verifies that ignore rule before creating
+the file** and refuses if it is missing, because a committed marker would put every teacher's clone
+into framework-developer mode. A running Claude Code session reads the marker once at startup, so
+restart it after switching.
+
+Forgetting this step lands you in teacher mode — harmless, and obvious from the session's opening
+line.
+
+## Where to start reading
+
 Start at `VISION.md` (why the project exists) and `FRAMEWORK-SPEC.md` (what the framework must
 contain). `ROADMAP.md` carries the implementation plan and the ledger — **the ledger is authoritative
 for what actually exists**, because the spec deliberately runs ahead of the code.
@@ -50,6 +69,7 @@ src/classkit/
   model.py                locating and loading a course tree
   scaffold.py             create-only content generation
   write.py                the overwrite-safe write path — every agent and command writes here
+  mode.py                 teacher / framework-developer hat: `classkit mode` (D-034)
   validate.py             schema layer + semantic rules
   cli.py                  argparse entry point
 tests/                    scaffold → validate round-trip
