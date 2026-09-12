@@ -1155,3 +1155,36 @@ Also pointed `CLAUDE.md`'s "Running things" at the new document.
 ### Next
 
 Unchanged: Avin hand-tests steps 0–1; step 3 is unblocked (fold in D-032); step 2 waits on Q-028.
+
+---
+
+## Session 22 — 2026-09-12 — Two ideas parked for later slices (Q-029, Q-030)
+
+Avin noted two ideas to keep for after Core. Recorded so they are not lost, and cross-referenced from
+the slices they belong to in `ROADMAP.md` so they surface at the right moment rather than only if
+someone re-reads the questions file.
+
+**Q-029 — the entry quiz could check homework, not only study sessions** (Assessment slice). It would
+give homework the accountability loop it currently lacks: homework is not mandatory every week and
+nothing structurally notices whether it was done, whereas the entry quiz is an accountability
+mechanism that already exists on already-budgeted class time. Recorded the concrete collision:
+homework spans several units, but `activity_references_guiding_question` *errors* on a Guiding
+Question that is not of the current unit — so this needs either a cross-unit exception or a different
+referencing route, decided deliberately rather than discovered as a validation failure.
+
+**Q-030 — the class Gem as a repository students clone and open with Claude Code** (Exports slice).
+It is the project's own thesis applied one audience further: `VISION.md` argues structure makes a
+course something agents can operate on, and today that benefit lands only on the teacher's side.
+Recorded two constraints to settle first — **confidentiality** (a student-clonable repo must not
+carry answer keys, distractor rationales, rubrics or exam material; it needs an *allow*-list and a
+clean git history, and interacts with Q-002), and **audience** (VISION §4 scopes the framework to
+people comfortable with git and an AI tool, which students broadly are not — so it must be an
+additional study path, never a required one, per D-010). Also flagged that it is the first idea to
+touch ROADMAP's "not planned: student-facing anything" line, and should cross it deliberately if at all.
+
+Neither affects Core. No spec change.
+
+### Next
+
+Unchanged: Avin hand-tests steps 0–1 (`dev/MANUAL-TESTING.md`); step 3 is unblocked and should fold
+in D-032; step 2 waits on Q-028.

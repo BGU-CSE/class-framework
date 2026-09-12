@@ -45,9 +45,13 @@ assumptions.
    Remaining design: the two open items beside D-019/D-020, and the minors in Q-027.
 2. **Assessment** — homework, programming assignments, exams (**Q-026**); fills the syllabus's
    reserved grading block. Depends on Core's guiding questions. (Entry-quiz items are Core; homework
-   and exam items are here.)
-3. **Exports** — the Gem *builder* and PPTX. "Generate an artifact from the designed course."
-   (Gem-as-a-study-path is Core; only the builder defers.)
+   and exam items are here.) Also consider **Q-029**: using the entry quiz to check *homework*, which
+   would give homework the accountability loop it currently lacks — note the cross-unit referencing
+   collision recorded there.
+3. **Exports** — the Gem *builder*, PPTX, and the **rendered syllabus** (D-032). "Generate an artifact
+   from the designed course." (Gem-as-a-study-path is Core; only the builder defers.) Also consider
+   **Q-030**: shipping the Gem as a repository students clone and open with Claude Code — read its
+   confidentiality constraint before starting.
 4. **Metrics** — *later.* Measures to improve a course or its activities, once Core has been built
    and taught enough to know which signals matter.
 5. **Lifecycle** — *much later,* after the course has been taught at least once: the semester arc,

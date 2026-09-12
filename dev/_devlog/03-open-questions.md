@@ -399,6 +399,61 @@ to be settled before that step can start. Not blocking Steps 0–1.
 
 ---
 
+## Q-029 — The entry quiz could check homework, not only study sessions
+**Raised 2026-09-12 by Avin. Not Core — belongs with the Assessment slice (Q-026).**
+
+Today the entry quiz tests that week's Guiding Questions, and its structural job is to make the class
+hour depend on the home study. Once homework exists, the same mechanism could also check homework.
+
+**Why it is attractive.** Homework is *not* mandatory every week and spans several units (Q-026), so
+it has no built-in accountability loop — nothing structurally notices whether it was done. The entry
+quiz is an accountability mechanism that already exists and already costs class time that is already
+budgeted. This would give homework the same structural grip the flip gives study sessions.
+
+**The concrete collision to remember.** Homework spans *several* units, but
+`activity_references_guiding_question` **errors** when an activity references a Guiding Question that
+is not of the current unit (§8.4). A quiz item checking homework covering units 1–3 would do exactly
+that. So this idea requires either a cross-unit exception for homework-checking activities, or a
+different referencing route (item → homework → its guiding questions). Decide deliberately; do not
+let it be discovered as a validation failure.
+
+Also unresolved: whether such an item carries `usage: [in-class-quiz, homework]` (the enum already
+allows both), and whether quiz time spent on homework counts as "mapped" against the unmapped-time
+cap (D-028).
+
+---
+
+## Q-030 — The class Gem could be a repository students clone and open with Claude Code
+**Raised 2026-09-12 by Avin. Not Core — belongs with the Exports slice.**
+
+The Gem is currently a Google Gem: a bundle the `gem-builder` exports, which students use via Gemini
+as one study path. The idea is to *also* ship it as a **repository students clone and work in with
+Claude Code** — extending the framework's AI-native premise from the teacher to the student.
+
+**Why it fits the project's thesis.** `VISION.md` argues that giving a course an explicit structure
+turns it into something agents can operate on. Today that benefit lands entirely on the *teacher's*
+side. This is the same bet applied to the student: a study partner that can navigate the actual unit,
+its guiding questions and its answer locators, rather than a chat with no map of the course.
+
+**Two constraints to settle before building it:**
+
+1. **Confidentiality — the sharp one.** A student-clonable repo must not carry assessment items with
+   their correct answers, distractor rationales, rubrics, or anything exam-related. The course repo
+   contains all of that, so this cannot be "the course repo minus a directory" written casually — it
+   needs a deliberate *allow*-list, not a deny-list, and git history in the exported repo must not
+   contain what the working copy omits. Interacts directly with **Q-002** (exam confidentiality).
+2. **Audience.** `VISION.md` §4 scopes the framework to teachers comfortable with git and an AI coding
+   tool, and says plainly that is not every teacher. Students are a far broader and less technical
+   population, so this would need to be an *additional* study path, never a required one — consistent
+   with D-010, where no study path is mandatory.
+
+**Also check it against the boundary** `ROADMAP.md` draws — *"Not planned: student-facing anything…
+the framework designs a course; it does not run one."* Distributing study material is arguably still
+designing rather than running, but this is the first idea that touches that line, and it should be
+crossed deliberately if it is crossed.
+
+---
+
 ## Q-027 — Minor flipped-class checks (parked)
 **Raised 2026-08-27, relocated here 2026-08-28.** Small structural checks the flipped-class model
 does not yet make, none blocking: (1) a session's `duration_minutes` is unconstrained — nothing ties
