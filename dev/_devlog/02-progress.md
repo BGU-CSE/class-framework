@@ -1188,3 +1188,51 @@ Neither affects Core. No spec change.
 
 Unchanged: Avin hand-tests steps 0–1 (`dev/MANUAL-TESTING.md`); step 3 is unblocked and should fold
 in D-032; step 2 waits on Q-028.
+
+---
+
+## Session 23 — 2026-09-12 — Two hats in one repo (→ D-034); two-repo split deferred (Q-031)
+
+Preparing to hand-test as a teacher, Avin noticed a fresh clone hands the teacher the *developer's*
+`CLAUDE.md`, and proposed splitting the project into two repositories. He asked for a rigorous
+argument before changing anything.
+
+**Checked the premise first, and it was half right — which decided the question.** `.claude/` is
+*entirely teacher-facing* and correct: `curriculum-architect`, `/design-unit`,
+`writing-guiding-questions` are the teacher's. `dev/` was already accepted clutter (D-024);
+`tests/`, `src/`, `pyproject.toml` are required or invisible. **Only `CLAUDE.md` was misaddressed** —
+one file, not a topology problem. Also worth noting: steps 0–1 are CLI-only, so this never blocked
+the pending test drive; it bites from step 3, when agents are first exercised.
+
+**Two repos rejected for now (D-034), recorded fairly and revisitable (Q-031).** The decisive
+argument: it would destroy **spec↔code atomicity** — "update the spec in the same commit" and
+"ledger row in the same commit" *cannot exist* across two repos — which is the one discipline that
+has kept this project coherent, and this project's own history (the ledger existing at all) is the
+evidence that conventions rot. It would also invent a release process mid-implementation, and hollow
+the dev repo out to documents only, since code and agents must live where teachers clone. Deferred to
+release (Q-031), where the trade-offs genuinely invert.
+
+**Done instead:** root `CLAUDE.md` rewritten teacher-facing (vocabulary, IDs, commands, how commands
+should behave, agent rules); new `dev/CLAUDE.md` holds invariants, layout, spec-update rule, how to
+add a rule, agent-editing rules. Vocabulary and IDs live in the root only — both hats need them and
+two copies would drift.
+
+**Hat detection.** The constraint that rules out the obvious answer: a teacher's repo *is* a clone,
+so anything shipped also lands there — a committed marker cannot discriminate, nor can "`dev/`
+exists". So: **default teacher** (right by base rate, and fails safe), a **gitignored
+`dev/.developer`** marker (never clones, so it is a reliable developer signal), and **task
+escalation** for framework work.
+
+**Mode reporting** (Avin's addition) uses two mechanisms because they fail differently: a
+`SessionStart` hook that both prints a line and *injects the mode into the model's context* — so the
+model is told its hat rather than inferring it — and a `CLAUDE.md` instruction to state the mode,
+which is the fallback and the only thing that can announce a *mid-session* change.
+
+Verified by simulating a clone from the staged tree: teacher clone → 🎓 TEACHER; this checkout → 🔧
+FRAMEWORK-DEVELOPER. Hook emits valid JSON in both modes. Also fixed the last dev-only leak in
+`.claude/` (`write-items.md` cited `dev/_devlog`).
+
+### Next
+
+Unchanged: hand-test steps 0–1 (`dev/MANUAL-TESTING.md`) — now with a correctly-addressed
+`CLAUDE.md`. Step 3 unblocked (fold in D-032). Step 2 waits on Q-028.

@@ -17,7 +17,7 @@ entry-quiz slot in the lesson plan, and wire the item IDs into that activity's `
 
 **For exam items** — stop and ask the teacher where they should live before writing. The course
 repo is shared with collaborators and git history is permanent; exam content in it is a leak
-waiting to happen. This is an open question in the framework (`dev/_devlog` Q-002), not a settled one.
+waiting to happen. This is an open question in the framework, not a settled one.
 
 Finish with `classkit validate`, then show the teacher the items with their distractor rationales
 visible — the rationales are where the quality actually is, and they're what the teacher needs to

@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+*.egg-info/
+
+# The framework-developer marker. Gitignored on purpose: it must never reach a
+# teacher's clone, so its presence is a reliable signal of a developer checkout.
+dev/.developer

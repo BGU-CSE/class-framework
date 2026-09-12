@@ -891,6 +891,83 @@ invents an outcome id and either can be re-run alone.
 
 ---
 
+## D-034 — One repo, two hats: `CLAUDE.md` is teacher-facing, `dev/CLAUDE.md` is the developer's
+**Date:** 2026-09-12 · **Status:** locked · **executed this session** · amends D-024
+
+Preparing to hand-test as a teacher, Avin noticed that a fresh clone hands the teacher the
+*developer's* `CLAUDE.md`, and asked whether the framework should be **split into two repositories**
+— one for development (spec, devlog, its own `.claude`), one always-ready-to-clone for teachers, with
+dev sessions writing into whichever is appropriate.
+
+**Rejected, after a rigorous comparison. The problem is one file, not the topology.**
+
+Checking what a clone actually contains: **`.claude/` is entirely teacher-facing and correct** —
+`curriculum-architect`, `/design-unit`, `writing-guiding-questions` are the teacher's agents,
+commands and skills. `dev/` was already accepted as tolerable clutter (D-024). `tests/`, `src/`,
+`pyproject.toml` are either required or invisible. **Only `CLAUDE.md` was misaddressed.**
+
+**The case for two repos** (recorded fairly, because it is not silly): a pristine teacher clone;
+unambiguous hats; teacher history not polluted by ~45 framework-design commits; and it would let the
+teacher repo go public while the dev repo stayed private, decoupling Q-016 from deleting `_devlog`.
+
+**Why it loses today:**
+
+1. **It destroys spec↔code atomicity, the discipline that has kept this project coherent.** The rule
+   "alter structure → update `FRAMEWORK-SPEC.md` in the same commit", and "a locked decision gets a
+   ledger row in the same commit", *cannot exist* when the schema is in one repo and the spec in
+   another. A mechanical guarantee would degrade into a convention, and this project's own history
+   (the spec-ahead-of-code gap needing a whole ledger to stay honest) is the evidence that
+   conventions rot.
+2. **It invents a release process** — cross-repo propagation for every change to code, templates or
+   agents, with drift to detect and machinery to maintain, before Core is even finished.
+3. **The dev repo would hollow out.** Code, schemas, templates, agents and tests must live where
+   teachers clone, so repo A would hold only documents — meaning real development happens in the
+   teacher repo anyway and the hats are not actually separated.
+4. It duplicates the inner loop for a person who is both developer and teacher, and it is a large
+   change to a model D-009, D-015 and D-024 all rest on, made mid-implementation.
+
+**Decision: stay with one repo, fix the hat.**
+
+- **Root `CLAUDE.md` is now teacher-facing** — vocabulary, IDs, the commands, how commands should
+  behave, the rules agents follow. Correct by base rate: there is one framework repo and *many*
+  course repos.
+- **`dev/CLAUDE.md` is new** and holds the developer content: invariants, layout, the spec-update
+  rule, how to add a validation rule, the agent-editing rules, how to run tests.
+- **Vocabulary and ID conventions stay in the root file only**, with `dev/CLAUDE.md` pointing at
+  them. Both hats need them; two copies would drift.
+
+**How a session knows its hat (Avin's requirement: "every session should have a clear hat").**
+
+The key constraint, which rules out the obvious answer: a teacher's repo *is* a clone of the
+framework, so **anything the framework ships also lands in the teacher's repo** — a committed marker
+file cannot discriminate, and neither can "`dev/` exists" (teachers have it too). What works:
+
+1. **Default teacher.** Right by base rate, and it fails safe: a developer wrongly in teacher mode
+   writes a course file, while a teacher wrongly in developer mode is told about pytest and the
+   ledger at the moment they are most lost.
+2. **A gitignored `dev/.developer` marker** — deterministic, and because gitignored files never
+   clone, it exists only in a developer's checkout. Created once per checkout; forgetting it lands
+   you in teacher mode, which is harmless and obvious.
+3. **Task escalation** — asked to change framework internals, read `dev/CLAUDE.md` regardless.
+
+**Mode reporting (also Avin's request).** Two mechanisms, because they fail differently:
+
+- **A `SessionStart` hook**, `.claude/hooks/report-mode.sh` + `.claude/settings.json`: mechanical,
+  fires every session. It both prints a line for the human (`systemMessage`) *and* injects the mode
+  into the model's context (`additionalContext`) — so the model is *told* its hat rather than left to
+  infer it. Tested in both modes; emits valid JSON.
+- **An instruction in `CLAUDE.md`** to state the mode in the first reply and whenever it changes.
+  This is the fallback if the hook does not run, and it is the only thing that can announce a
+  *mid-session* change, which a start-of-session hook cannot see.
+
+Honest cost: a project hook may prompt a teacher for approval on first open. Judged acceptable — it
+is one "yes", the script is four lines of readable shell, and a teacher arguably *should* be told
+what runs in their repo.
+
+**Two repos revisited at release,** not discarded: see Q-031.
+
+---
+
 ## D-032 — `syllabus.md` is a complete Bologna descriptor; *rendering* it is deferred to Exports
 **Date:** 2026-09-10 · **Status:** locked (design) · **implementation pending** · amends D-021 ·
 resolves gap **G-15** from `reviews/impl-gaps-step-0-1.md`

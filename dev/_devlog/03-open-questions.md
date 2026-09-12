@@ -399,6 +399,25 @@ to be settled before that step can start. Not blocking Steps 0–1.
 
 ---
 
+## Q-031 — Should the framework split into two repositories at release?
+**Raised and deferred 2026-09-12 → see D-034 for the full comparison.** The idea: a development repo
+(spec, devlog, its own `.claude`) and a separate always-ready-to-clone teacher repo, with dev sessions
+writing into whichever is appropriate.
+
+**Rejected for now** because it destroys spec↔code atomicity — the "update the spec in the same
+commit" and "ledger row in the same commit" rules cannot exist across two repos — invents a release
+process, and would hollow the dev repo out to documents only, since code, schemas, templates and
+agents must live where teachers clone. The immediate problem it was raised to solve (a teacher
+getting the developer's `CLAUDE.md`) turned out to be one file, fixed in D-034.
+
+**Why it should be revisited at release** (ties to **Q-016**, ROADMAP Phase 6): by then the spec will
+have stopped moving, so atomicity costs much less; `_devlog/` is being deleted anyway; and "a clean,
+public teacher repo" becomes a concrete goal rather than a hypothetical. Two repos would also let the
+teacher repo go public while development stays private — which is currently coupled to deleting
+`_devlog/`. The trade-offs genuinely invert; do not treat D-034 as settling it forever.
+
+---
+
 ## Q-029 — The entry quiz could check homework, not only study sessions
 **Raised 2026-09-12 by Avin. Not Core — belongs with the Assessment slice (Q-026).**
 
