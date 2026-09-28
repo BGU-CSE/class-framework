@@ -49,6 +49,9 @@ Two words are **banned** because each used to mean two things: **"topic"**, and 
 | **In-Class Session** | The weekly 50-min meeting. Synonym: **Lesson Plan**. One per Unit. |
 | **Activity** | A component of an In-Class Session. Has a duration; normally references ≥1 Guiding Question. |
 | **Assessment Item** | A single quiz/homework/exam question. |
+| **Homework** | A manifest, `assessments/homework/HW01.md`, that references Assessment Items from one or more Units, with its purpose, time budget and policies. Not per-unit, not every week. *(homework module)* |
+| **Item Class** | The homework context of an Assessment Item — DIY, Practicing, Coding, Research, or one the teacher adds. Sets typical time, tools and Bloom range. Independent of the item's format. *(homework module)* |
+| **Tool** | Something students may use in a homework (pen and paper, an AI assistant, Wireshark …), declared in `course.yaml` under `tools`. *(homework module)* |
 
 ## ID conventions
 
@@ -63,6 +66,7 @@ U01-S02-G1       Guiding Question   ← referenced by everything else
 U01-IC           In-Class Session
 U01-A1           Activity
 U01-I01          Assessment Item
+HW01             Homework            ← homework module
 ```
 
 ## The commands
@@ -73,6 +77,14 @@ U01-I01          Assessment Item
 | `/plan-units` | The syllabus: course goal, Course Outcomes, the unit map, unit objectives |
 | `/design-unit N` | One unit end to end — study sessions, the in-class hour, the entry quiz |
 | `/review-unit N` | An independent agent reviews what it did not write |
+| `/create-homework` | One homework across one or more units — plan, write, review, with two approval gates *(homework module)* |
+| `/new-hw-type` | Add an Item Class to this course *(homework module)* |
+| `/review-homework HW02` | A read-only second review of a finished homework *(homework module)* |
+
+<!-- homework-module:start -->
+Homework is specified in `dev/homework/HOMEWORK-SPEC.md`. `/write-items N homework` hands off to
+`/create-homework`. `classkit validate` does not check homework manifests yet.
+<!-- homework-module:end -->
 
 `classkit scaffold` creates files; `classkit validate` checks that the course holds together.
 Scaffolding **never overwrites**, so it is safe to re-run at any time.

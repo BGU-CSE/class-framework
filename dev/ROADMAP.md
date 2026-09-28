@@ -252,8 +252,8 @@ Source: `_devlog/../reviews/core-spec-review-01.md`. Some rows amend rows above;
 | ⬜ | `schemas/course.schema.json` | **(e)** new optional `in_class` block with `max_unmapped_minutes` |
 | ⬜ | `src/classkit/model.py` | **(e)** course-level override wins over the methodology default |
 | ⬜ | `src/classkit/validate.py` | **(e)** the cap rule reads the effective (overridden) value |
-| ⬜ | `schemas/assessment-item.schema.json` | **(g)** rename `answer` → `model_answer` |
-| ⬜ | `templates/assessment/item-open.md` | **(g)** same rename |
+| ✅ | `schemas/assessment-item.schema.json` | **(g)** rename `answer` → `model_answer` — done by the homework module (HW-D08) |
+| ✅ | `templates/assessment/item-open.md` | **(g)** same rename — done by the homework module (HW-D08) |
 | ⬜ | `.claude/agents/assessment-writer.md` | **(g)** same rename |
 | ⬜ | `.claude/commands/*.md` (all) | **(h)** approval gates sit in the command, between agent invocations — never inside an agent |
 | ⬜ | `.claude/commands/plan-units.md` | **(i)** sequential file-based handoff: syllabus written first, architect reads it |

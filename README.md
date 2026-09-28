@@ -65,7 +65,11 @@ agent layer — agents, skills and the `/` commands — is written but **has nev
 real course**, and is being brought up to the current design one step at a time.
 
 `dev/ROADMAP.md` carries the implementation plan and a ledger which is **authoritative for what
-actually exists**. Not built: homework and exams, the Gem builder, PPTX export, Moodle sync.
+actually exists**. Not built: exams, the Gem builder, PPTX export, Moodle sync.
+<!-- homework-module:start -->
+Homework is designed as a separate module ([`dev/homework/HOMEWORK-SPEC.md`](dev/homework/HOMEWORK-SPEC.md));
+its agents and commands exist, but `classkit validate` does not check homework yet.
+<!-- homework-module:end -->
 
 **Teachers start at [GETTING-STARTED.md](GETTING-STARTED.md).** **Developers start at
 [dev/VISION.md](dev/VISION.md)** — why the project exists and what it produces — then

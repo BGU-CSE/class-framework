@@ -352,7 +352,15 @@ sum check, no goal priority marker — moved to Q-027 so they survive this resol
 
 ---
 
-## Q-026 — Homework (including programming assignments) is undesigned
+## ~~Q-026 — Homework (including programming assignments) is undesigned~~ RESOLVED
+**Resolved 2026-09-28 → HW-D01** (homework module, `dev/homework/_devlog/01-decisions.md`).
+Homework is a first-class content type with its own schema and on-disk location, spanning one or
+more units, with a manifest that references items by id rather than duplicating them. Orchestration
+via `/create-homework` and `homework-planner`, with teacher approval gates before item writing and
+before finalization. Programming assignments are homework items with `item_class: Coding` (HW-D02)
+and the appropriate `format` (`code` for autograded, `open` for human-graded) — no separate
+assignment type. Original framing kept below.
+
 **Raised 2026-08-27 (Session 10).** Homework is a **distinct section** from the flipped-class study,
 and the content model has no first-class notion of it. Avin's framing: homework is at-home work *in
 addition to* the study sessions; it can span **several units/topics**; it is **not** per-unit or
@@ -420,6 +428,14 @@ teacher repo go public while development stays private — which is currently co
 
 ## Q-029 — The entry quiz could check homework, not only study sessions
 **Raised 2026-09-12 by Avin. Not Core — belongs with the Assessment slice (Q-026).**
+
+**Update 2026-09-28, following HW-D01 (homework module).** Homework now has a
+schema-representable identity, which unblocks this question. A homework manifest's `items` can
+include items that also carry `usage: [in-class-quiz]`; no validator distinguishes that case yet, so
+the reuse is silent. A future `entry_quiz.checks_homework: [HW0N]` field could formalize the link;
+not designed. Still open: whether such reuse should be flagged (a graded homework reusing an
+entry-quiz item may leak signal students already saw), and whether the link should be its own field
+rather than sharing `usage`.
 
 Today the entry quiz tests that week's Guiding Questions, and its structural job is to make the class
 hour depend on the home study. Once homework exists, the same mechanism could also check homework.

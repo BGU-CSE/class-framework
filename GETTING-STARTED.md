@@ -87,6 +87,7 @@ The course's *aim* — its goal, outcomes, prerequisites and workload — lives 
 | `textbooks` | Keys that study paths and answers cite, e.g. `CLRS` |
 | `in_class.max_unmapped_minutes` | How much of the class hour may be spent on activities that build on no guiding question — exam logistics, a news item. Default 10 of 50. *Not built yet* |
 | `time_constants` | Assumed reading, watching and exercise rates, used to *propose* study times |
+| `tools` | The tools students may use in homework — pen and paper, an AI assistant, anything course-specific *(homework module)* |
 
 Two of these are worth understanding rather than just setting.
 
@@ -116,8 +117,8 @@ Open Claude Code in your course repo and run these in order:
 | `/review-unit 3` | An adversarial critic — checks the hour genuinely depends on the prework |
 | `/write-items 3` | More assessment items for the entry quiz |
 
-*Homework, programming assignments and exams (`/write-items` in its full form) and the class Gem
-(`/build-gem`) are later phases. They are not built.*
+*Exams and the class Gem (`/build-gem`) are later phases. They are not built. Homework has its own
+flow — see [section 6](#6-create-homework).*
 
 ### How the commands behave
 
@@ -159,6 +160,46 @@ classkit validate
 Work **one unit at a time**. Review unit 1 properly before generating twelve more — the agents
 learn your subject from what's already in the repo, so a good unit 1 makes unit 2 better, and a
 bad unit 1 propagates.
+
+<!-- homework-module:start -->
+## 6. Create homework
+
+*Homework module — specified in `dev/homework/HOMEWORK-SPEC.md`. The commands and agents exist;
+`classkit validate` does not check homework manifests yet.*
+
+Homework is at-home work *in addition to* the study sessions. It can span several units, it is not
+every week, and it tests what students have already learned. It references items from the same
+item bank as your quizzes; it does not copy them.
+
+**Homework is optional.** Nothing below exists until you first use it, and a course without
+homework validates exactly as before.
+
+**The first time,** declare `tools` in `course/course.yaml` — what students may use. Your first
+`/create-homework` then creates two files you can edit afterwards:
+
+- `course/assessments/item-classes.yaml` — your Item Classes. Four are provided: **DIY** (short, no
+  AI), **Practicing** (longer, no AI), **Coding** and **Research** (AI allowed). Add more with
+  `/new-hw-type`.
+- `course/assessments/homework-defaults.yaml` — your usual budget, class mix and policies. The
+  pipeline proposes these, and updates them as you approve homework.
+
+**Then, for each homework, run `/create-homework`:**
+
+1. Give the units, the purpose (`practice`, `graded` or `diagnostic`), a time budget, and anything
+   else you care about. What you leave out comes from your defaults.
+2. The planner shows you a short brief: what each item will do, which existing items it reuses or
+   adapts, and the total time.
+3. **Gate 1 — you approve the brief**, revise it, ask for the slot-by-slot table, or reject it.
+   Nothing is written before you approve.
+4. The pipeline writes each item, a critic reviews it, and a solver attempts it (or runs its code,
+   for autograded Coding items). Disagreements it cannot settle are kept for you.
+5. **Gate 2 — you approve the result**, send named items back for revision, or reject it. Until you
+   approve, every new file is marked `status: draft`.
+
+Later, `/review-homework HW02` gives a read-only second opinion — useful before reusing an old
+homework.
+
+<!-- homework-module:end -->
 
 ## What the validator will not let you get away with
 

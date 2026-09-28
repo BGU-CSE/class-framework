@@ -1065,3 +1065,12 @@ that closes the coverage chain would pass most confidently exactly when the roof
 same class of silent hole as the dangling `activity.items` reference found in D-031a.
 
 Both rules land in **step 3**, with the rest of the coverage chain.
+
+---
+
+## Note — homework module decisions (2026-09-28)
+
+Decisions for the homework part of the Assessment phase are recorded separately, numbered
+`HW-D01`, `HW-D02`, … (open questions `HW-Q01`, …), in `dev/homework/_devlog/`. They resolve Q-026.
+HW-D08 carries out this log's D-031g rename (`answer` → `model_answer`). Plain `D-` and `Q-` numbers
+remain this log's own.

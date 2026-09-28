@@ -21,7 +21,7 @@ tested on a real course, and corrected before the next phase is specified (D-022
 | Phase | Covers | Status |
 |---|---|---|
 | **Core** | Course initiation, syllabus, course outcomes, units, at-home study sessions, the in-class hour **including the entry quiz** | **Specified below** |
-| Assessment | Homework, programming assignments, exams, the grading scheme | Deferred |
+| Assessment | Homework, programming assignments, exams, the grading scheme | **Homework: specified in [`dev/homework/HOMEWORK-SPEC.md`](homework/HOMEWORK-SPEC.md)**; exams and the grading scheme: Deferred |
 | Exports | The class Gem builder, PPTX, **the rendered syllabus** (one human-readable document — e.g. PDF — combining `syllabus.md`, the identity fields from `course.yaml`, and a unit overview derived from the units) | Deferred |
 | Metrics | Measures for improving a course or its activities | Deferred |
 | Lifecycle | Semester arc, revision, re-offering | Deferred |
@@ -174,8 +174,10 @@ Outcomes) **(target, D-029)**, `curriculum-architect` (the unit map and unit obj
 `topic-researcher` (finds real resources), `course-critic` (review). Commands: `/ingest`,
 `/plan-units`, `/design-unit N`, `/review-unit N`, and **`/write-items N` scoped to entry-quiz
 items** — `/design-unit` already writes the unit's entry quiz, so `/write-items` in Core is for
-adding to or reworking it. Deferred: `gem-builder` and `/build-gem` (Exports); the homework and exam
-roles of `assessment-writer` and `/write-items` (Assessment).
+adding to or reworking it. Deferred: `gem-builder` and `/build-gem` (Exports); the exam
+role of `assessment-writer` and `/write-items` (Assessment). Homework items are written by the
+homework module's own pipeline: `/write-items N homework` hands off to `/create-homework`
+(`dev/homework/HOMEWORK-SPEC.md`).
 
 ### 3.2 The shape of a flipped course
 
@@ -629,7 +631,7 @@ Activity object:
 | `est_minutes` | number ≥0 | | time to *answer* the item (distinct from a goal's study time) |
 | `stem` | string | ✓ | the question as presented to the student |
 | `choices` | array\<obj\> | ✓ for `multiple-choice`/`multiple-select` | each `{ label (`^[A-Za-z]$`), text, correct (bool), rationale }`; every distractor's `rationale` names the misconception it detects |
-| `model_answer` | string | | **(target: renamed from `answer`; D-031g)** the model answer, for `open`/`numeric`/`code`. Renamed because a guiding question's `answer` is a *list of locators* and an item's was a *string* — one key, two meanings |
+| `model_answer` | string | | **(renamed from `answer`; D-031g — carried out by the homework module, HW-D08)** the model answer, for `open`/`numeric`/`code`. Renamed because a guiding question's `answer` is a *list of locators* and an item's was a *string* — one key, two meanings |
 | `rubric` | array\<obj\> | ✓ in practice for `open` | each `{ criterion, points, notes }` |
 
 #### `methodologies/*.yaml` — the methodology definition
