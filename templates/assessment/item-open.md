@@ -8,7 +8,7 @@ difficulty: medium
 bloom: analyze
 est_minutes: 10
 stem: "TODO"
-answer: "Model answer."
+model_answer: "Model answer."
 rubric:
   - criterion: "TODO — an observable property of the answer, not 'quality'."
     points: 4

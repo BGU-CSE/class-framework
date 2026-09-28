@@ -40,6 +40,29 @@
         }
       }
     },
+    "tools": {
+      "type": "object",
+      "description": "Tools this course uses (homework module, HW-D03). Each key is a tool id referenced by homework `allowed_tools` and item-class `default_tools`. Open by design: a course declares its own tools (e.g. Wireshark, R) without forking the framework.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["description"],
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "One-line description shown on the student handout."
+          },
+          "availability": {
+            "enum": ["universal", "student_download", "lab_only", "provided_dataset"],
+            "description": "How students access the tool. `universal` = everyone has it (e.g. pen and paper). `student_download` = free, install locally. `lab_only` = department machines only. `provided_dataset` = a file the teacher supplies."
+          },
+          "url": {
+            "type": "string",
+            "description": "Optional link to the tool's homepage, download page, or documentation."
+          }
+        }
+      }
+    },
     "gem": {
       "type": "object",
       "description": "Google Gem export settings (D-005). The Gem is a first-class study path, not just an export.",

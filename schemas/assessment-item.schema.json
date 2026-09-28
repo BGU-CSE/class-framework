@@ -12,6 +12,10 @@
     "format": {
       "enum": ["multiple-choice", "multiple-select", "open", "numeric", "true-false", "code"]
     },
+    "item_class": {
+      "type": "string",
+      "description": "Homework module (HW-D02): the pedagogical class from course/assessments/item-classes.yaml, e.g. 'DIY', 'Practicing', 'Coding', 'Research'. Independent of `format`. Optional; expected on homework items."
+    },
     "guiding_questions": {
       "type": "array",
       "minItems": 1,
@@ -47,7 +51,7 @@
         }
       }
     },
-    "answer": { "type": "string", "description": "Model answer, for open/numeric/code formats." },
+    "model_answer": { "type": "string", "description": "Model answer, for open/numeric/code formats. Renamed from `answer` (D-031g; carried out by the homework module, HW-D08). An autograded code item's runnable reference is `expected_solution`." },
     "rubric": {
       "type": "array",
       "description": "Required in practice for open-format items.",
@@ -61,7 +65,29 @@
           "notes": { "type": "string" }
         }
       }
-    }
+    },
+    "tolerance": { "type": "number", "minimum": 0, "description": "Homework module. For `numeric`: absolute tolerance around `model_answer`. Use this or `tolerance_pct`, not both." },
+    "tolerance_pct": { "type": "number", "minimum": 0, "maximum": 100, "description": "Homework module. For `numeric`: tolerance as a percent of `model_answer`." },
+    "measurement_units": { "type": "string", "description": "Homework module (HW-D14). For `numeric`: the units the answer is measured in (e.g. ms, bytes), checked separately from the number. Not `units`, which elsewhere means course units." },
+    "starter_code": { "type": "string", "description": "Homework module. For Coding-class items: the skeleton the student edits." },
+    "expected_solution": { "type": "string", "description": "Homework module. For `format: code`: the runnable reference the autograder executes against `tests`." },
+    "tests": {
+      "type": "array",
+      "description": "Homework module. For `format: code`: deterministic test cases (no wall-clock, randomness or network).",
+      "items": {
+        "type": "object",
+        "required": ["input", "expected"],
+        "additionalProperties": false,
+        "properties": {
+          "input": { "type": "string" },
+          "expected": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "source_ref": { "type": "string", "pattern": "^U\\d{2}-I\\d{2}$", "description": "Homework module. For an adapted item: the id of the original item, which is never modified." },
+    "evaluation_strategy": { "enum": ["persona_attempt", "execute", "skip", "custom"], "description": "Homework module (HW-D07). Per-item override of the item class's evaluation strategy, used by item-solver." },
+    "status": { "enum": ["draft", "shipped"], "description": "Homework module (HW-Q03). `draft` marks a pipeline-written file awaiting Gate 2 approval; absent means shipped. Documentary only: the validator does not yet treat drafts differently." }
   },
   "allOf": [
     {

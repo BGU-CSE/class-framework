@@ -5,6 +5,10 @@ argument-hint: "<unit number> [quiz|homework|exam]"
 
 Write assessment items for unit **$1**, for `$2` (default: the entry quiz).
 
+If `$2` is `homework`, stop this command and run `/create-homework $1` instead.
+Tell the teacher that homework uses its own planning and review pipeline. Do not
+continue with the item-writing steps below; `/create-homework` owns that flow.
+
 Use the **assessment-writer** agent. Read the unit's study sessions first — every item must test a
 specific guiding question, and the validator rejects items that don't.
 
