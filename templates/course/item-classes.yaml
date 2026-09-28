@@ -1,0 +1,80 @@
+# Item classes — the pedagogical envelope for assessment items.
+# Third axis alongside format (answer shape) and usage (context).
+# Validated against schemas/item-classes.schema.json.
+#
+# The framework recommends the four starter classes below; teachers may
+# add, remove, or rename them. /new-hw-type adds a new class through an
+# interview and can also draft a matching writing skill.
+#
+# For each class:
+#   typical_minutes  — range {min, max} of item minutes (HW-D06)
+#   time_variance    — low or high; low classes expect per-item est_minutes,
+#                      high classes let est_minutes be optional (HW-D06)
+#   typical_bloom    — cognitive range items in this class typically sit at
+#   default_tools    — tools items in this class typically allow (open strings,
+#                      must be declared in course.yaml's tools map, per HW-D03)
+#   description      — one paragraph for future-teacher-you
+#   evaluation       — how item-solver treats items of this class (HW-D05)
+#     strategy       — persona_attempt | execute | skip | custom
+#     notes          — one line on why
+#     custom_skill   — only when strategy is custom; names the skill to load
+
+DIY:
+  typical_minutes: {min: 2, max: 4}
+  time_variance: low
+  typical_bloom: [remember, understand]
+  default_tools: [pen_and_paper]
+  description: >
+    Short, closed practice — a definition, a factoring step, a quick
+    calculation. Student works alone with no AI. Purpose is fluency at
+    the basic building blocks.
+  evaluation:
+    strategy: persona_attempt
+    notes: Small items with clear keys; personas can attempt and compare.
+
+Practicing:
+  typical_minutes: {min: 10, max: 20}
+  time_variance: low
+  typical_bloom: [understand, apply, analyze]
+  default_tools: [pen_and_paper]
+  description: >
+    Standard homework — worked problems, short-answer prose, applying
+    concepts. Student works alone with no AI. The core of most homeworks.
+  evaluation:
+    strategy: persona_attempt
+    notes: Longer than DIY but still key-checkable.
+
+Coding:
+  typical_minutes: {min: 30, max: 90}
+  time_variance: high
+  typical_bloom: [analyze, evaluate, create]
+  default_tools: [pen_and_paper, code_editor, ai_assistant]
+  description: >
+    Programming assignments — student writes code, usually with AI
+    assistance. Autograded when tests exist (format: code); human-graded
+    when the point is reasoning about the code (format: open with code
+    inside). Time varies widely per student.
+  evaluation:
+    strategy: execute
+    notes: >
+      Default for Coding items with format: code (autograded). Items with
+      format: open (human-graded, code inside prose) automatically fall
+      back to persona_attempt per HW-D07 — teacher can set
+      `evaluation_strategy: persona_attempt` on the item to make this
+      explicit. Alternative: set class strategy to persona_attempt if
+      most Coding items in your course are human-graded.
+
+Research:
+  typical_minutes: {min: 30, max: 120}
+  time_variance: high
+  typical_bloom: [analyze, evaluate, create]
+  default_tools: [pen_and_paper, ai_assistant]
+  description: >
+    Open-ended investigation — read a paper, compare approaches, form
+    an argument. AI assistance is expected and part of the point. No
+    checkable key by design; teacher grades against rubric.
+  evaluation:
+    strategy: skip
+    notes: >
+      No model answer to compare against. item-solver would fabricate
+      signal. Teacher reviews each item at Gate 2.

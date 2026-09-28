@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/BGU-CSE/class-framework/schemas/homework.schema.json",
+  "title": "Homework",
+  "description": "YAML front matter of course/assessments/homework/HW0N.md. A homework that spans one or more units (Q-026). A manifest of item id references plus its own metadata; items live under course/assessments/items/.",
+  "type": "object",
+  "required": [
+    "id",
+    "units",
+    "purpose",
+    "items",
+    "total_minutes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^HW\\d{2}$",
+      "description": "e.g. 'HW01'. Not per-unit \u2014 homework spans units."
+    },
+    "units": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^U\\d{2}$"
+      },
+      "description": "Units this homework assesses. Every referenced item's `unit` must be one of these (rule `homework_units_declared`).",
+      "uniqueItems": true
+    },
+    "purpose": {
+      "enum": [
+        "practice",
+        "graded",
+        "diagnostic"
+      ]
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^U\\d{2}-I\\d{2}$"
+      },
+      "description": "Ordered list of item ids. Items are referenced, not copied \u2014 each must carry `homework` in its `usage` array (rule `homework_item_usage`).",
+      "uniqueItems": true
+    },
+    "total_minutes": {
+      "type": "integer",
+      "minimum": 5,
+      "description": "Declared time budget. `homework_budget_fits` warns if the sum of items' `est_minutes` drifts outside tolerance."
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "material",
+            "quiz_report"
+          ]
+        },
+        "ref": {
+          "type": "string"
+        }
+      }
+    },
+    "allowed_tools": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Open strings. Every tool name must be declared in `course.yaml`'s `tools:` map (HW-D03) \u2014 `homework_tools_declared` warns if not. Same shape as in-class `allowed_activity_types`: extensible per-course without forking the framework."
+    },
+    "collaboration": {
+      "enum": [
+        "forbidden",
+        "discussion_only",
+        "allowed"
+      ]
+    },
+    "open_book": {
+      "type": "boolean"
+    },
+    "answer_release": {
+      "enum": [
+        "with_homework",
+        "after_deadline",
+        "never"
+      ],
+      "description": "`graded_answer_release_safe` errors when `purpose: graded` combines with `with_homework` (Q-002 sideways)."
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^U\\d{2}$"
+      },
+      "uniqueItems": true
+    },
+    "versions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "label",
+          "items"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "pattern": "^U\\d{2}-I\\d{2}$"
+            }
+          }
+        }
+      },
+      "uniqueItems": true
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "shipped"
+      ],
+      "description": "Lifecycle status of this file. `draft` \u2014 work-in-progress, written by the pipeline before Gate 2 approval. `shipped` \u2014 the file has been approved and is part of the course. Absent means shipped (default; the field only needs to be set to explicitly mark draft state). Convention introduced by HW-Q03 and set by /create-homework's Gate 2 flow. TARGET / FUTURE BEHAVIOR: draft-aware validation (drafts excluded from shipped-homework completeness checks like `assessment_scheme_complete`) is not yet implemented in the Python validator. Today the field is documentary \u2014 it marks intent for teachers, git history, and other tooling \u2014 and the validator treats draft and shipped files identically. See HW-D01 addendum and HW-Q03 for the target behavior."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "source"
+        ],
+        "properties": {
+          "source": {
+            "properties": {
+              "kind": {
+                "const": "quiz_report"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "source": {
+            "required": [
+              "kind",
+              "ref"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "purpose": {
+            "const": "graded"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "answer_release"
+        ]
+      }
+    }
+  ]
+}

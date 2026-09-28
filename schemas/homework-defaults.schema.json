@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/BGU-CSE/class-framework/schemas/homework-defaults.schema.json",
+  "title": "HomeworkDefaults",
+  "description": "course/assessments/homework-defaults.yaml — the teacher's learned homework defaults (homework module, HW-D16). Read by homework-planner and the /create-homework interviewer; updated at Gate 2 approval. Optional: created by the first /create-homework (HW-D13). Cross-file checks (class mix sums to ~1.0, classes exist) are the rule `homework_defaults_consistent`, not this schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "total_minutes": {
+      "type": "integer",
+      "minimum": 5,
+      "description": "Default time budget for a homework, in minutes. Same bound as the manifest's `total_minutes`."
+    },
+    "default_class_mix": {
+      "type": "object",
+      "description": "Proportion of items per Item Class in a typical homework. Keys are class names from item-classes.yaml; values sum to ~1.0 (checked by `homework_defaults_consistent`). A class added with /new-hw-type starts at 0.",
+      "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }
+    },
+    "allowed_tools": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "description": "Default tools, by key from course.yaml's `tools` map (HW-D03)."
+    },
+    "collaboration": { "enum": ["forbidden", "discussion_only", "allowed"] },
+    "open_book": { "type": "boolean" },
+    "answer_release": {
+      "enum": ["with_homework", "after_deadline", "never"],
+      "description": "Default only. A graded homework may still not use `with_homework` (`graded_answer_release_safe`)."
+    },
+    "reuse_policy": {
+      "enum": ["never", "practice", "always"],
+      "description": "never = always fresh items; practice = reuse only for practice homework; always = reuse for any purpose."
+    },
+    "budget_tolerance_minutes": {
+      "type": "number",
+      "minimum": 0,
+      "description": "How far the sum of item minutes may drift from `total_minutes` before `homework_budget_fits` warns."
+    }
+  }
+}

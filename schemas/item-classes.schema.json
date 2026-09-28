@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/BGU-CSE/class-framework/schemas/item-classes.schema.json",
+  "title": "ItemClasses",
+  "description": "course/assessments/item-classes.yaml \u2014 teacher-defined pedagogical classes over assessment items (HW-D02). Each top-level key is a class name; each value describes the class's typical bundle. A class is a hint, not a lock: specific fields on an item override the class defaults.",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "required": [
+      "typical_minutes",
+      "typical_bloom",
+      "default_tools",
+      "description"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "typical_minutes": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "min": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Lower end of typical range (minutes)"
+          },
+          "max": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Upper end of typical range (minutes)"
+          }
+        },
+        "required": [
+          "min",
+          "max"
+        ],
+        "description": "Typical range of item minutes for items of this class. Used as the reference for validators and the planner budget check. For low-variance classes (DIY, Practicing) the range is tight (e.g. 2-4, 10-20) and items in the class are expected to fall within it. For high-variance classes (Coding, Research) the range is wide (e.g. 30-90) and the per-item `est_minutes` is optional; the midpoint of the range is used for budget estimation when the item does not declare its own `est_minutes`."
+      },
+      "default_tools": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Tools an item of this class typically needs. Open strings \u2014 each must be declared in `course.yaml`'s `tools:` map (HW-D03). `class_tools_declared` warns when a class references an undeclared tool."
+      },
+      "typical_bloom": {
+        "type": "array",
+        "items": {
+          "enum": [
+            "remember",
+            "understand",
+            "apply",
+            "analyze",
+            "evaluate",
+            "create"
+          ]
+        },
+        "description": "Bloom levels this class operates at. `item_class_bundle_drift` warns when an item's declared `bloom` falls outside this range."
+      },
+      "description": {
+        "type": "string",
+        "description": "One-line human-readable description. Shown to the teacher during planning and on the student handout."
+      },
+      "evaluation": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "How items of this class are evaluated in the /create-homework pipeline (by item-solver). Absent means fall back to item-solver's default: attempt if model_answer/rubric present, skip otherwise.",
+        "properties": {
+          "strategy": {
+            "enum": [
+              "persona_attempt",
+              "execute",
+              "skip",
+              "custom"
+            ],
+            "description": "persona_attempt = item-solver attempts as personas and compares to model_answer (DIY, Practicing). execute = solver runs the item's tests via Bash (autograded Coding). skip = solver returns not_applicable and defers to teacher at Gate 2 (Research). custom = load a class-specific solver skill."
+          },
+          "notes": {
+            "type": "string",
+            "description": "One line explaining why this strategy fits the class."
+          },
+          "custom_skill": {
+            "type": "string",
+            "description": "When strategy is 'custom', the skill name to load (.claude/skills/<name>/SKILL.md)."
+          }
+        },
+        "required": [
+          "strategy"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "strategy": {
+                  "const": "custom"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "custom_skill"
+              ]
+            }
+          }
+        ]
+      },
+      "time_variance": {
+        "enum": [
+          "low",
+          "high"
+        ],
+        "description": "Whether individual items of this class can be reliably time-estimated. `low` \u2014 items have predictable duration (DIY, Practicing). `high` \u2014 items vary widely per student (Coding, Research; a 60-min problem is 4 hours for a struggling student). When `high`, per-item `est_minutes` is optional and item-critic does not enforce tight timing; `typical_minutes` range is the reference. When `low`, per-item `est_minutes` is expected and item-critic sanity-checks against `typical_minutes`. Default: `low` if absent."
+      }
+    }
+  }
+}
