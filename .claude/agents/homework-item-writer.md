@@ -106,6 +106,23 @@ reference answer that `item-solver` can compare against:
 
 `usage` must contain `homework`; this is what `homework_item_usage` checks.
 
+## Material fit feedback
+
+When `item-critic` reports that the course material does not cover what an
+item needs (HW-D19), revise the **item** so it fits what students were
+assigned. Never change learning materials — sessions, study paths, answer
+locators — yourself. If you think the material should change instead, say
+so; the pipeline raises it with the teacher at Gate 2.
+
+## Items that need an external tool
+
+If answering the item needs a tool or data the pipeline cannot run —
+Wireshark, lab-only software, a teacher-provided dataset — set
+`evaluation_strategy: skip` on the item and say in its body which tool and
+why (HW-D07, HW-D18). `item-solver` then does not attempt it, and the teacher
+checks it by hand at Gate 2. Research items are skipped by their class; no
+override needed.
+
 ## Rubric shape by class
 
 Defer to the loaded class skill for concrete guidance. This is about rubric *shape*, not time:

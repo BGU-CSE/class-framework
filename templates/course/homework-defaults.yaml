@@ -9,15 +9,17 @@
 # Default time budget for a homework (minutes). Adjust for your course pace.
 total_minutes: 90
 
-# Default class mix — proportion of items per class in a typical homework.
-# Values sum to 1.0. Classes must exist in item-classes.yaml.
+# Default item counts per class for an ordinary homework (HW-D27).
+# Whole numbers; the number of items is their sum. At least one must be above 0.
+# Classes must exist in item-classes.yaml.
 # A new class added via /new-hw-type starts at 0 here and stays out of the
-# typical mix until the teacher deliberately includes it.
-default_class_mix:
-  DIY: 0.1
-  Practicing: 0.6
-  Coding: 0.2
-  Research: 0.1
+# typical homework until the teacher deliberately includes it.
+# Targeted versions (HW-D26) are planned per quiz report and are not stored here.
+default_class_counts:
+  DIY: 2
+  Practicing: 2
+  Coding: 1
+  Research: 0
 
 # Default tools allowed in a homework. Must be declared in course.yaml's tools map.
 # Individual homeworks and item classes can narrow or widen this.
@@ -31,14 +33,6 @@ collaboration: discussion_only
 
 # Default open-book policy for the homework.
 open_book: true
-
-# When solutions and rubrics are released to students.
-# with_homework  — released alongside the assignment (practice only)
-# after_deadline — released after the submission deadline
-# never          — not released; students see grades but not the model
-# NOTE: graded homework may NOT use with_homework (enforced by
-# graded_answer_release_safe validator rule).
-answer_release: after_deadline
 
 # Reuse policy — how the pipeline treats prior items when planning.
 # never    — always create fresh items

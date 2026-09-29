@@ -16,15 +16,29 @@ its purpose is.
 
 ## Read first
 
+- Run `classkit bank --format json` and use its current coverage, declared
+  usage, actual manifest use, and unused-item data to find gaps and reuse
+  candidates (HW-D22). Until H5 implements the command, scan the files below
+  directly; a missing command must not block homework creation.
 - The homework request: `units`, `purpose`, `source`, and the teacher's free-text notes
 - `course/course.yaml` — the course's declared tools and textbooks
 - `course/units/*/unit.md` for each declared unit — the objectives
 - `course/units/*/sessions/*.md` — the guiding questions and their `answer` locators
 - `course/assessments/items/` — the existing item bank; note each item's `usage` array
 - Any prior `course/assessments/homework/HW*.md` — so you don't repeat unintentionally
-- `course/assessments/homework-defaults.yaml` — the teacher's typical shape
+- `course/assessments/homework-defaults.yaml` — the teacher's typical shape; the spec's
+  count per class (from `default_class_counts` unless the teacher gave other counts, HW-D27)
+  is the number of slots per class
 - `course/assessments/item-classes.yaml` — the teacher's pedagogical class taxonomy
 - If `source.kind == quiz_report`: read the report and the items that were on that quiz.
+  The report must hold aggregated Guiding Question results only. If it contains student
+  names, identifiers, grades or per-student answers, stop and ask the teacher for an
+  aggregated version; never copy student data into the plan (HW-D26).
+
+Treat declared and actual use as different facts. An item with `homework` in
+`usage` is eligible for homework; only a homework manifest proves that it was
+actually assigned. Do not infer quiz or exam use unless a corresponding
+manifest exists. Keep draft items separate from shipped reuse candidates.
 
 ## Skills to load
 
@@ -105,7 +119,10 @@ Not shown to the teacher by default, but the source of truth for the writer down
    If sum disagrees with `total_minutes` beyond tolerance, revise before showing the brief.
    When the plan is heavy on high-variance classes, note in the brief that actual times will
    vary widely per student — the sum is a rough budget, not a promise.
-6. **Groups, if any** — for a homework with `versions`, common core vs. per-group slots.
+6. **Targeted versions, if any** (HW-D26) — the shared slots and their count per class, then
+   per version: its label, its target Guiding Questions, its count per class, the slots that
+   cover each target, and the workload per student (shared plus version, same minute rules as
+   the budget check).
 
 ## Reuse policy
 
@@ -172,6 +189,18 @@ the mismatch if the teacher's expectation looks different.
 Identify misconceptions above threshold (default >25% of respondents on a distractor). Each
 above-threshold misconception → one plan slot with the intent line naming the misconception
 directly.
+
+### Targeted versions
+
+When the teacher wants versions, group the struggling Guiding Questions from the report into
+versions. Every version has a unique label (never a student name), at least one target, and
+at least one slot per target. A version slot tests only its version's targets; anything
+everyone should practise goes in the shared slots. The same slot may serve several versions.
+Keep version workloads close; if they differ, say by how much and why.
+
+In the brief, show every version: its targets in plain words, which items cover each target,
+and its approximate minutes beside the others. On **graded** homework, name any difference in
+workload or targets between versions and ask the teacher to approve it explicitly.
 
 If the report is thin, say so — don't fabricate a diagnostic story to justify the homework.
 A report with no signal is a homework that should be from `material` instead, and the teacher

@@ -14,7 +14,7 @@ a class is a per-course operation; no framework change needed.
 1. **Ground.** Read:
    - `course/assessments/item-classes.yaml` — existing classes; the new
      one must not collide by name
-   - `course/assessments/homework-defaults.yaml` — the `default_class_mix`
+   - `course/assessments/homework-defaults.yaml` — the `default_class_counts`
      block, which will get a new line
    - `course/course.yaml` — declared tools; the new class's
      `default_tools` must reference tools declared there
@@ -57,7 +57,7 @@ a class is a per-course operation; no framework change needed.
 4. **Show the change set to the teacher.** All proposed changes together
    in one message:
    - The new `item-classes.yaml` entry
-   - The new line in `default_class_mix` (defaulting to 0)
+   - The new line in `default_class_counts` (defaulting to 0)
    - The drafted skill file, if any
 
    Teacher approves, edits inline, or rejects.
@@ -67,7 +67,7 @@ a class is a per-course operation; no framework change needed.
    already exist, so they need `--overwrite`, which the teacher's approval
    of the change set in step 4 covers; the new skill file is written plainly.
    - Append to `item-classes.yaml`
-   - Append to `default_class_mix` in `homework-defaults.yaml`
+   - Append to `default_class_counts` in `homework-defaults.yaml`
    - Create `.claude/skills/writing-<slug>-items/SKILL.md` if drafted
 
 6. **Validate.** Run `classkit validate` and confirm no rules broke.

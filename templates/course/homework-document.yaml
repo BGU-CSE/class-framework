@@ -1,0 +1,27 @@
+# How your homework Word documents look (HW-D30).
+# /create-homework fills the student document and the teacher answers document
+# from this file plus the approved homework. Edit it by hand or ask the agent.
+# Validated against schemas/homework-document.schema.json.
+# Contains no answers, so it is committed with the course.
+
+course_title: "Course name"
+instructor: ""
+semester: "Semester A, 2026-27"      # update every semester
+
+# Title placeholders: {course_title} {semester} {number} {id} {units}
+# {number} comes from the homework id (HW03 -> 3).
+title_format: "{course_title} — Homework {number}"
+
+due_date_format: "DD/MM/YYYY"        # the date itself is asked per homework
+submission_instructions: ""
+
+header: ""
+footer: ""
+# logo: assets/logo.png              # optional, path relative to course/
+
+language: he                         # he | en | ...
+direction: rtl                       # rtl | ltr
+font: David
+font_size: 12
+
+show_est_minutes: false              # print estimated minutes per item

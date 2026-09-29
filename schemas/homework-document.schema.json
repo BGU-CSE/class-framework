@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/BGU-CSE/class-framework/schemas/homework-document.schema.json",
+  "title": "HomeworkDocument",
+  "description": "course/assessments/homework-document.yaml — how the homework Word documents look (homework module, HW-D30). The agent fills the student and teacher documents from this file plus the approved manifest and items at /create-homework step 12. Optional: created by the first /create-homework (HW-D13). Holds no answers, so it is committed like any course file.",
+  "type": "object",
+  "required": ["course_title", "semester", "title_format", "language", "direction"],
+  "additionalProperties": false,
+  "properties": {
+    "course_title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Course name as printed on the documents."
+    },
+    "instructor": {
+      "type": "string",
+      "description": "Instructor name(s) as printed on the documents."
+    },
+    "semester": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Current offering, e.g. 'Spring 2027' or 'Semester B, 2026-27'. Update it each semester."
+    },
+    "title_format": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Document title. Placeholders: {course_title}, {semester}, {number} (homework number from the id: HW03 -> 3), {id}, {units}."
+    },
+    "due_date_format": {
+      "type": "string",
+      "description": "How the due date is printed, e.g. 'DD/MM/YYYY'. The date itself is the manifest's `due_date`."
+    },
+    "submission_instructions": {
+      "type": "string",
+      "description": "Printed on the student document, e.g. 'Submit one PDF on Moodle'."
+    },
+    "header": { "type": "string", "description": "Free text for the page header." },
+    "footer": { "type": "string", "description": "Free text for the page footer." },
+    "logo": {
+      "type": "string",
+      "description": "Optional path, relative to course/, of an image printed in the header."
+    },
+    "language": {
+      "type": "string",
+      "pattern": "^[a-z]{2}$",
+      "description": "Document language as an ISO 639-1 code, e.g. 'he', 'en'."
+    },
+    "direction": {
+      "enum": ["rtl", "ltr"],
+      "description": "Text direction of the documents."
+    },
+    "font": { "type": "string", "description": "Body font, e.g. 'David', 'Arial'." },
+    "font_size": { "type": "number", "minimum": 6, "maximum": 32 },
+    "show_est_minutes": {
+      "type": "boolean",
+      "description": "Print each item's estimated minutes on the student document."
+    }
+  }
+}

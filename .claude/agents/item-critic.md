@@ -39,6 +39,9 @@ For each item you review:
   (`.claude/skills/writing-<class>-items/SKILL.md`) — use its rules as
   the source of what to check
 - The item's `model_answer` field / rubric / model solution as applicable
+- For the material-fit check: the `answer` locators of the Guiding
+  Questions the item tests, and the study paths of their session together
+  with the resources those paths reference
 
 Do NOT read the whole item bank on every review. You look at the item
 in front of you; comparison to the bank is `homework-planner`'s job,
@@ -64,6 +67,22 @@ All items:
   guiding question(s) listed in its front matter. An item that lists
   `U03-S02-G2` but tests something else — even something valuable —
   is misfiled and misleads the planner.
+- **Material fit** (HW-D19). Students can only answer from what they were
+  actually assigned. Check that what the item needs — a concept, formula,
+  algorithm, fact — is covered, in this order of evidence:
+  1. the `answer` locators of the Guiding Questions the item tests;
+  2. otherwise, the study paths of their session and the resources those
+     paths actually reference.
+
+  A file merely existing in `course/materials/source/` is **not** evidence
+  that students studied it — only what was assigned counts. If something
+  the item requires is absent, report `should-fix` naming the missing
+  concept and the session ("U03-I05 needs the relaxation step; no study
+  path of U03-S02 covers it"). If there is no evidence to check against, do
+  not guess: report "couldn't verify material fit" so the item is listed at
+  Gate 2. **Research items** are exempt from the material containing their
+  answer; check only that students were given enough course context to
+  begin the research.
 - **Bloom match.** If `bloom: analyze`, the stem asks for analysis
   (compare, differentiate, trace, examine), not recall dressed as
   analysis. Verb in the stem should match the claimed cognitive level.

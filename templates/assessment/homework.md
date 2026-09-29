@@ -11,11 +11,13 @@ id: {{homework_id}}                  # e.g. HW01, HW02
 units: [{{unit_id}}]                 # unit ids; array of one or more
 purpose: practice                    # practice | graded | diagnostic
 total_minutes: 90                    # time budget for the whole homework
+# due_date: 2026-11-15               # optional; printed on the student document (HW-D30)
 
 # Where this homework came from.
 source:
   kind: material                     # material | quiz_report — 'material' = grounded in course materials, no specific quiz
   # ref: EQ-U03                      # required if kind is quiz_report (id of the source quiz)
+                                     # the report itself holds aggregated Guiding Question results only
 
 # Items in this homework. References only — items live in course/assessments/items/.
 # Every referenced item file must have `homework` in its `usage` array.
@@ -27,6 +29,13 @@ items:
 # Tool policy for the whole homework. Must be declared in course.yaml's tools map.
 allowed_tools: [pen_and_paper]
 
+# Tools a specific item needs — optional (HW-D28). Several per item are fine;
+# a programming language counts as a tool. Each tool must be declared in
+# course.yaml's tools map; each key must be an item of this homework.
+# item_tools:
+#   U03-I05: [wireshark, gns3]
+#   U03-I07: [python]
+
 # Collaboration policy.
 # forbidden       — students work alone
 # discussion_only — students may discuss but each submits their own work
@@ -35,28 +44,22 @@ collaboration: discussion_only
 
 open_book: true                      # true | false
 
-# When solutions and rubrics are released to students.
-# with_homework  — released alongside the assignment (practice only!)
-# after_deadline — released after the submission deadline
-# never          — not released; students see grades but not the model
-# Graded homework may NOT use with_homework (enforced by graded_answer_release_safe).
-answer_release: after_deadline
-
-# Prerequisites — earlier units the student needs to have completed.
-# Every prerequisite must be a unit id from earlier in the course sequence.
-prerequisites: []
-  # - U01
-  # - U02
-
-# Versions — optional. Only used when this homework has grouped variants
-# (e.g. take-home exam with different problem sets per group).
-# Each version needs a label and the items specific to that version.
-# The `items` array above contains the shared/common items.
+# Versions — optional, targeted (HW-D26). Used when a quiz report shows that
+# groups of students struggled with different Guiding Questions. Requires
+# source.kind: quiz_report with a ref. Every student gets the shared `items`
+# above plus the items of their version.
+# - label: unique; never a student name or identifier
+# - targets: the Guiding Questions this version remediates (declared units only)
+# - items: each must test at least one of the targets and nothing outside them;
+#   every target needs at least one item; an item may appear in several versions
+# Which student gets which version is kept outside this repository.
 # versions:
 #   - label: A
-#     items: [U03-I06, U03-I07]     # Version A gets its own regular item ids
+#     targets: [U03-S01-G1, U03-S01-G2]
+#     items: [U03-I06, U03-I07]
 #   - label: B
-#     items: [U03-I08, U03-I09]     # Version B gets different ids — item ids match ^U\d{2}-I\d{2}$
+#     targets: [U03-S02-G1]
+#     items: [U03-I08]
 
 # Status of this manifest. Draft currently marks work-in-progress for teachers
 # and tooling, but the Python validator still treats draft and shipped files

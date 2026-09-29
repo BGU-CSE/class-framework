@@ -29,8 +29,7 @@ Gate 1 (step 5) and Gate 2 (step 11). Between them the pipeline runs without
 stopping, but announces each step as it goes ("writing item 3 of 6",
 "critic, round 2", "solver"). Writer, critic and solver rounds need no
 separate approval. This is how this command applies the framework's
-"stepwise, with your approval" rule. The steps are numbered 1–13, exactly as
-in `dev/homework/HOMEWORK-SPEC.md` §4.1.
+"stepwise, with your approval" rule.
 
 1. **Ground.** Read:
    - `course/course.yaml` and the methodology
@@ -39,10 +38,11 @@ in `dev/homework/HOMEWORK-SPEC.md` §4.1.
    - `course/units/*/sessions/*.md`
    - `course/assessments/items/`
    - Any prior `course/assessments/homework/HW*.md`
-   - `course/assessments/homework-defaults.yaml` and `item-classes.yaml`
+   - `course/assessments/homework-defaults.yaml`, `item-classes.yaml` and
+     `homework-document.yaml`
 
-   **First homework in this course?** If either file is missing, create it
-   from `templates/course/homework-defaults.yaml` / `item-classes.yaml`
+   **First homework in this course?** If any of these files is missing, create
+   it from its template in `templates/course/`
    through `classkit write` (new files, no overwrite), tell the teacher
    they were created and can be edited, then continue (HW-D13). Homework
    is optional, so a course only gets these files once it uses homework.
@@ -52,9 +52,11 @@ in `dev/homework/HOMEWORK-SPEC.md` §4.1.
    - **Grounding files:** the list above
    - **Shape example:** a prior `HW0N.md` if one exists, otherwise
      the fields the manifest schema expects (`units`, `purpose`,
-     `total_minutes`, `source`, `items` [as a slot count + class mix,
-     not concrete ids yet], `allowed_tools`, `collaboration`,
-     `open_book`, `answer_release`)
+     `total_minutes`, `source`, `items` [as a count per item class, e.g.
+     "1 DIY, 1 Coding" (HW-D27), not concrete ids yet], `allowed_tools`, `collaboration`,
+     `open_book`); when the source is a quiz report, also whether the
+     teacher wants **targeted versions** (HW-D26); then the counts are
+     asked for the shared items and for each version separately
    - **Pre-filled:** `{units: $1, purpose: $2}` if given
 
    The interviewer returns a completed spec. Fields it left as defaults
@@ -64,12 +66,12 @@ in `dev/homework/HOMEWORK-SPEC.md` §4.1.
 3. **Handle follow-ups.** For each `follow_up` the interviewer returned:
    - If it names an undeclared tool → do NOT block; suggest the teacher
      run whatever command exists for adding tools, or just note in the
-     report at step 13.
+     report at step 14.
    - If it names an undeclared item class → the plan cannot proceed
      with that class. Stop and tell the teacher to run `/new-hw-type`
      first, then re-run this command.
    - If it's something else (a stylistic note, a scheduling comment),
-     record for the report at step 13.
+     record for the report at step 14.
 
 4. **Plan.** Invoke `homework-planner` with the spec. It writes its internal
    plan to `course/assessments/homework/.plans/HW0N.md` and shows the
@@ -77,7 +79,12 @@ in `dev/homework/HOMEWORK-SPEC.md` §4.1.
 
 5. **Gate 1 — the teacher approves the brief.** Nothing but the plan file
    exists yet: no items, no manifest, no reuse edits are written before this
-   approval. Four outcomes:
+   approval. For a homework with **targeted versions** (HW-D26), the brief
+   shows for every version its target Guiding Questions, which items cover
+   each target, and its approximate workload next to the other versions. On
+   **graded** homework, versions whose workload or targets differ need the
+   teacher's explicit approval of that difference; a plain "approve" of the
+   brief is not enough. Four outcomes:
 
    - **Approve** → continue to step 6.
    - **Revise** → the teacher says what to change; `homework-planner`
@@ -119,20 +126,29 @@ in `dev/homework/HOMEWORK-SPEC.md` §4.1.
    references, not copies.
 
 10. **Validate.** Run `classkit validate`. On `graded` homework,
-    `graded_answer_release_safe` and `graded_requires_rubric` are errors
-    that block the pipeline until resolved. On `practice` homework, both
-    rules do not trigger. Fix every error before proceeding.
+    `graded_requires_rubric` is an error that blocks the pipeline until
+    resolved. On `practice` homework, it does not trigger. Fix every error
+    before proceeding.
 
 11. **Gate 2 — the teacher approves the result.** All items and the
     manifest are on disk with `status: draft` frontmatter (written in
     steps 6 and 9). Show the teacher:
-    - The final manifest as prose (item summaries, total time, class mix)
+    - The final manifest as prose (item summaries, total time, item count per class)
     - Any critic or solver deadlocks — "critic thinks X, writer thinks Y,
       you decide"
     - Any validator warnings still standing after step 10
     - Any `follow_ups` from step 3 the pipeline did not resolve
     - For Research items: a note that the class has no automated key
-      check and the teacher should read each item themselves
+      check and the teacher should read each item themselves, with the
+      solver's `teacher_aid` — references (marked if unverified) and a
+      short summary of what a strong answer covers
+    - Material fit (HW-D19): items `item-critic` could not verify against
+      the assigned material, and any case where the writer suggests the
+      course material should change instead of the item — that choice is
+      the teacher's
+    - **Check by hand:** every tool-dependent item (skipped because it
+      needs Wireshark, lab-only software, a provided dataset…), with the
+      expected approach from its `teacher_aid`
     - For Coding items: a note that the reference solution and tests
       were executed by `item-solver` and passed (or, if they didn't,
       what failed and why the pipeline is still surfacing this)
@@ -154,7 +170,8 @@ in `dev/homework/HOMEWORK-SPEC.md` §4.1.
       Return to Gate 2 when the revised items are done.
 
     - **Reject entirely** → files stay on disk with `status: draft`.
-      Defaults are NOT updated (step 12 is skipped). The pipeline does
+      No documents are created and defaults are NOT updated (steps 12
+      and 13 are skipped). The pipeline does
       NOT auto-delete: silent deletion risks losing work the teacher
       wanted to keep. Instead, print the explicit list from above so the
       teacher can decide file-by-file:
@@ -171,16 +188,70 @@ in `dev/homework/HOMEWORK-SPEC.md` §4.1.
       draft-aware (deferred build work; today the marker is documentary
       and the validator ignores it).
 
-12. **Update defaults.** Compare accepted values against
+12. **Create the documents** (HW-D23). After Gate 2 approval, create two
+    Word files from the approved manifest and item files, laid out as
+    `course/assessments/homework-document.yaml` says (HW-D30): course title,
+    instructor, semester, the title built from `title_format` (`{number}` is
+    the homework number from its id), due date, submission instructions,
+    header, footer, logo, language and direction, font. If the manifest has
+    no `due_date`, ask the teacher for it first and add it to the manifest
+    through `classkit write --overwrite` (covered by the Gate 2 approval). If
+    `semester` looks out of date, ask before using it (with targeted
+    versions, HW-D26: one student document **per version** — the shared items
+    plus that version's items — and a single teacher answers document with
+    every version clearly labeled):
+    - a **student document** — the homework as students receive it: stems,
+      choices, starter code, tools and collaboration rules; **no answers**;
+    - a separate **teacher answers document** — model answers, rubrics,
+      correct choices, reference solutions and tests, and the solver's
+      teacher aids.
+
+    Then run the **leak check** on every student document: confirm that none
+    of the items' answer fields (`model_answer`, choices marked `correct`,
+    `expected_solution`, `tests`, `rubric`) appear in it. Anything suspicious
+    is shown to the teacher, never delivered silently.
+
+    **Where to save (HW-D24).** The bank — manifest and item files — is the
+    homework; the Word files are outputs. Ask the teacher where to save them.
+    Any folder **outside** the course repository is fine. Inside the repository,
+    use only a dedicated generated-output directory that contains no tracked
+    files; never use the repository root or a broad existing directory such as
+    `course/`, `assessments/`, `materials/`, or `units/`.
+
+    Before writing inside the repository:
+    1. Resolve the repository root and the requested destination. Refuse if the
+       destination is not the exact dedicated directory the teacher approved.
+    2. Check the destination with `git ls-files`. If the directory or either
+       target document is already tracked, stop and ask the teacher to choose
+       another location. Ignoring a path does not untrack it.
+    3. Check the repository-relative destination with `git check-ignore`. If it
+       is not ignored, add only that exact, anchored directory pattern to
+       `.git/info/exclude` (local to this clone; never `.gitignore`), then run
+       `git check-ignore` again to verify it.
+    4. Tell the teacher what local exclusion was added. Never run `git rm`,
+       alter tracked files, or exclude a parent directory to make this work.
+
+    For later edits, ask the teacher where the files are.
+
+    **Later edits.** Both documents stay editable by the teacher and by you.
+    When the teacher asks you to change something, change the **item file in
+    the bank first** (through `classkit write`, HW-D12), then update both
+    documents and repeat the leak check. When the teacher edits a document
+    by hand, the bank is not updated until they ask you to sync it; then read
+    each change back into its item file and confirm it with the teacher.
+
+13. **Update defaults.** Compare accepted values against
     `homework-defaults.yaml`. Fields left at the default: leave alone.
     Fields the teacher changed: update, so the next homework doesn't
-    re-ask. Never update on decline or partial accept — only on a full
+    re-ask. `default_class_counts` describes an ordinary homework: update
+    it only from a homework without versions, never from a targeted one. Never update on decline or partial accept — only on a full
     Gate 2 approval.
 
-13. **Report** to the teacher in prose: which guiding questions touched,
+14. **Report** to the teacher in prose: which guiding questions touched,
     which items were reused vs. fresh, total time vs. declared, any
     `follow_ups` from step 3 that need their attention, anything the
-    plan cut for time.
+    plan cut for time, where the two documents are, and the leak-check
+    result.
 
 For **graded homework**, reference answers live in different fields per format:
 - `format: open` → human-readable model answer in `model_answer`; grading criteria in `rubric`.
@@ -192,10 +263,24 @@ For **graded homework**, reference answers live in different fields per format:
   `choices[].correct`.
 
 All of these are in the referenced item files, whose git history is permanent. Do not
-include worked solutions in the homework body; they live in the item files and are released
-per `answer_release`.
+include worked solutions in the homework body. They go to the teacher answers document;
+the student document is protected by the step 12 leak check. Publishing solutions to
+students is the teacher's decision outside this pipeline (HW-D25).
 
-For **grouped homework**, the fairness rule `homework_versions_fair`
-warns rather than errors. Decide with the teacher rather than silencing.
+**Targeted versions** (HW-D26). A homework built from a quiz report may have
+versions, each aimed at the Guiding Questions a group of students struggled
+with. Every student gets the shared items plus their version's items. The
+rule `homework_versions_targeted` (error) checks that labels are unique, every
+version has targets from the declared units, each version item tests one of
+its version's targets and nothing else, every target is covered, and the
+source is a resolvable `quiz_report`.
+
+**Student data never enters the repository.** The quiz report you work from
+must hold aggregated Guiding Question results only. If what the teacher gives
+you contains student names, identifiers, grades or per-student answers, stop
+and ask for an aggregated version; do not copy any of it into the plan,
+manifest, items or report. Which student receives which version is the
+teacher's record, kept outside the repository; version labels never name or
+identify students.
 
 **One homework per invocation.**

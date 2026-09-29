@@ -1,6 +1,6 @@
 ---
 name: writing-research-items
-description: How to write a Research-class assessment item. Loaded by homework-item-writer (and item-critic) when the plan slot's item_class is `Research`. Governs mini-research tasks where students use an AI assistant to investigate a research question, then critique, synthesize, or extend. Covers stem framing, rubric criteria for AI-assisted work, and the failure modes specific to this class.
+description: How to write a Research-class assessment item. Loaded by homework-item-writer (and item-critic) when the plan slot's item_class is `Research`. Governs mini-research tasks where students use an AI assistant to investigate a question, then critique, synthesize, or extend. Covers stem framing, rubric criteria for AI-assisted work, and the failure modes specific to this class.
 status: ratified
 ---
 
@@ -125,3 +125,13 @@ should take, not the reading.** A Research item's `est_minutes` should
 count the investigation-plus-writing time, not any reading the student
 does before starting. Read the class's `typical_minutes` in
 `item-classes.yaml` as the anchor; per-item overrides are fine.
+
+## What the pipeline gives the teacher
+
+Research items get no pass/fail check — there is no key to compare
+against. Instead `item-solver` writes a **teacher aid** (HW-D18): up to 3–5
+references a strong answer could draw on, and a short summary of what a
+strong answer covers. References come from the course's own materials first;
+anything outside them must be verifiable, or it is marked "unverified —
+check before use". Write the rubric so it stands on its own: the aid helps
+the grader, it does not replace the rubric.

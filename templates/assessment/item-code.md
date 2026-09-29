@@ -15,7 +15,7 @@ starter_code: |
   def solve(nums):
       pass
 expected_solution: |
-  # Reference solution. Shown to students only if answer_release permits.
+  # Reference solution. Teacher-only: it goes to the teacher answers document.
   def solve(nums):
       return sum(nums)
 tests:

@@ -50,6 +50,11 @@
       "minimum": 5,
       "description": "Declared time budget. `homework_budget_fits` warns if the sum of items' `est_minutes` drifts outside tolerance."
     },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Due date (YYYY-MM-DD), asked per homework and printed on the student document in the course's `due_date_format` (HW-D30). Optional."
+    },
     "source": {
       "type": "object",
       "required": [
@@ -75,6 +80,21 @@
       },
       "description": "Open strings. Every tool name must be declared in `course.yaml`'s `tools:` map (HW-D03) \u2014 `homework_tools_declared` warns if not. Same shape as in-class `allowed_activity_types`: extensible per-course without forking the framework."
     },
+    "item_tools": {
+      "type": "object",
+      "description": "Tools a specific item needs (HW-D28), keyed by item id: e.g. {U03-I05: [wireshark, gns3]}. Several tools per item are allowed; a programming language counts as a tool (e.g. python). Every tool must be declared in `course.yaml`'s `tools` map (`homework_tools_declared`); every key must be an item of this homework, shared or in a version (`homework_item_reference`). Used while creating the homework and listed in the student document; items without an entry need no specific tool.",
+      "propertyNames": {
+        "pattern": "^U\\d{2}-I\\d{2}$"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": {
+          "type": "string"
+        }
+      }
+    },
     "collaboration": {
       "enum": [
         "forbidden",
@@ -85,42 +105,43 @@
     "open_book": {
       "type": "boolean"
     },
-    "answer_release": {
-      "enum": [
-        "with_homework",
-        "after_deadline",
-        "never"
-      ],
-      "description": "`graded_answer_release_safe` errors when `purpose: graded` combines with `with_homework` (Q-002 sideways)."
-    },
-    "prerequisites": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "pattern": "^U\\d{2}$"
-      },
-      "uniqueItems": true
-    },
     "versions": {
       "type": "array",
+      "minItems": 1,
+      "description": "Targeted versions (HW-D26). Each version addresses Guiding Questions the source quiz report showed students struggling with. Students get the shared top-level `items` plus their version's `items`. Labels must not identify students; which student gets which version stays outside the repository. Checked by `homework_versions_targeted`.",
       "items": {
         "type": "object",
         "required": [
           "label",
+          "targets",
           "items"
         ],
         "additionalProperties": false,
         "properties": {
           "label": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique within the homework (e.g. 'A', 'gq1-2'). Never a student name or identifier."
+          },
+          "targets": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^U\\d{2}-S\\d{2}-G\\d+$"
+            },
+            "description": "Guiding Questions this version remediates. Must belong to the homework's declared `units`; each must be tested by at least one of this version's items."
           },
           "items": {
             "type": "array",
             "minItems": 1,
+            "uniqueItems": true,
             "items": {
               "type": "string",
               "pattern": "^U\\d{2}-I\\d{2}$"
-            }
+            },
+            "description": "Version-specific item ids. Each must test at least one of this version's `targets` and no Guiding Question outside them. An item may appear in several versions, once per version."
           }
         }
       },
@@ -163,16 +184,27 @@
     },
     {
       "if": {
-        "properties": {
-          "purpose": {
-            "const": "graded"
-          }
-        }
+        "required": [
+          "versions"
+        ]
       },
       "then": {
         "required": [
-          "answer_release"
-        ]
+          "source"
+        ],
+        "properties": {
+          "source": {
+            "required": [
+              "kind",
+              "ref"
+            ],
+            "properties": {
+              "kind": {
+                "const": "quiz_report"
+              }
+            }
+          }
+        }
       }
     }
   ]

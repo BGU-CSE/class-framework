@@ -17,6 +17,11 @@ attempting one and reporting "the persona did well" is theatre. Return
 `not_applicable` for those and move on. Better to leave the human
 judgment call to the teacher at gate 2 than to invent a signal.
 
+The same holds for any item whose answer needs a **tool or data you cannot
+run** (Wireshark, lab-only software, a teacher-provided dataset): never
+invent what the tool would show. Skipping still means helping the teacher —
+see "Teacher aid for skipped items" below.
+
 The failure mode to watch for: producing plausible-looking persona
 attempts for items whose class doesn't have a checkable key. Once you
 start doing this, every item looks fine and no signal ever reaches the
@@ -55,10 +60,16 @@ safety net for items that lack the field.
   the missing execution material as a `should-fix` issue. Run the
   three-axis review plus the execution axis.
 
-- **`skip`** → return `not_applicable` immediately. Do NOT attempt.
-  Report the item as "requires human review at Gate 2" and move on.
-  Use for Research and any class where automated attempts would
-  fabricate signal.
+- **`skip`** → return `not_applicable`. Do NOT attempt. Report the item
+  as "requires human review at Gate 2" and write its `teacher_aid`
+  (below). Use for Research, tool-dependent items, and any class where
+  automated attempts would fabricate signal.
+
+**Tool check before `persona_attempt`.** Even when the resolved strategy
+is `persona_attempt`, if answering the item actually needs a tool or data
+you cannot run, do not attempt it: return `not_applicable` with the reason
+("needs Wireshark"), write its `teacher_aid`, and add a `should-fix`
+finding for the writer to set `evaluation_strategy: skip` on the item.
 
 - **`custom`** → load the skill named in `evaluation.custom_skill`
   (path `.claude/skills/<custom_skill>/SKILL.md`) and follow its
@@ -125,6 +136,29 @@ For **Coding items**, "attempt" means:
 Do not skip execution because reading suggests the code is fine.
 Reading is what item-critic did.
 
+## Teacher aid for skipped items (HW-D18)
+
+A skipped item gets no verdict — but the teacher still has to grade it, so
+give them something useful instead of nothing. Put it in `teacher_aid` (see
+Output). It is returned in your report and shown to the teacher at Gate 2.
+It is not saved anywhere yet: where confidential teacher material is stored
+is undecided (HW-Q06).
+
+- **Research items** — up to 3–5 references a strong answer could draw on,
+  and a short summary (a few sentences) of what a strong answer covers: the
+  main directions, the key trade-offs, the pitfalls.
+- **Tool-dependent items** (the answer needs a tool or data you cannot run —
+  Wireshark, lab-only software, a teacher-provided dataset) — one or two
+  sentences on the expected approach, and "check by hand at Gate 2".
+
+**References follow the framework's no-invented-resources rule.** Take them
+from the course's own materials first: `course/materials/source/`, the
+`textbooks` in `course/course.yaml`, and the `answer` locators of the Guiding
+Questions the item tests. An outside reference is allowed only if you can
+verify it; otherwise label it **"unverified — check before use"** or leave it
+out. Never give a URL, page, section or DOI you have not actually seen. Fewer
+real references beat more plausible ones.
+
 ## What you check — the three axes
 
 After both personas have attempted the item, compare their answers to
@@ -179,7 +213,8 @@ with three fields:
   right. "The stem is unclear" is wrong.
 
 For items marked `not_applicable`, note the class and the reason
-(usually "Research class — no checkable key by design").
+("Research class — no checkable key by design", or "needs Wireshark"),
+and write its `teacher_aid`.
 
 ## Convergence — same rules as item-critic
 
@@ -196,6 +231,7 @@ solver (item needs revision) — the pipeline does not resolve this.
 
 - Do not attempt items the class-branching says to skip. Research
   items get `not_applicable`, period. No fabricated attempts.
+- Do not invent tool output, and do not invent references (HW-D18).
 - Do not skip code execution for Coding items when the code exists.
   Reading is not solving.
 - Do not modify the item. If personas revealed a problem, that goes
@@ -221,6 +257,9 @@ Return a structured object:
   - `personas_ran`: list of persona names who attempted this item
   - `execution_log`: only for Coding items — brief note on what tests
     passed/failed
+  - `teacher_aid`: only for `not_applicable` items — references and a
+    short summary (Research), or the expected approach (tool-dependent);
+    see "Teacher aid for skipped items"
 - `notes_for_teacher`: on `deadlocked`, one-sentence summaries in
   prose; on any items marked `not_applicable`, a short list so the
   teacher knows those need their attention at gate 2
