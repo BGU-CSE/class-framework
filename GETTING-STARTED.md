@@ -171,25 +171,34 @@ Work **one unit at a time**. Review unit 1 properly before generating twelve mor
 learn your subject from what's already in the repo, so a good unit 1 makes unit 2 better, and a
 bad unit 1 propagates.
 
-## What the validator will not let you get away with
+## What the validator tells you
 
-- **A class hour that has drifted off the home study.** Activities reference the week's guiding
-  questions; ones that don't are flagged, and if their total time passes
-  `max_unmapped_minutes`, that's an error. If the hour doesn't depend on the prework, it's a
-  lecture with extra steps.
-- **A study session that doesn't fit its budget.** The session's guiding questions carry study
-  times, and they have to sum to roughly the session length. That's how "two hours at home"
-  quietly becomes four.
-- **A guiding question with nowhere to find the answer.** Every question records where its answer
-  lives — a textbook section, a slide, a video timestamp — unless you deliberately mark it as one
-  to be resolved in class, in which case an activity has to pick it up.
-- **A unit objective no guiding question addresses**, and an objective that rolls up to no Course
-  Outcome.
-- **An assessment item testing something students were never asked to learn.**
+**You are the authority.** The validator catches what the agents get wrong and tells you what it
+sees; it does not overrule you. It reports three kinds of finding:
 
-Warnings are advisory. Errors mean the design is broken, not that the tool is fussy. Some checks
-only run once your unit map is complete — a half-built course is a normal state, not a failing one,
-and the validator says when it has skipped something for that reason.
+- **Errors — broken data.** A reference to something that doesn't exist: a guiding question an
+  activity names but nobody wrote, a quiz item that isn't there, an answer pointing at slide 18 of a
+  12-slide deck. These are almost never intentional, and the agents can't work correctly over them.
+- **Alerts — high priority, shown first.** Coverage: a Course Outcome no unit delivers, an objective
+  no guiding question addresses, an objective that rolls up to no outcome, a missing syllabus. Often
+  a temporary state while you build — but worth looking at.
+- **Warnings — departures from good practice.** A session over its time budget, a guiding question
+  with no recorded answer, a class hour drifting off the home study, a week with no class meeting.
+  Sometimes that is exactly what you meant.
+
+When a departure is deliberate, mark it so it stops nagging — in that file's front matter:
+
+```yaml
+accepted:
+  - rule: session_budget_feasibility
+    reason: "long session on purpose — exam week"
+```
+
+— or change a rule for the whole course under `rules:` in `course.yaml`. Agents never do this on
+their own; only you do. *(Alerts and `accepted:` are not built yet.)*
+
+Some checks only run once your unit map is complete — a half-built course is a normal state, and
+the validator says when it has skipped something for that reason.
 
 ## What you still have to do yourself
 

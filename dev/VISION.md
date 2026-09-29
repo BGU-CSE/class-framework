@@ -45,7 +45,9 @@ better learning and better teaching.
 
 Because agents author the content, something has to catch what agents get wrong. That is why the
 framework validates: not rigor for its own sake, but the safety net that makes agent-authored course
-material trustworthy. Code verifies; agents judge.
+material trustworthy. Code verifies; agents judge. **The teacher decides.** Validation catches
+what agents get wrong and informs the teacher; it never overrules a teacher's deliberate choice —
+the teacher is the authority, and is responsible for what reaches students.
 
 ## 4. Scope and audience
 

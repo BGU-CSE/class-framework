@@ -44,8 +44,8 @@ are deliberately not duplicated here — two copies would drift.
 4. **The class hour is built on the home study.** Activities reference that unit's Guiding
    Questions. An activity referencing none is permitted but flagged, and the **total unmapped
    time in an hour is capped** (`in_class.max_unmapped_minutes`). Legitimate exceptions exist —
-   exam logistics, a current-events hook — but an hour made of them is a lecture. Never raise the
-   cap to make a validation pass (D-028).
+   exam logistics, a current-events hook — but an hour made of them is a lecture. An agent never raises the cap, or accepts an
+   exception, on its own; the teacher may (D-028, D-037).
 5. **Nothing overwrites a teacher's work without permission — enforced in code, not by prompt.**
    Scaffolding is create-only (`write_new()` is the only way scaffold touches disk), and **every
    agent and command writes through `classkit.write.write()` / `classkit write`, which structurally
@@ -100,6 +100,12 @@ Add the check to `Validator`, give it a code, and put its default severity in
 `DEFAULT_SEVERITY` if it is not an error. Methodologies override severities in their
 `rules:` block. Every rule needs a test in `tests/test_course_lifecycle.py` that breaks a
 scaffolded course and asserts the code fires — a rule that never fires is worse than no rule.
+
+**Say which kind it is** (D-037). *Integrity* — it names something that does not exist, or a file
+cannot be read — defaults to `error`. *Advisory* — something is missing or departs from the
+methodology — defaults to `warn` (`alert` if it matters most). **The teacher is the authority:** do
+not make a pedagogical check an error, and do not put pedagogical presence into a schema's
+`required`, which would turn advice back into an error by the back door.
 
 **Say which course state the rule judges** (D-033). A course is half-built for almost all of its
 life, and invariant 6 requires a fresh scaffold to validate clean. A **consistency** rule (does

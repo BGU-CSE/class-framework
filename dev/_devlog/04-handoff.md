@@ -53,7 +53,11 @@ committed; the suite is 36 tests, green. `dev/ROADMAP.md`'s ledger is ticked: 13
    §8.7; course log **D-036**, spec §8.8). Order was debated: Claude proposed doing step 3 first;
    Avin correctly insisted on ingest first, because the materials layout is the input contract for
    every later agent, and a teacher never reaches step 3 without step 2.
-3. **Then step 3** (`/plan-units`), folding in D-032 (Bologna syllabus fields).
+3. **Validation re-founded (D-037):** the teacher is the authority. Only *integrity* findings
+   (references to things that don't exist) are errors; everything pedagogical is advice — `warn`, or
+   `alert` for coverage — and a teacher can accept any exception. Fold this into step 2, which
+   touches the validator anyway.
+4. **Then step 3** (`/plan-units`), folding in D-032 (Bologna syllabus fields).
 
 **How implementation sessions are run:** a *fresh, context-free* session, working from
 `../FRAMEWORK-SPEC.md` alone, which doubles as a test of the spec's self-containment claim (D-026).

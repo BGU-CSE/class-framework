@@ -1360,3 +1360,33 @@ Ledger: 18 new rows (13 decisions, 121 changes). GETTING-STARTED's materials ste
 
 Implement step 2 (ingest + course log) in a fresh session, from the spec, with a gap report. Then
 Avin hand-tests `/ingest` against real materials. Then step 3.
+
+---
+
+## Session 25b — 2026-09-29 — The teacher is the authority (→ D-037)
+
+Avin raised a concern about the whole validation direction: *"you over-push for validation tools…
+the teacher is the authority, and it is his responsibility to check everything he delivers… I don't
+want the framework to be too strict in preventing out-of-the-box solutions or some inconsistencies
+(which are sometimes ok in class)."*
+
+Claude agreed and owned the drift: `VISION.md` already framed validation as a feature for catching
+*agent* mistakes, yet successive decisions kept promoting pedagogical checks to `error`.
+
+**Resolution (D-037):** validation informs, never overrules. Rules split mechanically — *names
+something that doesn't exist* → integrity → `error`; *missing or unconventional* → advisory → `warn`.
+New severity **`alert`** for coverage (Avin: advisory, "could be a temporary glitch… but a
+HIGH-priority alert"). Twelve pedagogical rules demoted from error to warn — including
+`in_class_missing` (a holiday week is legitimate). Teachers override course-wide in `course.yaml`
+`rules:` and accept single exceptions with `accepted:` in front matter, which then stops nagging but
+stays counted and logged. Agents fix what they caused and never overrule the teacher. Schemas check
+shape, not pedagogy. Never-overwrite stays hard — it protects the teacher rather than constraining them.
+
+Written into VISION, the spec (§2.2, §8.2, §8.4 rewritten, invariant 4), both CLAUDE files, README
+and GETTING-STARTED. Ledger: 8 rows. Docs only; the re-classification of already-built rules is
+implementation work.
+
+### Next
+
+Implement step 2 (ingest + course log) — and fold D-037 in, since step 2 touches the validator
+anyway.

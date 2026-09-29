@@ -1133,3 +1133,56 @@ next year needs the second.
 
 Cross-cutting (every command writes to it), but lands with step 2 because ingest is its first user.
 
+---
+
+## D-037 — The teacher is the authority: validation informs, it does not overrule
+**Date:** 2026-09-29 · **Status:** locked (design) · **implementation pending** · amends D-021,
+D-028, D-031e, D-033 (severities) and the wording of invariant 4
+
+Avin: *"I think you over-push for validation tools… I'm afraid they may cause problems for a teacher
+to make progress. The teacher is the authority, and it is his responsibility to check everything he
+delivers to students. I don't want the framework to be too strict in preventing out-of-the-box
+solutions or some inconsistencies (which are sometimes ok in class)."*
+
+Correct, and Claude owned it: `VISION.md` already said validation is a *feature* that exists to catch
+what **agents** get wrong, yet decision after decision promoted pedagogical checks to `error` —
+`syllabus_missing`, the unmapped-time cap, coverage. Each looked reasonable alone; together they
+turned a teacher's deliberate choices into failures.
+
+**Principle:** validation checks the agents' work and reports on the teacher's; it never overrules
+the teacher. *Code verifies; agents judge; the teacher decides.*
+
+**Two kinds of rule, split by a mechanical line.** *Names something that does not exist, or cannot be
+read* → **integrity → `error`** (dangling ids, missing items, a locator to a nonexistent slide,
+unparseable front matter — almost never intentional, and agents cannot reason over them). *Something
+missing, or a departure from the methodology* → **advisory → `warn`**. One concern can yield both: an
+objective naming a nonexistent `CO9` is integrity; an objective naming no outcome is advisory.
+
+**A third severity, `alert`** — high-priority advisory, reported first, never failing `validate`.
+Avin's call for coverage: *"advisory, since this could be a temporary glitch and it is still the
+teacher's responsibility, but a HIGH-priority alert."* Alert: `outcome_coverage`,
+`objective_coverage`, `objective_maps_to_outcome`, `syllabus_missing`.
+
+**Demoted from error to warn:** `session_count`, `goal_count`, `goal_type`, `in_class_missing` (a
+holiday or online week is legitimate), `in_class_duration_match`, `activity_count`, `activity_type`,
+`require_opening_quiz`, `answer_reference_present`, `deferred_question_resolved_in_class`,
+`session_budget_feasibility`, `in_class_unmapped_time_cap`. Split: an activity naming a guiding
+question from *another* unit becomes advisory (also unblocks Q-029's homework-checking quiz); an item
+with no correct choice becomes advisory. New integrity rule `outcome_reference`.
+
+**Exceptions stop nagging** (a warning that always fires trains the teacher to ignore all warnings):
+`course.yaml` `rules:` overrides any rule course-wide — the teacher's last word, above the
+methodology; and `accepted: [{rule, reason}]` in any artifact's front matter suppresses one rule for
+that file. Accepted exceptions are counted in `validate`'s output (never invisible) and logged.
+
+**Agents fix what they caused and never overrule the teacher:** they resolve or surface findings
+from their own output, never add `accepted:`, change `rules:` or raise a threshold unless asked, and
+never "correct" a teacher's decision. Invariant 4's "never raise the cap to make a validation pass"
+becomes a rule about agents, not teachers.
+
+**Schemas check shape, not pedagogy** — otherwise a schema `required` turns advice back into an
+error by the back door (e.g. `answer` and `outcomes` presence move from schema to advisory rules).
+
+**Unchanged and deliberately so:** never-overwrite (invariant 5) is not validation. It constrains
+nothing the teacher chooses; it protects the teacher's work from an agent.
+

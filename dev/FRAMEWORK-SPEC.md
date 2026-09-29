@@ -97,6 +97,13 @@ stops firing is caught; you cannot unit-test a prompt, and a silently broken rul
 confidence. And the agent that wrote a unit must not be the one certifying it — self-review is
 systematically generous.
 
+**Validation serves the teacher, it does not overrule them** (D-037). The teacher is the authority
+and is responsible for what reaches students. Only *integrity* findings — references to things that
+do not exist — are errors; everything pedagogical is advice, which a teacher may accept as a
+deliberate exception (§8.4). What the framework enforces without exception is different in kind:
+**never overwriting the teacher's work** (invariant 5) protects the teacher; it does not constrain
+them.
+
 **Agents do what code cannot attempt:** is this guiding question a topic label in disguise? Would
 this activity still work if nobody did the prework? Is eight minutes honest for eight pages of
 proofs? This is why `course-critic` exists, and why it is explicitly told not to repeat the
@@ -458,8 +465,7 @@ they are repeated here with their reasons.
 4. **The class hour is built on the home study.** Activities reference that unit's guiding questions.
    An activity referencing none is permitted but flagged, and the **total unmapped time in an hour is
    capped** (§8.4) — the cap is what stops the hour drifting back into a lecture. Legitimate
-   exceptions exist (exam logistics, a current-events hook); an hour made of them does not. Never
-   raise the cap to make a validation pass (D-028).
+   exceptions exist (exam logistics, a current-events hook); an hour made of them does not. **An agent never raises the cap, or accepts an exception, on its own**; the teacher may (D-028, D-037).
 5. **Nothing overwrites a teacher's work without permission — enforced in code.** Scaffolding is
    create-only (`write_new()` is its only path to disk), and every agent and command writes through a
    `classkit` path that structurally refuses to overwrite existing content without explicit
@@ -526,6 +532,7 @@ Mechanically checked. `NN` is two digits; `N` is one or more.
 | `time_constants` | object | | per-course overrides of `defaults/time-constants.yaml` (any subset) |
 | `in_class` | object | | **(target, D-031e)** per-course overrides of the methodology's in-class settings. Currently one key: `max_unmapped_minutes` (integer ≥0) — the cap on in-class time spent on activities that reference no guiding question. Overrides the methodology default (10). Setting it to the full hour length disables the guardrail, which is the teacher's right (D-014) |
 | `agents` | object | | course-local agent-role → replacement name (Q-007) |
+| `rules` | object | | **(target, D-037)** rule-code → `error \| alert \| warn \| off`. The teacher's course-wide override of any validation rule; wins over the methodology (§8.4) |
 
 Deferred: a `gem` block (Exports phase).
 
@@ -691,42 +698,101 @@ Activity object:
 
 ### 8.4 Validation rules
 
-`classkit validate` runs a schema layer, then a semantic layer. Severity below is the default; a
-methodology's `rules:` block may override any to `error | warn | off`. Rules tagged **(target)** are
-not built yet.
+**The teacher is the authority** (D-037). The validator exists to catch what *agents* get wrong and to
+*inform* the teacher — never to overrule a teacher's deliberate choice. It reports; it does not
+gatekeep. So every rule is one of two kinds:
 
-| Code | Checks | Default |
+- **Integrity** — the course is broken *as data*: something is referenced that does not exist, or a
+  file cannot be read. Almost never intentional, and agents and tools cannot reason correctly over
+  it. Severity **`error`**.
+- **Advisory** — something is missing, or departs from the methodology's good practice. A teacher may
+  have good reasons for any of these (a holiday week with no class hour, a deliberately long
+  session). Severity **`warn`**, or **`alert`** for the checks that matter most.
+
+The dividing line is mechanical: **a finding that names something that does not exist is integrity;
+a finding that something is absent or unconventional is advisory.** So one concern can yield both —
+an objective naming `CO9` when there is no `CO9` is an integrity error; an objective naming no outcome
+at all is an advisory alert.
+
+#### Severities
+
+| Severity | Meaning | `classkit validate` |
 |---|---|---|
-| `schema` | each file's front matter matches its JSON Schema | error |
-| `schema_unavailable` | `jsonschema` not installed → schema layer skipped | warn |
-| `unit_count` | units on disk vs `course.yaml` `units` | warn |
-| `id_consistency` | every id matches its unit/number/session/prefix rules | error |
-| `session_count` | sessions per unit == methodology `sessions_per_unit` | error |
-| `goal_count` | goals per session within `goals_per_session` | error |
-| `goal_type` | `goal.type ∈ allowed_goal_types` | error |
-| `goal_maps_to_objective` | each `goal.objectives` names an objective the unit defines | error |
-| `objective_coverage` | every unit objective addressed by ≥1 guiding question | error |
-| `objective_maps_to_outcome` | every unit objective names ≥1 Course Outcome | error **(target, D-021)** |
-| `outcome_coverage` | every Course Outcome covered by ≥1 unit objective. **Completeness rule — runs only when the unit map is complete** (see below) | error **(target, D-021/D-033)** |
-| `syllabus_missing` | the course has no `syllabus/syllabus.md` | error **(target, D-033)** |
-| `answer_reference_present` | each goal has ≥1 `answer` unless `defer_to_class` | error **(target, D-019/23)** |
-| `deferred_question_resolved_in_class` | each `defer_to_class` goal is referenced by ≥1 activity | error **(target, D-023)** |
-| `session_budget_feasibility` | `sum(est_minutes) + overhead ≤ budget`, within tolerance (renamed from `session_path_feasibility`) | error **(target, D-020)** |
-| `min_paths_per_session` | session has ≥ `study_paths.min_paths_per_session` paths | warn **(target, D-020)** |
-| `in_class_missing` | unit has an `in-class.md` | error |
-| `in_class_duration_match` | declared == methodology `minutes`, and activities sum to it within tolerance | error |
-| `activity_count` | activities within `in_class.activities` | error |
-| `activity_type` | `activity.type ∈ allowed_activity_types` | error |
-| `require_opening_quiz` | if set, the first activity is a `quiz` | error |
-| `activity_references_guiding_question` | an activity references no guiding question (a legitimate exception, but worth seeing); also errors if it references a question **not of this unit** | warn **(target: was error; D-028)** |
-| `in_class_unmapped_time_cap` | total duration of activities referencing no guiding question ≤ `max_unmapped_minutes` (course override, else methodology default 10) | error **(target, D-028/D-031e)** |
-| `activity_item_reference` | every id in an activity's `items` resolves to an existing item of this unit | error **(target, D-031a)** |
-| `syllabus_workload_missing` | there is no `syllabus/syllabus.md`, or it declares no `workload` | warn |
-| `item_reference` | an item's `unit` exists, its `guiding_questions` all exist, and a choice-format item has ≥1 `correct` | error |
-| `material_locator_resolves` | every `ref` of the form `M<NNNN>` or `M<NNNN>#anchor` — in an answer or a study path — names a material in the manifest, and the anchor exists in its ingested file. **Consistency rule** | error **(target, D-035)** |
-| `materials_not_ingested` | a file in `materials/source/` is new or changed since the last ingest | warn **(target, D-035)** |
-| `guiding_question_assessed` | every guiding question is tested by ≥1 assessment item | **`off` in Core**; warn from the Assessment phase **(D-031c)** |
-| `unit_has_entry_quiz_items` | the unit has ≥1 assessment item with `usage: in-class-quiz` | warn **(target, D-031c)** |
+| `error` | integrity — broken data | reported; exit code 1 |
+| `alert` | **high-priority advisory** — look at this soon | reported **first**, marked `ALERT`; does not fail |
+| `warn` | advisory | reported; does not fail |
+| `off` | not checked | — |
+
+`--strict` counts alerts and warnings as failures too, for a teacher who wants that.
+
+#### Overrides — who has the last word
+
+1. A **methodology's** `rules:` block sets defaults for courses that use it.
+2. The course's **`course.yaml` `rules:`** block overrides the methodology — the teacher's last word,
+   for any rule. (Switching an *integrity* rule off is allowed, but tools may then misbehave over the
+   broken references it would have caught.)
+3. **Per instance, a teacher accepts an exception** in the artifact's own front matter:
+
+   ```yaml
+   accepted:
+     - rule: session_budget_feasibility
+       reason: "long session on purpose — exam week"
+   ```
+
+   That rule's findings for that file are then suppressed, so a known exception stops nagging — a
+   warning that always fires trains the teacher to ignore every warning. `validate` still prints a
+   one-line count of accepted exceptions, so they are never invisible, and each acceptance is recorded
+   in the course log (§8.8). `accepted:` is a field on every artifact that has front matter.
+
+**Agents fix what they caused, and never overrule the teacher.** An agent must fix or surface any
+finding its own output produced, and may **never** add an `accepted:` entry, change `rules:`, or
+raise a threshold on its own — only on the teacher's explicit instruction, which is then logged. And
+an agent never "corrects" something the teacher decided: a teacher's exception or a teacher-made
+inconsistency is reported and left alone unless the teacher asks.
+
+**Schemas check shape, not pedagogy.** JSON Schema enforces what tools need to *read* a file — ids,
+types, allowed keys. Whether a guiding question *has* an answer, or an objective *has* an outcome, is
+advisory, so it is expressed as a rule below, not as a schema `required` — otherwise the schema layer
+would turn advice back into errors.
+
+#### The rules
+
+Severity is the default; **(target)** means not built yet. Every rule is also a *consistency* or
+*completeness* rule (see below).
+
+| Code | Checks | Kind | Default |
+|---|---|---|---|
+| `schema` | front matter parses and has the shape tools need (ids, types, allowed keys) | integrity | error |
+| `schema_unavailable` | `jsonschema` not installed → schema layer skipped | — | warn |
+| `id_consistency` | every id matches its unit/number/session/prefix rules | integrity | error |
+| `goal_maps_to_objective` | each objective a goal names is defined by its unit | integrity | error |
+| `outcome_reference` | each outcome an objective names exists in the syllabus **(target, D-037)** | integrity | error |
+| `activity_references_guiding_question` | a guiding question an activity names exists. (Naming one from *another* unit is advisory — warn; naming none is advisory — warn) | integrity | error **(target: split, D-028/D-037)** |
+| `activity_item_reference` | every id in an activity's `items` resolves to an existing item | integrity | error **(target, D-031a)** |
+| `item_reference` | an item's `unit` and `guiding_questions` exist. (A choice-format item with no `correct` choice is advisory — warn) | integrity | error |
+| `material_locator_resolves` | every `M<NNNN>` / `M<NNNN>#anchor` locator names a real material and anchor | integrity | error **(target, D-035)** |
+| `outcome_coverage` | every Course Outcome is covered by ≥1 unit objective. Completeness rule | advisory | **alert** **(target, D-021/D-033/D-037)** |
+| `objective_coverage` | every unit objective is addressed by ≥1 guiding question | advisory | **alert** **(target: was error; D-037)** |
+| `objective_maps_to_outcome` | every unit objective names ≥1 Course Outcome | advisory | **alert** **(target, D-021/D-037)** |
+| `syllabus_missing` | the course has no `syllabus/syllabus.md` | advisory | **alert** **(target, D-033/D-037)** |
+| `unit_count` | units on disk vs `course.yaml` `units` | advisory | warn |
+| `session_count` | sessions per unit == methodology `sessions_per_unit` | advisory | warn **(target: was error; D-037)** |
+| `goal_count` | goals per session within `goals_per_session` | advisory | warn **(target: was error; D-037)** |
+| `goal_type` | `goal.type ∈ allowed_goal_types` | advisory | warn **(target: was error; D-037)** |
+| `answer_reference_present` | each goal has ≥1 `answer` unless `defer_to_class` | advisory | warn **(target, D-019/D-023/D-037)** |
+| `deferred_question_resolved_in_class` | each `defer_to_class` goal is referenced by ≥1 activity | advisory | warn **(target, D-023/D-037)** |
+| `session_budget_feasibility` | `sum(est_minutes) + overhead ≤ budget`, within tolerance | advisory | warn **(target, D-020/D-037)** |
+| `min_paths_per_session` | session has ≥ `study_paths.min_paths_per_session` paths | advisory | warn **(target, D-020)** |
+| `in_class_missing` | unit has an `in-class.md` | advisory | warn **(target: was error; D-037)** |
+| `in_class_duration_match` | declared == methodology `minutes`, activities sum to it within tolerance | advisory | warn **(target: was error; D-037)** |
+| `activity_count` | activities within `in_class.activities` | advisory | warn **(target: was error; D-037)** |
+| `activity_type` | `activity.type ∈ allowed_activity_types` | advisory | warn **(target: was error; D-037)** |
+| `require_opening_quiz` | if set, the first activity is a `quiz` | advisory | warn **(target: was error; D-037)** |
+| `in_class_unmapped_time_cap` | total time of activities referencing no guiding question ≤ `max_unmapped_minutes` | advisory | warn **(target, D-028/D-031e/D-037)** |
+| `syllabus_workload_missing` | the syllabus declares no `workload` | advisory | warn |
+| `materials_not_ingested` | a source file is new or changed since the last ingest | advisory | warn **(target, D-035)** |
+| `unit_has_entry_quiz_items` | the unit has ≥1 item with `usage: in-class-quiz` | advisory | warn **(target, D-031c)** |
+| `guiding_question_assessed` | every guiding question is tested by ≥1 assessment item | advisory | **off in Core**; warn from the Assessment phase **(D-031c)** |
 
 Retired by D-020: `path_estimate_missing`, and the per-path `_estimate_path` helper.
 
@@ -758,11 +824,11 @@ caught immediately), while **outcome → objective is a completeness rule** (an 
 yet is simply unfinished work). The chain is checked in both directions, but the two directions
 become meaningful at different times.
 
-**Why `syllabus_missing` is an error, not a warning (D-033).** `scaffold course` always creates the
+**Why `syllabus_missing` is a high-priority alert (D-033, softened from error by D-037).** `scaffold course` always creates the
 syllabus, so it can only be absent if it was deleted. Worse, a course with no syllabus has **no
 Course Outcomes**, which makes `outcome_coverage` *vacuously true* — the rule that closes the
-coverage chain would pass most confidently exactly when the roof is gone. An error is the honest
-severity for a silently-empty guarantee.
+coverage chain would pass most confidently exactly when the roof is gone. An alert is the honest
+severity: the teacher may be mid-rewrite, but a silently-empty guarantee must not go unnoticed.
 
 **Why `guiding_question_assessed` is off in Core (D-031c).** In Core the only assessment items are
 entry-quiz items, and a short entry quiz cannot test all ~15–20 of a unit's guiding questions. The

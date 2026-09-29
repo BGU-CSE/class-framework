@@ -314,6 +314,19 @@ All land in **step 3**, with the coverage chain.
 | ⬜ | `.claude/agents/*.md` (writers) | read recent log entries before starting work |
 | ⬜ | `tests/` | append-only; format parseable |
 
+## D-037 — Teacher authority: integrity vs advisory
+
+| | Artifact | Change |
+|---|---|---|
+| ⬜ | `src/classkit/validate.py` | new severity `alert`: reported first, marked `ALERT`, does not fail; exit 1 only on `error`; `--strict` counts alerts and warnings |
+| ⬜ | `src/classkit/validate.py` | re-classify existing rules per spec §8.4 (demote pedagogical errors to warn/alert); split `activity_references_guiding_question` and `item_reference`; new `outcome_reference` |
+| ⬜ | `src/classkit/validate.py`, `model.py` | read `course.yaml` `rules:` (wins over methodology); honour `accepted:` per file; print a count of accepted exceptions |
+| ⬜ | `schemas/*.schema.json` | `accepted: [{rule, reason}]` on every front-matter artifact; `rules:` on course; move pedagogical presence out of `required` (e.g. `answer`, objective `outcomes`) |
+| ⬜ | `methodologies/question-driven-25.yaml` | severities consistent with §8.4 |
+| ⬜ | `.claude/agents/*.md`, `.claude/commands/*.md` | fix what you caused; never add `accepted:` / change `rules:` / raise a threshold unless asked; never overrule a teacher decision; log accepted exceptions |
+| ⬜ | `tests/` | each demoted rule warns, not errors; alert ordering and exit code; `rules:` override; `accepted:` suppresses and is counted |
+| ✅ | `dev/VISION.md`, `FRAMEWORK-SPEC.md`, `CLAUDE.md`, `dev/CLAUDE.md`, `README.md`, `GETTING-STARTED.md` | the principle and the new model, written down (this commit) |
+
 ## Cross-cutting
 
 | | Artifact | Change |
@@ -322,7 +335,7 @@ All land in **step 3**, with the coverage chain.
 | ✅ | `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block was scaffolded and documented although Exports is deferred (G-16). **Removed from the template and the settings table** — shipping configuration for a feature that does not exist confuses a teacher reading their own `course.yaml`. The optional field stays in `course.schema.json`, so a course that sets it still validates |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-09-29:** 13 decisions, 121 artifact changes, **14 built, 1 in progress, 88 not
+**Count as of 2026-09-29:** 14 decisions, 129 artifact changes, **14 built, 1 in progress, 88 not
 started** — implementation steps 0 (the write path) and 1 (scaffold the syllabus) are done, though
 D-032 reopens step 1's artifact to complete the Bologna descriptor. (D-025
 refines D-020 rows and D-031 amends several — no double-counting intended; D-026/D-027 are

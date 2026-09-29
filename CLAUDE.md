@@ -88,13 +88,33 @@ Hold them to this — it is specified behaviour, not a nicety:
 - **Revise rather than regenerate.** Where output already exists, the default is to change what you
   asked about and leave the rest alone.
 
+## The teacher is the authority
+
+The validator **informs you; it doesn't overrule you.** Only *broken data* — a reference to
+something that doesn't exist, a file that can't be read — is an error. Everything else is advice
+about good practice: warnings, and **alerts** (high-priority advice, shown first) for coverage —
+whether the units deliver the course outcomes. You may depart from any of it.
+
+To make a deliberate exception stop nagging, add to that file's front matter:
+
+```yaml
+accepted:
+  - rule: session_budget_feasibility
+    reason: "long session on purpose — exam week"
+```
+
+or change a rule for the whole course in `course.yaml` under `rules:`. **Agents never do either on
+their own** — only when you ask — and they never "fix" something you decided.
+
 ## Rules the agents follow
 
 - **No invented resources.** No made-up URLs, page numbers, slide numbers or video titles. A
   fabricated reference validates cleanly and fails a student mid-session.
+- **Fix what you caused; never overrule the teacher.** Resolve or report any finding your own output
+  produced. Never add `accepted:`, change `rules:`, or raise a threshold unless the teacher asks.
 - **Every activity in the class hour builds on the home study.** An activity that references no
-  Guiding Question is allowed — exam logistics, a current-events hook — but the total time spent on
-  such activities is capped, because an hour made of them is a lecture again.
+  Guiding Question is allowed — exam logistics, a current-events hook — and the total time on such
+  activities is flagged past a limit, because an hour made of them is a lecture again.
 - **The methodology's numbers come from `methodologies/*.yaml`**, never hardcoded — 4 sessions, 25
   minutes, 3–5 questions, a 50-minute hour. To change them, change that file, not the agents.
 
