@@ -1319,3 +1319,44 @@ conclude the framework is broken.
 
 Unchanged: hand-test steps 0–1 with `dev/MANUAL-TESTING.md` (and now `GETTING-STARTED.md`). Step 3
 unblocked (fold in D-032). Step 2 waits on Q-028.
+
+---
+
+## Session 25 — 2026-09-29 — Ingest and the course log designed (→ D-035, D-036); Q-028 resolved
+
+Avin returned after hand-testing steps 0–1 in a clean clone ("I believe it went fine").
+
+**Sequencing disagreement, resolved in Avin's favour.** Claude recommended step 3 (`/plan-units`)
+next, deferring ingest design until step 4, on the grounds that step 3 has no structural dependency
+on ingest and would reveal what ingest needs. Avin: settle ingest first — how it works, what it
+does, how data is organized, how it runs incrementally — and anyway a teacher can't test step 3
+without having done ingest. Conceded: the materials layout is the input contract for every
+downstream agent, so building on an unspecified heap means rework; testing step 3 without ingest
+tests a workflow no teacher follows; and "workflow order outside" was our own principle.
+
+**Design (D-035, spec §8.7), built up with Avin:**
+- General, not DS&A-shaped (Avin caught Claude assuming the pilot course). Teachers are not assumed
+  organized: flat or nested, duplicates (PPTX + its PDF), any format, added over time.
+- `source/` (the teacher's, never modified) vs `ingested/` (derived, one `.md` per material, flat,
+  keyed by `M<NNNN>` — `M` because `S` already means Study Session). Flat so a rename or move never
+  breaks a locator; the manifest re-matches by hash.
+- Explicit anchors (`## Slide 18`, `## Page 34`, document headings) and a new rule
+  `material_locator_resolves` — which makes invariant 7 **partly mechanical** for the first time:
+  a fabricated "slide 18" in a 12-slide deck now fails validation.
+- Links: `links.md` + `classkit add-url` (Avin's suggestion), plus URLs harvested from documents.
+- Extraction is code (reproducible anchors): built-in md/txt/pptx/pdf/docx, optional pandoc and
+  LibreOffice, everything else `unsupported` and reported — proactive for common formats, reactive
+  for the rest. Scanned PDFs and media flagged, not handled.
+- Pre-flight report and approval gate before a long run (Avin's point); incremental and resumable
+  by hash; hand edits to ingested text detected and preserved (Avin wanted them editable).
+
+**Course log (D-036, spec §8.8)** — Avin's idea: `LOG.md` records what changed in the course and
+why, which git's byte history does not. Course only, never framework development. Every approved
+step of every command is an entry; written by `classkit log`; agents read recent entries first.
+
+Ledger: 18 new rows (13 decisions, 121 changes). GETTING-STARTED's materials step updated. Docs only.
+
+### Next
+
+Implement step 2 (ingest + course log) in a fresh session, from the spec, with a gap report. Then
+Avin hand-tests `/ingest` against real materials. Then step 3.

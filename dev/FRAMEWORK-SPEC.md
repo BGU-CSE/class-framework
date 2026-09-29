@@ -177,6 +177,10 @@ items** — `/design-unit` already writes the unit's entry quiz, so `/write-item
 adding to or reworking it. Deferred: `gem-builder` and `/build-gem` (Exports); the homework and exam
 roles of `assessment-writer` and `/write-items` (Assessment).
 
+**Tooling commands used across Core:** `classkit ingest` (the deterministic half of `/ingest`,
+§8.7), `classkit add-url` (add a link to the course's materials, §8.7), and `classkit log` (append
+to the course log, §8.8).
+
 ### 3.2 The shape of a flipped course
 
 Under Core's default methodology, `question-driven-25`, a course is **12–13 Units**. One unit is one
@@ -332,7 +336,15 @@ glossary is in `CLAUDE.md`; the identifiers are in §8.1.
 Course-level setup runs once; then units are designed one at a time.
 
 ```
-/ingest            read materials/source/*, report what the course actually covers
+/ingest            (§8.7) 1. pre-flight scan: count files by format, slides/pages, duplicates,
+                      links, unsupported files, a rough time estimate — then WAIT for approval
+                   2. classkit ingest converts each new or changed source into
+                      materials/ingested/M<NNNN>-slug.md with addressable anchors, and
+                      updates materials/manifest.yaml (incremental, resumable)
+                   3. an agent classifies each source (kind, likely units), asks the teacher
+                      to confirm suspected same-material duplicates, and reports what the
+                      course actually covers and where it is thin
+                   Every approved step appends to course/LOG.md (§8.8).
 /plan-units        ONE flow, two agents, sequential and file-based (D-029, D-031i):
                    1. syllabus-designer writes syllabus/syllabus.md — goal, Course
                       Outcomes (CO1…), workload, prerequisites. Written to disk first.
@@ -421,7 +433,10 @@ sessions 1, 2 and 4 — and it is how a course is maintained year to year.
 | `syllabus/syllabus.md` | syllabus-designer | validator, critic | Core (the rendered syllabus export is Exports) |
 | `methodologies/*.yaml` | framework (or a teacher adding one) | designer, planner, validator | Core |
 | `defaults/time-constants.yaml` | framework, overridable per course | designer, critic (advisory) | Core |
-| `materials/source/*` | teacher | `/ingest`, curriculum-architect, designer | Core |
+| `materials/source/*` | teacher (and `classkit add-url` → `links.md`) | `/ingest` only | Core |
+| `materials/manifest.yaml` | `classkit ingest` (+ agent classification) | every agent that cites material, validator | Core |
+| `materials/ingested/*.md` | `classkit ingest`; the teacher may hand-edit | curriculum-architect, designer, assessment-writer, critic | Core |
+| `LOG.md` | `classkit log`, called by every command at each approved step | every agent (recent entries), the teacher | Core |
 | `unit.md` | curriculum-architect | designer, validator | Core |
 | `sessions/NN.md` | study-session-designer | planner, assessment-writer, validator | Core |
 | `in-class.md` | lesson-planner | critic, validator | Core |
@@ -474,6 +489,10 @@ Mechanically checked. `NN` is two digits; `N` is one or more.
 | `U<NN>-IC` | In-Class Session (one per unit) | `U01-IC` |
 | `U<NN>-A<N>` | Activity | `U01-A1` |
 | `U<NN>-I<NN>` | Assessment Item | `U01-I01` |
+| `M<NNNN>` | Material — one ingested source (a file or a link) **(target, D-035)** | `M0007` |
+| `M<NNNN>#<anchor>` | A locator inside a material: `slide-N`, `page-N`, or a heading slug | `M0007#slide-18` |
+
+`M` is used rather than `S` because `S` already means Study Session.
 
 ### 8.2 Artifact field specifications
 
@@ -486,6 +505,11 @@ Mechanically checked. `NN` is two digits; `N` is one or more.
 | `units/NN-slug/in-class.md` | fixed name, one per unit |
 | `syllabus/syllabus.md` | fixed name, one per course |
 | `assessments/items/UNN-INN.md` | the item's id |
+| `materials/source/**` | anything, any structure — the teacher's; never modified by agents (§8.7) |
+| `materials/source/links.md` | fixed name; the course's list of links (§8.7) |
+| `materials/ingested/MNNNN-slug.md` | the material's id plus a slug of its title; flat, one per material |
+| `materials/manifest.yaml` | fixed name, one per course |
+| `LOG.md` | fixed name, one per course, at the course root (§8.8) |
 
 #### `course.yaml` — course configuration (plain YAML, no body)
 
@@ -583,7 +607,7 @@ Goal object (the Guiding Question):
 | `prompt` | string | ✓ | the guiding question, phrased so a student can answer and check it |
 | `objectives` | array\<`U<NN>-O<N>`\> | ✓ (≥1) | unit objectives this goal rolls up to |
 | `est_minutes` | number ≥0 | ✓ | **(target, D-020)** teacher-approved study time; the session budget sums these |
-| `answer` | array\<obj\> | ✓ (≥1) **unless** `defer_to_class` | **(target, D-019)** precise locators of the correct answer; each `{ kind (enum), ref (string), note (opt) }`; `kind ∈ textbook \| slide \| video \| article \| web \| other`; never the answer in prose |
+| `answer` | array\<obj\> | ✓ (≥1) **unless** `defer_to_class` | **(target, D-019)** precise locators of the correct answer; each `{ kind (enum), ref (string), note (opt) }`; `kind ∈ textbook \| slide \| video \| article \| web \| other`; never the answer in prose. **Prefer a material locator** — `ref: "M0007#slide-18"` — which the validator can check (D-035); a textbook key with a locator (`"CLRS §2.3.1"`) remains allowed for sources that are cited but not ingested |
 | `defer_to_class` | boolean | | **(target, D-023)** default `false`. If `true`: no `answer`; a pre-class thinking prompt that **must** be referenced by ≥1 in-class activity |
 
 > A goal's `answer` is a **list of locators** — where the answer can be found. It is not the answer
@@ -699,6 +723,8 @@ not built yet.
 | `activity_item_reference` | every id in an activity's `items` resolves to an existing item of this unit | error **(target, D-031a)** |
 | `syllabus_workload_missing` | there is no `syllabus/syllabus.md`, or it declares no `workload` | warn |
 | `item_reference` | an item's `unit` exists, its `guiding_questions` all exist, and a choice-format item has ≥1 `correct` | error |
+| `material_locator_resolves` | every `ref` of the form `M<NNNN>` or `M<NNNN>#anchor` — in an answer or a study path — names a material in the manifest, and the anchor exists in its ingested file. **Consistency rule** | error **(target, D-035)** |
+| `materials_not_ingested` | a file in `materials/source/` is new or changed since the last ingest | warn **(target, D-035)** |
 | `guiding_question_assessed` | every guiding question is tested by ≥1 assessment item | **`off` in Core**; warn from the Assessment phase **(D-031c)** |
 | `unit_has_entry_quiz_items` | the unit has ≥1 assessment item with `usage: in-class-quiz` | warn **(target, D-031c)** |
 
@@ -805,6 +831,134 @@ writing, which is what a command uses to check a target before it generates anyt
 > or `Edit` in its front matter can bypass this path entirely. Routing each writing agent through it
 > — and removing those tools — is a per-agent change, made in the step where that agent is built.
 
+### 8.7 Materials and ingest **(target, D-035)**
+
+Ingest turns whatever a teacher already has — in whatever state it is in — into something every later
+agent can read and **cite precisely**. It assumes no organization: one folder of everything, or a
+tidy tree, duplicates included.
+
+#### Layout — two layers, never mixed
+
+```
+course/materials/
+  source/                  the teacher's: any files, any structure. Agents never modify it.
+    links.md               the course's links, one per line
+  ingested/                derived: one .md per material, flat, named by id
+    M0007-heaps.md
+    M0012-2024-final.md
+  manifest.yaml            every material: id, kind, format, paths, hashes, status
+```
+
+`ingested/` is **flat and keyed by a stable id**, not a mirror of `source/`. A file that is renamed or
+moved keeps its id (the manifest matches it by content hash), so **locators never break when the
+teacher reorganizes `source/`**.
+
+#### `links.md`
+
+One link per line, optionally followed by `—` and a note:
+
+```
+https://www.youtube.com/watch?v=… — heaps explained, 12 min, good for U06
+https://en.wikipedia.org/wiki/Binary_heap
+```
+
+`classkit add-url URL [--note TEXT]` appends a line, rejecting a malformed URL or one already listed.
+`/ingest` also collects every URL it finds *inside* slides and documents, recording where it was
+found. Each link becomes a material of kind `link` or `video`. **In Core only the link and safely
+fetchable metadata (title, duration) are recorded — not its content.**
+
+#### The manifest
+
+`materials/manifest.yaml` — a list; each material:
+
+| Field | Type | Req | Notes |
+|---|---|---|---|
+| `id` | `M<NNNN>` | ✓ | assigned once, never reused |
+| `title` | string | ✓ | from the file's metadata or first heading; editable |
+| `format` | string | ✓ | `pptx`, `pdf`, `docx`, `md`, `odt`, `url`, … |
+| `kind` | enum | ✓ | `slides \| textbook \| notes \| exam \| exercise \| syllabus \| reading \| link \| video \| other` — set by the classifying agent, correctable by the teacher |
+| `sources` | array\<string\> | ✓ | paths under `source/` (or the URL); **more than one when duplicates were merged** |
+| `canonical` | string | ✓ | which of `sources` the anchors refer to (a PPTX over its PDF export, since "slide 18" beats "page 18") |
+| `source_hash` | string | ✓ | hash of the canonical source's content |
+| `ingested_hash` | string | | hash of the `.md` ingest last wrote — lets a hand edit be detected |
+| `status` | enum | ✓ | `ingested \| unsupported \| no-text \| media \| link` |
+| `status_reason` | string | | e.g. "install LibreOffice, or export to PDF" |
+| `units` | array\<`U<NN>`\> | | units this material appears to support — a hint, set by the agent |
+| `found_in` | `M<NNNN>` | | for a link discovered inside another material |
+| `ingested_at` | date | | |
+
+#### An ingested file
+
+Front matter carries the id, title, format, canonical source path and `source_hash`. The body is the
+extracted text with **explicit anchors**, so a locator names a place that demonstrably exists:
+
+| Format | Anchor | Locator |
+|---|---|---|
+| PPTX, ODP | one heading per slide: `## Slide 18` | `M0007#slide-18` |
+| PDF | one heading per page: `## Page 34` | `M0003#page-34` |
+| DOCX, ODT, RTF, MD, HTML | the document's own headings, slugified | `M0012#question-3` |
+| link, video | none — the material is the link | `M0020` (a timestamp goes in the locator's `note`) |
+
+#### Extractors — proactive for common formats, reactive for the rest
+
+Conversion is **code**, not agent work (D-018): it must produce the *same anchors every time*, or
+locators rot.
+
+- **Built in** (Python, installed with the framework): `.md`, `.txt`, `.pptx`, `.pdf` (text layer),
+  `.docx`.
+- **Through optional external converters**, when installed: pandoc (`.odt`, `.rtf`, `.html`,
+  `.epub`) and LibreOffice (`.ppt`, `.doc`, `.odp`, converted first to a built-in format). If they are
+  missing, those files are marked `unsupported` with a hint — never silently dropped.
+- **Anything else**: recorded as `unsupported`, listed in the pre-flight report, never fatal to the run.
+  The teacher can export it to PDF and re-ingest.
+- **Flagged, not handled in Core:** scanned PDFs with no text layer (`no-text` — would need OCR) and
+  audio/video files (`media` — recorded, content not extracted).
+- **Adding a format** is one extractor registered by file extension — an extension point like adding a
+  methodology (§2.5).
+
+#### How a run works
+
+1. **Pre-flight, no processing.** Files found by format, total slides and pages, exact and suspected
+   duplicates, links found, unsupported files, and a rough time estimate. Then the command **waits
+   for approval** (§5.2).
+2. **Convert** — `classkit ingest` processes only materials that are new or whose `source_hash`
+   changed. Because the manifest records per-material state, **an interrupted run resumes where it
+   stopped**.
+3. **Classify and confirm** — an agent sets `kind` and `units`, and **asks the teacher to confirm**
+   suspected same-material duplicates (a PPTX and its PDF) before merging them. Exact duplicates
+   (same hash) merge without asking.
+4. **Report** what the course actually covers and where it is thin.
+
+**Hand edits are preserved.** A teacher may fix a bad extraction in `ingested/`. If the file's hash no
+longer matches `ingested_hash`, re-ingest **does not regenerate it silently** — it writes through the
+write path (§8.6), which refuses, and the command shows the teacher the edit and asks.
+
+**A removed source** is marked in the manifest, never deleted: locators pointing at it must fail
+validation visibly rather than disappear.
+
+### 8.8 The course log **(target, D-036)**
+
+`LOG.md` at the course root records **what changed in the course and why** — the meaning that
+git's history of bytes does not carry. It covers the course only: materials, syllabus, units,
+sessions, the hour, items. Never framework development.
+
+Append-only. One entry per non-trivial change:
+
+```markdown
+## 2026-10-02 — /design-unit 3, step 1 approved
+- **Changed:** U03-S01..S04 created (14 guiding questions)
+- **Why:** first design of unit 3; teacher asked for fewer proof-heavy questions
+- **Files:** units/03-heaps/sessions/01.md … 04.md
+```
+
+- **Every approved step of every command is an entry** — the log and the approval gates (§5.2) are
+  the same moments. So is each ingest run.
+- It is written by **`classkit log`**, not by each agent in its own style, so the format stays
+  consistent and parseable.
+- **Agents read the recent entries before starting work**, so they know what was done last time and
+  why — which is what makes year-to-year revision possible without re-deriving intent.
+- The teacher may add entries by hand ("taught U03 — students found S02 too long").
+
 ---
 
 ## 9. Known weaknesses and open risks
@@ -826,6 +980,12 @@ Honest list, kept current.
   overridable per course, so a teacher can raise it to the full hour and switch the protection off
   entirely. That is deliberate (a course repo is sovereign, D-014) and it means the guarantee is a
   *default*, not something the framework can insist on.
+- **Some locators cannot be verified.** `material_locator_resolves` proves a slide or page exists,
+  not that the answer is on it; and video timestamps and un-ingested textbook citations cannot be
+  checked at all. Invariant 7 becomes *partly* mechanical — the critic still owns the rest.
+- **Extraction quality varies.** Slides that are mostly images or diagrams extract to little text, and
+  scanned PDFs to none. The teacher can fix a bad extraction by hand (it is preserved), but an agent
+  reading a poor extraction will under-rate that material.
 - **The agent layer has never been run on a real course.** Every prompt in `.claude/` is untested
   against real materials. Expect substantial revision after the first unit.
 - **The pluggable-methodology claim is unverified.** D-011 says another methodology works without code

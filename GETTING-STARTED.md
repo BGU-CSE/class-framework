@@ -71,6 +71,17 @@ past exams, reading lists, lecture notes. Any format. Nothing is required, and m
 the agents read this to work out what your course actually covers instead of inventing a
 generic version of it.
 
+It doesn't need to be organized — one folder of everything is fine, and duplicates (a deck and its
+PDF export) are detected. For videos and web pages, list them in
+`course/materials/source/links.md`, one per line with an optional note, or run
+`classkit add-url URL --note "…"` *(not built yet)*.
+
+`/ingest` then turns all of it into a readable, citable copy in `course/materials/ingested/` —
+one file per source, with every slide and page marked — so that an answer can point at
+`M0007#slide-18` and the validator can check that slide exists. Your originals are never touched,
+and you can correct a badly extracted file by hand; a later ingest won't overwrite your fix without
+asking. Add material any time and run `/ingest` again — only what's new or changed is processed.
+
 If your textbook isn't a file, record it in `course/course.yaml` under `textbooks:` — study
 paths and answer references cite it by key.
 

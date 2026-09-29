@@ -46,16 +46,14 @@ committed; the suite is 36 tests, green. `dev/ROADMAP.md`'s ledger is ticked: 13
   bypass the write path) is a ledger row now: each agent drops those tools in the step that touches
   it.
 
-## What is next — 2026-09-10
+## What is next — 2026-09-29
 
-1. **Avin will hand-test steps 0 and 1** in a clean clone. **The procedure is written and verified:
-   `../MANUAL-TESTING.md`** — clean-environment setup, exact commands, expected output, and a table
-   of *expected noise* so known-but-unbuilt decisions are not reported as bugs.
-2. **Step 3 (`/plan-units`) is unblocked** — no open questions remain for it. Its implementation
-   session should **also fold in D-032**, which reopens step 1's syllabus schema and template.
-3. **Step 2 (ingest) is still blocked on Q-028**, deliberately unanswered until we reach it. Avin
-   expects it to be the hard one (organizing heterogeneous materials, additions over time, and
-   possibly post-processing raw slides into something `answer` locators can point at).
+1. **Steps 0–1 were hand-tested by Avin** in a clean clone (after a two-week break) — reported fine.
+2. **Step 2 is next: ingest + the course log.** Its design is now settled (Q-028 → **D-035**, spec
+   §8.7; course log **D-036**, spec §8.8). Order was debated: Claude proposed doing step 3 first;
+   Avin correctly insisted on ingest first, because the materials layout is the input contract for
+   every later agent, and a teacher never reaches step 3 without step 2.
+3. **Then step 3** (`/plan-units`), folding in D-032 (Bologna syllabus fields).
 
 **How implementation sessions are run:** a *fresh, context-free* session, working from
 `../FRAMEWORK-SPEC.md` alone, which doubles as a test of the spec's self-containment claim (D-026).

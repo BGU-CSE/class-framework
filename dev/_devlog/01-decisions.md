@@ -1065,3 +1065,71 @@ that closes the coverage chain would pass most confidently exactly when the roof
 same class of silent hole as the dangling `activity.items` reference found in D-031a.
 
 Both rules land in **step 3**, with the rest of the coverage chain.
+
+---
+
+## D-035 — Ingest: a derived, addressable layer over whatever the teacher has
+**Date:** 2026-09-29 · **Status:** locked (design) · **implementation pending** · resolves **Q-028**
+
+**Sequencing first.** Claude proposed implementing step 3 (`/plan-units`) before designing ingest,
+on the grounds that step 3 does not structurally depend on it and would teach us what ingest needs.
+Avin disagreed and was right: **the organization of materials is the input contract for every agent
+downstream**, so building `/plan-units` against an unspecified heap means reworking it once ingest
+defines the contract; and a teacher never runs step 3 without step 2, so testing it without ingest
+would test a workflow nobody follows. It is also simply the "workflow order outside" principle.
+
+**Assumptions (Avin):** the framework is general, not DS&A-shaped; the teacher is **not** assumed to
+be organized — one folder of everything or a tidy tree; material may be duplicated (a PPTX and its
+PDF); any format may appear; material is added over time.
+
+**Decisions** (full normative text in spec §8.7):
+
+- **Two layers.** `materials/source/` is the teacher's and agents never modify it;
+  `materials/ingested/` is derived — **one `.md` per material, flat, keyed by a stable id `M<NNNN>`**
+  (not `S`, which already means Study Session). Flat rather than mirroring `source/` so that renaming
+  or moving a file never breaks a locator; the manifest re-matches it by content hash.
+- **A manifest** (`materials/manifest.yaml`) records every material: id, title, format, kind,
+  source paths (plural, for merged duplicates), the canonical source, hashes, status, likely units.
+- **Explicit anchors** — one heading per slide or page, or the document's own headings — so a locator
+  like `M0007#slide-18` names a place that demonstrably exists. **New rule
+  `material_locator_resolves` (error)** makes invariant 7 *partly mechanical* for the first time: a
+  fabricated "slide 18" in a 12-slide deck now fails validation instead of reaching a student.
+- **Links:** `materials/source/links.md`, one URL per line with an optional note, plus **`classkit
+  add-url`** (Avin's request) to append safely; URLs found *inside* documents are collected too. Core
+  records links and fetchable metadata, not their content.
+- **Extraction is code** (D-018 — anchors must be reproducible): built in for md/txt/pptx/pdf/docx;
+  pandoc and LibreOffice used *if installed* for odt/rtf/html/epub/ppt/doc/odp; anything else is
+  recorded `unsupported`, reported, never fatal. Proactive for common formats, reactive for the rest;
+  a new format is one extractor registered by extension. Scanned PDFs (`no-text`) and audio/video
+  (`media`) are flagged, not handled, in Core. This also keeps the install light — the heavy tools
+  are optional.
+- **Classification and duplicate *confirmation* are agent work**; exact duplicates merge by hash
+  without asking, suspected same-material duplicates are confirmed by the teacher.
+- **Pre-flight report first** (Avin's point: ingest can be long) — counts, duplicates, links,
+  unsupported files, a time estimate — then an approval gate. **Incremental and resumable** by hash.
+- **Ingested text is editable** (Avin): a hand edit is detected by `ingested_hash` and preserved —
+  re-ingest goes through the write path, which refuses, and the teacher is asked.
+- **A removed source is marked, never deleted**, so locators to it fail visibly.
+
+---
+
+## D-036 — The course log
+**Date:** 2026-09-29 · **Status:** locked (design) · **implementation pending**
+
+Avin's idea: a log of every non-trivial change to the course — syllabus added, unit created, session
+changed, materials added — "such a log can help agents in the future". **Scope, per Avin: the course
+only**, never framework development.
+
+Why it is not redundant with git: git records *which bytes changed*; the log records **what the
+change meant and why** ("reworked U03-S02 — students found it too long"). An agent revising a course
+next year needs the second.
+
+- `LOG.md` at the course root, append-only, one entry per non-trivial change: date, which command or
+  who, what changed **by ID**, why, files.
+- **Every approved step of every command is an entry** — the log entries and the approval gates of
+  D-030 are the same moments. Each ingest run is an entry.
+- Written by **`classkit log`**, so the format is consistent and parseable, not left to each agent.
+- Agents read recent entries before starting work. The teacher may add entries by hand.
+
+Cross-cutting (every command writes to it), but lands with step 2 because ingest is its first user.
+

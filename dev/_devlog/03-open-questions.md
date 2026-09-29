@@ -366,7 +366,12 @@ flipped-class content model is settled.
 
 ---
 
-## Q-028 — Ingest is under-specified, and is probably not simple
+## ~~Q-028 — Ingest is under-specified, and is probably not simple~~ RESOLVED
+**Resolved 2026-09-29 → D-035** (spec §8.7): a derived `materials/ingested/` layer, one `.md` per
+material keyed by `M<NNNN>`, a manifest, explicit anchors that the validator checks, `links.md` +
+`classkit add-url`, code extractors with optional converters, pre-flight report, incremental by hash.
+Original framing below.
+
 **Raised 2026-09-10 by Avin, while planning the implementation order.** *"The course starts (after
 clone) with a script and the ingest. Both need to be implemented and checked. I suspect the ingest
 will not be simple… you put all in one place (slides, exams, old syllabus, links?), there's some

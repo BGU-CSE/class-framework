@@ -83,7 +83,7 @@ Each step should end in something runnable and inspectable, not just green tests
 |---|---|---|
 | **0. Foundation** ✅ | The overwrite-safe write path. Nothing else — this is deliberately thin. | D-031b |
 | **1. Initialize** ✅ | `classkit scaffold course` produces a complete, valid course skeleton *including* `syllabus/syllabus.md`. The teacher's first contact with the framework. | D-021 (schema, template, model, scaffold rows), D-031d |
-| **2. Ingest** ⚠️ | Reading the teacher's real materials. **Design not settled — see Q-028.** Cannot start until it is. | *(none yet — the spec does not specify ingest)* |
+| **2. Ingest + course log** | `/ingest` end to end: pre-flight report, `classkit ingest` (extractors, anchors, manifest, incremental, hand-edit detection), classification and duplicate confirmation, `classkit add-url`, `material_locator_resolves`. Plus the course log — `classkit log` — since ingest is its first user. **Designed** (Q-028 → D-035, D-036). | D-035, D-036 |
 | **3. Syllabus and units** | `/plan-units` end to end: syllabus schema and rules, `outcomes` on objectives, `syllabus-designer` + `curriculum-architect`, the file-based handoff. | D-021, D-029, D-031d, D-031i |
 | **4. Study sessions** | `answer`, `est_minutes`, `defer_to_class`, session-level `paths`, the budget rule, `study-session-designer`, the rewritten `estimating-study-time` skill. | D-019, D-020, D-023, D-025 |
 | **5. Entry quiz** | `model_answer` rename, `usage` scoping, `unit_has_entry_quiz_items`, `assessment-writer` scoped to the entry quiz. | D-031c, D-031g |
@@ -286,6 +286,34 @@ All land in **step 3**, with the coverage chain.
 | ⬜ | `tests/test_course_lifecycle.py` | a fresh scaffold does not fire `outcome_coverage`; a *complete* course with an uncovered outcome does; deleting the syllabus fires `syllabus_missing` |
 | ⬜ | `CLAUDE.md` | "Adding a validation rule" must say to declare consistency vs completeness |
 
+## D-035 — Materials and ingest
+
+| | Artifact | Change |
+|---|---|---|
+| ⬜ | `src/classkit/ingest/` (new) | scan `materials/source/` recursively; hash; detect exact duplicates; pre-flight report (counts, pages/slides, duplicates, links, unsupported, time estimate) |
+| ⬜ | `src/classkit/ingest/` extractors | built-in `md`, `txt`, `pptx`, `pdf`, `docx` → `.md` with anchor headings (`## Slide N`, `## Page N`, own headings); optional pandoc / LibreOffice; registry keyed by extension; `unsupported` / `no-text` / `media` statuses |
+| ⬜ | `src/classkit/ingest/` manifest | `materials/manifest.yaml`: stable `M<NNNN>` ids, re-match renamed files by hash, merged duplicates, `ingested_hash` for hand-edit detection, removed sources marked not deleted; resumable |
+| ⬜ | `src/classkit/cli.py` | `classkit ingest [--preflight]`, `classkit add-url URL [--note]` |
+| ⬜ | `schemas/manifest.schema.json` (new) | the manifest's fields (spec §8.7) |
+| ⬜ | `src/classkit/validate.py` | `material_locator_resolves` (error, consistency) and `materials_not_ingested` (warn) |
+| ⬜ | `src/classkit/scaffold.py`, `templates/course/` | scaffold `materials/source/links.md` and `materials/ingested/`; update `materials-source-README.md` |
+| ⬜ | `pyproject.toml` | extraction dependencies (pptx, pdf, docx readers) |
+| ⬜ | `.claude/commands/ingest.md` | pre-flight → gate → convert → classify → confirm duplicates → report; log each approved step |
+| ⬜ | `.claude/agents/` (ingest classification) | set `kind` and `units`; propose same-material duplicates for confirmation; never modify `source/` |
+| ⬜ | `.claude/agents/*` that cite material | prefer `M<NNNN>#anchor` locators (study-session-designer, assessment-writer, topic-researcher, course-critic) — land with each agent's own step |
+| ⬜ | `GETTING-STARTED.md`, `CLAUDE.md` | materials, `links.md`, `add-url`, locators |
+| ⬜ | `tests/` | extraction anchors per format; incremental re-run; rename keeps id; hand edit refused; duplicate merge; locator rule fires on a missing anchor |
+
+## D-036 — The course log
+
+| | Artifact | Change |
+|---|---|---|
+| ⬜ | `src/classkit/log.py` (new), `cli.py` | `classkit log` — append a structured entry (date, actor, changed IDs, why, files) to `LOG.md` |
+| ⬜ | `src/classkit/scaffold.py` | create `LOG.md` with a first entry when a course is scaffolded |
+| ⬜ | `.claude/commands/*.md` (all) | log each approved step (with the D-030 gates) |
+| ⬜ | `.claude/agents/*.md` (writers) | read recent log entries before starting work |
+| ⬜ | `tests/` | append-only; format parseable |
+
 ## Cross-cutting
 
 | | Artifact | Change |
@@ -294,7 +322,7 @@ All land in **step 3**, with the coverage chain.
 | ✅ | `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block was scaffolded and documented although Exports is deferred (G-16). **Removed from the template and the settings table** — shipping configuration for a feature that does not exist confuses a teacher reading their own `course.yaml`. The optional field stays in `course.schema.json`, so a course that sets it still validates |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-09-10:** 11 decisions, 103 artifact changes, **14 built, 1 in progress, 88 not
+**Count as of 2026-09-29:** 13 decisions, 121 artifact changes, **14 built, 1 in progress, 88 not
 started** — implementation steps 0 (the write path) and 1 (scaffold the syllabus) are done, though
 D-032 reopens step 1's artifact to complete the Bologna descriptor. (D-025
 refines D-020 rows and D-031 amends several — no double-counting intended; D-026/D-027 are
