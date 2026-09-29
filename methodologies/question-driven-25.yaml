@@ -44,11 +44,12 @@ study_paths:
   allowed_kinds: [gem, video, textbook, article, exercise, other]
   min_paths_per_goal: 1
 
-# Validator rule severities. `error` fails the build; `warn` reports only.
+# Validator rule severities: rule-code -> error | alert | warn | off.
+#
+# Only departures from the framework defaults (spec §8.4, `DEFAULT_SEVERITY` in
+# src/classkit/validate.py) belong here. The defaults follow D-037: a rule that names
+# something that does not exist is an `error`; everything pedagogical is advice — `warn`,
+# or `alert` for the coverage chain. A course overrides any of this in its own
+# course.yaml `rules:` block, which has the last word.
 rules:
-  session_path_feasibility: error      # >=1 complete path per session within session_minutes
-  activity_references_guiding_question: error
-  objective_coverage: error            # every unit objective has >=1 guiding question
-  goal_maps_to_objective: error
-  in_class_duration_match: error
   guiding_question_assessed: warn      # every guiding question reaches a quiz/homework/exam item

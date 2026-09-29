@@ -97,10 +97,12 @@ A decision marked `locked (design)` must get a row in `ROADMAP.md`'s ledger in t
 
 ## Adding a validation rule
 
-Add the check to `Validator`, give it a code, and put its default severity in
-`DEFAULT_SEVERITY` if it is not an error. Methodologies override severities in their
-`rules:` block. Every rule needs a test in `tests/test_course_lifecycle.py` that breaks a
-scaffolded course and asserts the code fires — a rule that never fires is worse than no rule.
+Add the check to `Validator`, give it a code, and register its default severity in
+`DEFAULT_SEVERITY` — every rule, errors included (the table is complete; an unregistered code
+raises). Methodologies override severities in their `rules:` block, and a course overrides the
+methodology in `course.yaml` `rules:`. Every rule needs a test in `tests/test_course_lifecycle.py`
+that breaks a scaffolded course and asserts the code fires **at its severity** — a rule that never
+fires is worse than no rule.
 
 **Say which kind it is** (D-037). *Integrity* — it names something that does not exist, or a file
 cannot be read — defaults to `error`. *Advisory* — something is missing or departs from the

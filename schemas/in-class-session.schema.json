@@ -16,7 +16,7 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["id", "type", "duration_minutes", "guiding_questions"],
+        "required": ["id", "type", "duration_minutes"],
         "additionalProperties": false,
         "properties": {
           "id": { "type": "string", "pattern": "^U\\d{2}-A\\d+$" },
@@ -27,9 +27,8 @@
           "duration_minutes": { "type": "integer", "minimum": 1 },
           "guiding_questions": {
             "type": "array",
-            "minItems": 1,
             "items": { "type": "string", "pattern": "^U\\d{2}-S\\d{2}-G\\d+$" },
-            "description": "The home-study goals this activity builds on. REQUIRED and non-empty: this is what structurally prevents the class hour from re-lecturing the prework (D-010)."
+            "description": "The guiding questions of this unit the activity builds on. Normally non-empty — it is what keeps the class hour from re-lecturing the prework — but not required by the schema: an activity with none is advisory, flagged by `activity_without_guiding_question` (D-028, D-037)."
           },
           "items": {
             "type": "array",

@@ -16,7 +16,7 @@ from .scaffold import (
     scaffold_session,
     scaffold_unit,
 )
-from .validate import validate
+from .validate import Validator
 from .write import write
 
 
@@ -32,7 +32,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     check.add_argument("path", nargs="?", help="course directory (default: search upward)")
     check.add_argument(
-        "--strict", action="store_true", help="treat warnings as errors"
+        "--strict",
+        action="store_true",
+        help="fail on alerts and warnings too, not only on errors",
     )
 
     scaffold = subcommands.add_parser(
@@ -122,14 +124,19 @@ def report_scaffold(result: Result, root: Path) -> None:
 def run_validate(args, framework_root: Path) -> int:
     course_root = find_course_root(Path(args.path) if args.path else None)
     course = load_course(course_root, framework_root)
-    findings = validate(course, framework_root)
+    validator = Validator(course, framework_root)
+    validator.run()
 
-    errors = [f for f in findings if f.level == "error"]
-    warnings = [f for f in findings if f.level == "warn"]
-
-    for finding in errors + warnings:
+    # Alerts are printed first (spec §8.4): they are what the teacher should look at soonest,
+    # even though only errors — broken data — fail the run.
+    for finding in validator.ordered():
         print(finding)
         print()
+
+    findings = validator.findings
+    errors = [f for f in findings if f.level == "error"]
+    alerts = [f for f in findings if f.level == "alert"]
+    warnings = [f for f in findings if f.level == "warn"]
 
     units = len(course.units)
     goals = sum(len(session.data.get("goals") or []) for u in course.units for session in u.sessions)
@@ -137,11 +144,11 @@ def run_validate(args, framework_root: Path) -> int:
         f"{course.config.get('title', 'course')} — {units} units, "
         f"{goals} guiding questions, {len(course.items)} assessment items"
     )
-    print(f"{len(errors)} errors, {len(warnings)} warnings")
+    print(f"{len(alerts)} alerts, {len(errors)} errors, {len(warnings)} warnings")
 
     if errors:
         return 1
-    return 1 if (args.strict and warnings) else 0
+    return 1 if (args.strict and (alerts or warnings)) else 0
 
 
 def run_scaffold(args, framework_root: Path) -> int:

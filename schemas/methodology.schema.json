@@ -67,8 +67,8 @@
     },
     "rules": {
       "type": "object",
-      "description": "Validator rule severities. Unlisted rules default to 'error'.",
-      "additionalProperties": { "enum": ["error", "warn", "off"] }
+      "description": "Validator rule severities for courses using this methodology. Unlisted rules keep the framework default (spec §8.4). A course's own course.yaml `rules:` overrides these (D-037).",
+      "additionalProperties": { "enum": ["error", "alert", "warn", "off"] }
     }
   },
   "$defs": {

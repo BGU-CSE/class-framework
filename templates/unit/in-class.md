@@ -4,11 +4,12 @@ unit: {{unit_id}}
 title: "{{unit_title}} — in class"
 duration_minutes: {{in_class_minutes}}
 
-# The weekly meeting. Every activity MUST reference at least one Guiding Question from
-# this unit's study sessions — that requirement is what stops the hour turning back into
-# a lecture. If an activity has nothing to reference, it does not belong here.
+# The weekly meeting. Each activity should build on at least one Guiding Question from
+# this unit's study sessions — that is what stops the hour turning back into a lecture.
+# An activity that references none (exam logistics, a current-events hook) is allowed but
+# flagged by `classkit validate`, so keep them rare.
 #
-# Durations must sum to duration_minutes (within the methodology's tolerance).
+# Durations should sum to duration_minutes (within the methodology's tolerance).
 activities:
   - id: {{unit_id}}-A1
     type: quiz

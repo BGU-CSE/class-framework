@@ -203,8 +203,8 @@ is calibrated rather than pure vibes.
 
 | | Artifact | Change |
 |---|---|---|
-| ⬜ | `schemas/in-class-session.schema.json` | `guiding_questions` no longer required on an activity; add optional `reason` string |
-| ⬜ | `src/classkit/validate.py` | `activity_references_guiding_question` → **warn** when empty; still **error** when a referenced id is not of this unit |
+| 🔨 | `schemas/in-class-session.schema.json` | `guiding_questions` no longer required on an activity ✅ (step 2a, as D-037 pedagogical presence); add optional `reason` string ⬜ (step 6) |
+| ✅ | `src/classkit/validate.py` | `activity_references_guiding_question` → **warn** when empty; still **error** when a referenced id is not of this unit. *Amended by D-037 and built so:* empty → `activity_without_guiding_question` (warn); another unit's id → `activity_references_other_unit` (warn); an id that exists nowhere → `activity_references_guiding_question` (error) |
 | ⬜ | `src/classkit/validate.py` | new rule `in_class_unmapped_time_cap` (error): Σ duration of activities with no guiding question ≤ `in_class.max_unmapped_minutes` |
 | ⬜ | `methodologies/question-driven-25.yaml` | add `in_class.max_unmapped_minutes: 15`; severities for both rules |
 | ⬜ | `.claude/agents/lesson-planner.md` | most activities build on guiding questions; unmapped ones need a `reason` and cost against the cap |
@@ -318,11 +318,11 @@ All land in **step 3**, with the coverage chain.
 
 | | Artifact | Change |
 |---|---|---|
-| ⬜ | `src/classkit/validate.py` | new severity `alert`: reported first, marked `ALERT`, does not fail; exit 1 only on `error`; `--strict` counts alerts and warnings |
+| ✅ | `src/classkit/validate.py` | new severity `alert`: reported first, marked `ALERT`, does not fail; exit 1 only on `error`; `--strict` counts alerts and warnings. `DEFAULT_SEVERITY` is now a **complete** table (errors included) |
 | ⬜ | `src/classkit/validate.py` | re-classify existing rules per spec §8.4 (demote pedagogical errors to warn/alert); split `activity_references_guiding_question` and `item_reference`; new `outcome_reference` |
 | ⬜ | `src/classkit/validate.py`, `model.py` | read `course.yaml` `rules:` (wins over methodology); honour `accepted:` per file; print a count of accepted exceptions |
 | ⬜ | `schemas/*.schema.json` | `accepted: [{rule, reason}]` on every front-matter artifact; `rules:` on course; move pedagogical presence out of `required` (e.g. `answer`, objective `outcomes`) |
-| ⬜ | `methodologies/question-driven-25.yaml` | severities consistent with §8.4 |
+| ✅ | `methodologies/question-driven-25.yaml` | severities consistent with §8.4 — the block now lists only departures from the defaults; `methodology.schema.json` accepts `alert` |
 | ⬜ | `.claude/agents/*.md`, `.claude/commands/*.md` | fix what you caused; never add `accepted:` / change `rules:` / raise a threshold unless asked; never overrule a teacher decision; log accepted exceptions |
 | ⬜ | `tests/` | each demoted rule warns, not errors; alert ordering and exit code; `rules:` override; `accepted:` suppresses and is counted |
 | ✅ | `dev/VISION.md`, `FRAMEWORK-SPEC.md`, `CLAUDE.md`, `dev/CLAUDE.md`, `README.md`, `GETTING-STARTED.md` | the principle and the new model, written down (this commit) |

@@ -149,9 +149,11 @@ option (D-011). Drop a YAML file in `methodologies/`, name it in `course.yaml`, 
 read, never hardcoded. The contract is the study-session schema (§8.5). *This claim is untested —
 see §9.*
 
-**Adding a validation rule.** Add the check to `Validator`, give it a code, set a default severity in
-`DEFAULT_SEVERITY` if it is not an error, and add a test that breaks a scaffolded course and asserts
-the code fires. A rule with no such test is worse than no rule.
+**Adding a validation rule.** Add the check to `Validator`, give it a code, register its default
+severity in `DEFAULT_SEVERITY` — **every** rule, errors included: the table is complete, reporting an
+unregistered code raises, and it is how a mistyped rule name in `rules:` or `accepted:` is caught —
+and add a test that breaks a scaffolded course and asserts the code fires **at that severity**. A
+rule with no such test is worse than no rule. Only an integrity rule may default to `error` (§8.4).
 
 **Adding an agent.** New file in `.claude/agents/`. If its craft overlaps an existing agent's, put
 the craft in a skill and have both load it — otherwise the two drift and the teacher gets
@@ -644,7 +646,7 @@ Activity object:
 | `type` | enum | ✓ | from methodology `allowed_activity_types`, e.g. `quiz \| discussion \| critical-thinking \| worked-example \| group-work \| synthesis` |
 | `title` | string | | |
 | `duration_minutes` | integer ≥1 | ✓ | |
-| `guiding_questions` | array\<`U<NN>-S<NN>-G<N>`\> | | **(target: no longer required; D-028)** the guiding questions of *this unit* the activity builds on. Normally non-empty; an activity with none is flagged, and unmapped time is capped (§8.4) |
+| `guiding_questions` | array\<`U<NN>-S<NN>-G<N>`\> | | not required by the schema (D-028, D-037) — the guiding questions of *this unit* the activity builds on. Normally non-empty; an activity with none is flagged, and unmapped time is capped (§8.4) |
 | `reason` | string | | **(target, D-028)** why this activity references no guiding question, e.g. `"exam logistics"`, `"current-events hook"`. Only meaningful when `guiding_questions` is absent or empty; the critic judges whether it is legitimate |
 | `items` | array\<`U<NN>-I<NN>`\> | | assessment items used (typically the entry quiz). Every id **must resolve to an existing item of this unit** — checked by `activity_item_reference` (D-031a) |
 | `grouping` | enum | | `individual \| pairs \| small-group \| plenary` |
@@ -680,7 +682,7 @@ Activity object:
 | `home_study` | object | ✓ | `{ total_minutes, sessions_per_unit, session_minutes, goals_per_session: {min,max}, default_goal_type?, allowed_goal_types?, budget_tolerance_minutes? }` **(target: `budget_tolerance_minutes`; D-020)** |
 | `in_class` | object | ✓ | `{ scope (unit\|session), minutes, activities: {min,max}?, duration_tolerance_minutes? (default 5), require_opening_quiz? (default false), max_unmapped_minutes? (default 10), allowed_activity_types }` **(target: `max_unmapped_minutes`; D-028, default lowered by D-031e)**. `max_unmapped_minutes` is overridable per course in `course.yaml` |
 | `study_paths` | object | | `{ allowed_kinds?, min_paths_per_session? }` **(target: renamed from `min_paths_per_goal`; D-020)** |
-| `rules` | object | | rule-code → `error \| warn \| off`; overrides the defaults in §8.4 |
+| `rules` | object | | rule-code → `error \| alert \| warn \| off`; overrides the defaults in §8.4 for courses using this methodology. A course's own `course.yaml` `rules:` overrides it in turn |
 
 `question-driven-25` values: `unit.total_minutes 150`, `objectives 2–4`; `home_study.total_minutes
 100`, `sessions_per_unit 4`, `session_minutes 25`, `goals_per_session 3–5`, `allowed_goal_types
@@ -772,28 +774,31 @@ Severity is the default; **(target)** means not built yet. Every rule is also a 
 | `id_consistency` | every id matches its unit/number/session/prefix rules | integrity | error |
 | `goal_maps_to_objective` | each objective a goal names is defined by its unit | integrity | error |
 | `outcome_reference` | each outcome an objective names exists in the syllabus **(target, D-037)** | integrity | error |
-| `activity_references_guiding_question` | a guiding question an activity names exists. (Naming one from *another* unit is advisory — warn; naming none is advisory — warn) | integrity | error **(target: split, D-028/D-037)** |
+| `activity_references_guiding_question` | a guiding question an activity names exists somewhere in the course | integrity | error |
 | `activity_item_reference` | every id in an activity's `items` resolves to an existing item | integrity | error **(target, D-031a)** |
-| `item_reference` | an item's `unit` and `guiding_questions` exist. (A choice-format item with no `correct` choice is advisory — warn) | integrity | error |
+| `item_reference` | an item's `unit` and `guiding_questions` exist | integrity | error |
 | `material_locator_resolves` | every `M<NNNN>` / `M<NNNN>#anchor` locator names a real material and anchor | integrity | error **(target, D-035)** |
 | `outcome_coverage` | every Course Outcome is covered by ≥1 unit objective. Completeness rule | advisory | **alert** **(target, D-021/D-033/D-037)** |
-| `objective_coverage` | every unit objective is addressed by ≥1 guiding question | advisory | **alert** **(target: was error; D-037)** |
+| `objective_coverage` | every unit objective is addressed by ≥1 guiding question | advisory | **alert** |
 | `objective_maps_to_outcome` | every unit objective names ≥1 Course Outcome | advisory | **alert** **(target, D-021/D-037)** |
 | `syllabus_missing` | the course has no `syllabus/syllabus.md` | advisory | **alert** **(target, D-033/D-037)** |
 | `unit_count` | units on disk vs `course.yaml` `units` | advisory | warn |
-| `session_count` | sessions per unit == methodology `sessions_per_unit` | advisory | warn **(target: was error; D-037)** |
-| `goal_count` | goals per session within `goals_per_session` | advisory | warn **(target: was error; D-037)** |
-| `goal_type` | `goal.type ∈ allowed_goal_types` | advisory | warn **(target: was error; D-037)** |
+| `session_count` | sessions per unit == methodology `sessions_per_unit` | advisory | warn |
+| `goal_count` | goals per session within `goals_per_session` | advisory | warn |
+| `goal_type` | `goal.type ∈ allowed_goal_types` | advisory | warn |
 | `answer_reference_present` | each goal has ≥1 `answer` unless `defer_to_class` | advisory | warn **(target, D-019/D-023/D-037)** |
 | `deferred_question_resolved_in_class` | each `defer_to_class` goal is referenced by ≥1 activity | advisory | warn **(target, D-023/D-037)** |
 | `session_budget_feasibility` | `sum(est_minutes) + overhead ≤ budget`, within tolerance | advisory | warn **(target, D-020/D-037)** |
 | `min_paths_per_session` | session has ≥ `study_paths.min_paths_per_session` paths | advisory | warn **(target, D-020)** |
-| `in_class_missing` | unit has an `in-class.md` | advisory | warn **(target: was error; D-037)** |
-| `in_class_duration_match` | declared == methodology `minutes`, activities sum to it within tolerance | advisory | warn **(target: was error; D-037)** |
-| `activity_count` | activities within `in_class.activities` | advisory | warn **(target: was error; D-037)** |
-| `activity_type` | `activity.type ∈ allowed_activity_types` | advisory | warn **(target: was error; D-037)** |
-| `require_opening_quiz` | if set, the first activity is a `quiz` | advisory | warn **(target: was error; D-037)** |
+| `in_class_missing` | unit has an `in-class.md` | advisory | warn |
+| `in_class_duration_match` | declared == methodology `minutes`, activities sum to it within tolerance | advisory | warn |
+| `activity_count` | activities within `in_class.activities` | advisory | warn |
+| `activity_type` | `activity.type ∈ allowed_activity_types` | advisory | warn |
+| `require_opening_quiz` | if set, the first activity is a `quiz` | advisory | warn |
+| `activity_without_guiding_question` | an activity names ≥1 guiding question (split from `activity_references_guiding_question`, D-028/D-037) | advisory | warn |
+| `activity_references_other_unit` | a guiding question an activity names belongs to *this* unit, not another (split, D-037; the case Q-029's homework-checking quiz needs) | advisory | warn |
 | `in_class_unmapped_time_cap` | total time of activities referencing no guiding question ≤ `max_unmapped_minutes` | advisory | warn **(target, D-028/D-031e/D-037)** |
+| `item_no_correct_choice` | a choice-format item has ≥1 choice marked `correct` (split from `item_reference`, D-037) | advisory | warn |
 | `syllabus_workload_missing` | the syllabus declares no `workload` | advisory | warn |
 | `materials_not_ingested` | a source file is new or changed since the last ingest | advisory | warn **(target, D-035)** |
 | `unit_has_entry_quiz_items` | the unit has ≥1 item with `usage: in-class-quiz` | advisory | warn **(target, D-031c)** |
