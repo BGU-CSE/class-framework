@@ -91,9 +91,9 @@ Mirrors the framework's own `02-progress.md`.
 
 ## Metrics
 
-- 16 decisions (HW-D01..HW-D16, plus HW-D01 addendum)
-- 6 open questions logged (HW-Q01..HW-Q06)
-- 20 validator rules specified (all tagged `target` pending Python
+- 30 decisions (HW-D01..HW-D30, plus HW-D01 addendum)
+- 8 open questions logged (HW-Q01..HW-Q08)
+- 21 validator rules specified (all tagged `target` pending Python
   implementation)
 - 5 audit rounds, all specific issues addressed
 - Estimated ~2000 lines of documentation across SPEC, devlog, and README
@@ -125,7 +125,8 @@ See `04-handoff.md` for the full task list.
 - **HW-D10 recorded:** formats belong to the framework. The item schema is
   now Chen's file plus optional fields and the D-031g rename, with no new
   format rules. `item-code.md` reframed as the Coding-class template; the
-  numeric, multiple-select and true-false templates moved to `for-chen/`.
+  numeric, multiple-select and true-false templates now sit at their final
+  framework paths for direct approval or removal during review.
 - **HW-D11 recorded:** module decisions and open questions renumbered to
   `HW-D01`…`HW-D11` and `HW-Q01`…`HW-Q05` (mapping in `_devlog/README.md`).
 - **Framework docs linked (Decision 8, option B):** Chen's Q-026 marked
@@ -154,3 +155,62 @@ See `04-handoff.md` for the full task list.
   `homework_defaults_consistent` (21 rules in total).
 - **HW-Q06 logged:** where homework is graded and what must stay hidden
   depends on class and purpose (VPL, manual, none); linked to Q-002.
+- **`dev/homework/ROADMAP.md` added:** phase position, implementation plan
+  (steps H0–H7, moved from the handoff) and a per-decision ledger. It sits
+  outside `_devlog/` so it survives the devlog's removal at release.
+- **Roadmap review fixes:** "homework is optional" scoped precisely (config
+  rules still run when their file exists); `SCHEMA_FOR` rows moved to
+  `validate.py`; H6 renamed to integration tests (the agent pipeline is
+  exercised only by the first real homework); remaining "task list" pointers
+  now go to `ROADMAP.md`; branch/merge wording removed from module docs.
+- **Audience separation:** teacher-facing homework instructions
+  (`create-homework.md`, root `CLAUDE.md` teacher note, `GETTING-STARTED.md`
+  §6) no longer depend on `dev/homework/` documents; root `README.md` keeps a
+  developers-only link to the spec.
+- **Developer guide:** framework `dev/CLAUDE.md` gains a tree line and a marked
+  "Homework module" section (design, status, history, inventory, integration
+  point, rules for changing homework files). Chen's inventory is unchanged.
+- **HW-D17 recorded:** `/review-homework` removed (not part of the intended
+  flow; it also borrowed the framework's unit-oriented `course-critic`).
+  Re-review before reuse kept as HW-Q07.
+- **HW-D18 recorded:** tool-dependent items skipped (never invented tool
+  output); every skipped item gets a teacher aid (Research: references and a
+  short summary; tools: expected approach), with no-invented-resources rules.
+- **HW-D18 correction:** the teacher aid is returned in the solver report and
+  shown at Gate 2; it is not saved (storage is HW-Q06).
+- **HW-D19 recorded:** `item-critic` checks material fit against what students
+  were assigned; the writer revises items, never learning materials.
+- **HW-D20 recorded (scope only):** homework document export — a student Word
+  document and a separate teacher answers document — is designed in the module.
+- **HW-D21 recorded:** the framework's item bank is the single question bank;
+  overviews are generated, usage history derived. HW-Q08 logged (id capacity,
+  provenance — proposals for Chen).
+- **HW-D22 recorded:** `classkit bank` generates the overview on demand;
+  human output is the default, JSON is the stable agent contract, declared
+  and actual use stay separate, and no file is stored unless requested.
+- **HW-D23 recorded:** an agent creates the student and teacher Word documents
+  after Gate 2, with a leak check; both stay editable, agent edits go through
+  the bank first. Pipeline is now fourteen steps.
+- **HW-D24 recorded and tightened:** Word documents are saved outside the
+  repository or in a dedicated untracked output directory. An inside-repo
+  destination is checked with `git ls-files` and `git check-ignore`; only its
+  exact anchored path may enter `.git/info/exclude`.
+- **HW-D25 recorded:** `answer_release` dropped; the teacher decides about
+  publishing solutions outside the pipeline. 20 validator rules remain.
+- **HW-D26 recorded:** versions are targeted at Guiding Questions from a quiz
+  report (label, targets, items; `quiz_report` source required);
+  `homework_versions_fair` replaced by `homework_versions_targeted`, still 20
+  rules. Quiz reports are aggregated only; no student data in the repository.
+- **HW-D27 recorded:** item counts per class (`default_class_counts`) replace
+  the fractional class mix; shared and per-version counts asked separately for
+  targeted homework; `homework_defaults_consistent` checks counts, classes and
+  budget. Still 20 rules.
+- **HW-D28 recorded:** per-item tools in the manifest (`item_tools`), several
+  per item, programming languages included; Chen's item schema unchanged.
+  Two existing rules extended; still 20.
+- **HW-D29 recorded:** `prerequisites` dropped with its rule
+  `homework_prerequisites_precede`; 19 validator rules remain.
+- **HW-D30 recorded:** Word documents laid out from
+  `homework-document.yaml` (course title, instructor, semester, title with
+  homework number, due date, submission instructions, header/footer, logo,
+  language/direction, font); manifest gains optional `due_date`.

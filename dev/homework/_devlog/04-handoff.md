@@ -1,7 +1,8 @@
-# Handoff — implementation task list
+# Handoff — implementation notes
 
 Whoever picks up the module for Python implementation, read this first.
-Complements `HOMEWORK-SPEC.md` (the what) with the how, in order.
+Complements `HOMEWORK-SPEC.md` (the what) and `../ROADMAP.md` (the order and
+what is built) with the how.
 
 ## State at handoff
 
@@ -9,28 +10,32 @@ Complements `HOMEWORK-SPEC.md` (the what) with the how, in order.
 - Python runtime: unchanged. `classkit` does not load homework manifests,
   item classes, or the new templates. Scaffolding creates the homework
   directory but no files in it.
-- Validator: unchanged. None of the 21 rules exist in `validate.py`.
+- Validator: unchanged. None of the 19 rules exist in `validate.py`.
 - Tests: no homework-specific tests exist.
 - All content files (agents, commands, skills, schemas, templates) ship
   in the module and are ready to drop into their target paths.
 
-## Task list, in order
+## Notes by step
 
-### 1. Module content — done
+**The order of work and what is already built live in
+[`../ROADMAP.md`](../ROADMAP.md)** — its plan (steps H0–H7) and its ledger,
+which is authoritative for what exists. This file keeps the implementer's
+notes for each step.
 
-The agents, commands, skills, schemas and templates are already in place
-in the `homework-by-shira` branch; merging it into `main` installs them.
-Start at task 2.
+H0 (module content) is done: the agents, commands, skills, schemas and
+templates are in place.
 
-### 2. Update `src/classkit/model.py`
+### H1 — `src/classkit/model.py`
 
 Currently loads only course, syllabus, units, sessions, items. Add:
 
 - Loader for `course/assessments/homework/HW*.md` (parse frontmatter and
   body; exclude `.plans/` per `homework_schema` rule)
 - Loader for `course/assessments/item-classes.yaml`
-- Loader for `course/assessments/homework-defaults.yaml`, validated against
-  `schemas/homework-defaults.schema.json` (add it to `SCHEMA_FOR`)
+- Loader for `course/assessments/homework-defaults.yaml`
+- In `validate.py` (not here): register the four new schemas —
+  `homework`, `item-classes`, `homework-defaults`, `homework-document`
+  (HW-D30) — in `SCHEMA_FOR`
 - New model classes: `Homework`, `ItemClass`, `HomeworkDefaults`
 - Extend `Course` to hold `homework: List[Homework]`, `item_classes:
   Dict[str, ItemClass]`, `homework_defaults: Optional[HomeworkDefaults]`
@@ -39,48 +44,54 @@ Currently loads only course, syllabus, units, sessions, items. Add:
 Tests to add: `tests/test_model_homework.py` — fixtures for each new
 loader, error cases for malformed files.
 
-### 3. Update `src/classkit/validate.py`
+### H2–H4 — `src/classkit/validate.py`
 
-**Rule states (D-033, HW-D13).** 20 of the 21 rules are *consistency*
+**Rule states (D-033, HW-D13).** 18 of the 19 rules are *consistency*
 rules: they judge only homework manifests, item classes and defaults that exist, and
 must produce nothing on a course with no homework. `assessment_scheme_complete`
 is the one *completeness* rule: report it as skipped until the course is
 complete, and silent unless the syllabus declares homework. Severity is
-fixed per rule (`DEFAULT_SEVERITY`); the two `graded_*` rules are errors
-that only apply when `purpose: graded`. Each rule needs a test in both
-directions, including "no homework → no finding".
+fixed per rule (`DEFAULT_SEVERITY`); `graded_requires_rubric` is an error
+that only applies when `purpose: graded`. Each rule needs a test in both
+directions, including its silent case. A pristine course with no homework
+artifacts produces no homework findings; manifest-dependent rules are silent
+without manifests; configuration rules run whenever their file exists (for
+example after an abandoned first run) and still report malformed
+configuration.
 
-Implement all 21 rules from HOMEWORK-SPEC §7.2. Each rule as a Python
+Implement all 19 rules from HOMEWORK-SPEC §7.2. Each rule as a Python
 function returning `List[Diagnostic]` (or the framework's existing
 diagnostic type). Function names should match rule names.
 
 Grouping (proposed):
 
 - `validate_homework_structure()` — schema, id_consistency, item_reference,
-  item_usage, units_declared, coverage, prerequisites_precede
-- `validate_homework_budgets_and_versions()` — budget_fits, versions_fair,
+  item_usage, units_declared, coverage
+- `validate_homework_budgets_and_versions()` — budget_fits, versions_targeted,
   source_quiz_exists
-- `validate_graded_homework()` — requires_rubric, answer_release_safe
-- `validate_tools()` — homework_tools_declared, class_tools_declared
+- `validate_graded_homework()` — requires_rubric
+- `validate_tools()` — homework_tools_declared (`allowed_tools` and
+  `item_tools`, HW-D28), class_tools_declared
 - `validate_item_classes()` — item_class_declared, item_class_bundle_drift,
   item_class_evaluation_declared, item_source_resolvable,
   code_execution_reference_present
+- `validate_homework_defaults()` — homework_defaults_consistent
 - `validate_assessment_scheme()` — assessment_scheme_complete
 
 Tests: `tests/test_validate_homework.py` — one test per rule, positive
 and negative cases.
 
 **Notes for tricky rules:**
-- `homework_defaults_consistent`: only when the file exists. Compare the
-  class-mix sum with a tolerance (±0.01) — the shipped template sums to
-  0.9999999999999999 in floating point.
+- `homework_defaults_consistent`: only when the file exists (HW-D27). Warn
+  when every `default_class_counts` value is 0, when a class is missing from
+  `item-classes.yaml`, or when Σ count × midpoint of the class's
+  `typical_minutes` is further than `budget_tolerance_minutes` from
+  `total_minutes`. Integers only, so no floating-point tolerance is needed.
 - `homework_budget_fits`: per HW-D06, missing `est_minutes` on
   `time_variance: high` classes uses midpoint of `typical_minutes` range.
 - `homework_schema`: file glob `HW*.md` MUST exclude `.plans/`.
 - `graded_requires_rubric`: only applies when `purpose: graded`, and only
   to items whose format requires a rubric (`open`, `code`).
-- `graded_answer_release_safe`: `purpose: graded` + `answer_release:
-  with_homework` = error.
 - `code_execution_reference_present`: resolve the per-item strategy override,
   then the class strategy. When the result is `execute` and the item format is
   `code`, require both `expected_solution` and `tests`.
@@ -89,7 +100,7 @@ and negative cases.
   first (they treat draft and shipped identically); layer draft-awareness
   as a second pass. HW-Q03 tracks.
 
-### 4. Update `src/classkit/scaffold.py`
+### H5 — `src/classkit/scaffold.py`
 
 - Add `scaffold homework` subcommand — creates a new `HW{NN}.md` from
   template
@@ -102,37 +113,46 @@ and negative cases.
 
 Tests: extend `tests/test_course_lifecycle.py` to cover the new files.
 
-### 5. Update `src/classkit/cli.py`
+### H5 — `src/classkit/cli.py`
 
 - Add `scaffold homework` argument parser
 - Extend `scaffold item` with `--class`, and let `--format code` use the
-  Coding-class template `item-code.md` (templates for other formats are
-  the framework's call — see `dev/homework/for-chen/`)
+  Coding-class template `item-code.md`; support the shipped numeric,
+  multiple-select and true-false framework templates as well
+- Add `classkit bank`: human-readable stdout by default; stable JSON with
+  `--format json`; write only with explicit `--output <file>`. Keep declared
+  `usage` separate from actual manifest references, report missing manifest
+  types as unavailable, and list drafts separately (HW-D22).
 
-### 6. Write end-to-end tests
+### H6 — Integration tests
 
-New file: `tests/test_homework_pipeline.py`. Fixtures:
+New file: `tests/test_homework_integration.py`. Fixtures:
 
 - Practice homework, small (single unit, 3 items)
 - Graded homework, multi-unit (2 units, 5 items, mix of classes)
 - Diagnostic homework tied to a `quiz_report` source
-- Grouped homework with two versions
+- Homework with two targeted versions (valid), plus failing cases: target
+  outside declared units, uncovered target, version item testing an
+  unrelated Guiding Question, versions without a `quiz_report` source
 - Homework with reused items (usage array extension)
 - Homework with adapted items (new id + source_ref)
 - Coding homework (autograded via `execute` strategy)
 - Research homework (skipped via `skip` strategy)
 
 Each fixture: load the fixture course, run `classkit validate`, assert
-expected errors/warnings.
+expected errors/warnings. These test loading and validation only. The agent
+pipeline — the two gates, writing, the critic and solver loops — is not
+covered here; it is first exercised by the "first real homework" stage in
+`../ROADMAP.md`.
 
-### 7. Update public status documentation
+### H7 — Public status documentation
 
 The design-phase part is done: `FRAMEWORK-SPEC.md` (Assessment row),
 `ROADMAP.md`, the root `CLAUDE.md`, `GETTING-STARTED.md` and `README.md`
 already describe homework as *specified, validation not built* (every
 addition in the root docs is marked `homework-module`).
 
-Only after (2)-(6) pass:
+Only after H1–H6 pass:
 
 - Change those notes from "validation not built" to "implemented" — search
   for `homework-module` in the root docs
@@ -148,8 +168,10 @@ Only after (2)-(6) pass:
   experimental.
 - **Do not extend `item-critic` or `item-solver` to quiz/exam items.**
   HW-Q04 tracks the decision. Homework-only for now.
-- **Do not implement rendering** (manifest → student PDF/Moodle export).
-  Never designed.
+- **Do not implement rendering yet.** Its scope is decided (HW-D20: a
+  student Word document and a separate teacher answers document, generated
+  after Gate 2), but how and where are still being designed. Moodle export
+  stays out of scope.
 - **Do not implement item bank ingest** (`/ingest-items` command). HW-Q02
   logged as open.
 
@@ -157,21 +179,20 @@ Only after (2)-(6) pass:
 
 Rough estimates, assuming Python developer with framework familiarity:
 
-- Task 1 (module content): done
-- Task 2 (model updates): 3-4 hours
-- Task 3 (validator rules): 6-8 hours (many rules, each simple; setup dominates)
-- Task 4 (scaffolding): 2 hours
-- Task 5 (CLI): 1 hour
-- Task 6 (end-to-end tests): 4-6 hours (fixtures take time)
-- Task 7 (docs): 30 minutes
+- H0 (module content): done
+- H1 (model updates): 3-4 hours
+- H2–H4 (validator rules): 6-8 hours (many rules, each simple; setup dominates)
+- H5 (scaffolding, CLI and bank overview): 4-5 hours
+- H6 (integration tests): 4-6 hours (fixtures take time)
+- H7 (docs): 30 minutes
 
-Total: **17-22 hours** of focused work. Plus review time and iteration.
+Total: **18-24 hours** of focused work. Plus review time and iteration.
 
 ## Failure modes to watch for
 
 - **Silent field drops:** JSON Schema allows unknown properties by default
   unless `additionalProperties: false` is set. All three new schemas
-  (`homework`, `item-classes`) set it — validators must produce actionable
+  (`homework`, `item-classes`, `homework-defaults`) set it — validators must produce actionable
   errors, not silent truncation.
 - **Path handling on Windows:** `course/assessments/homework/.plans/`
   uses forward slashes in glob patterns. Test on Windows or use
@@ -194,6 +215,7 @@ Total: **17-22 hours** of focused work. Plus review time and iteration.
 
 ## When you're done
 
+- Tick each row in `../ROADMAP.md`'s ledger in the commit that lands it
 - Update `HOMEWORK-SPEC.md` §7.2 to drop the `target` tag from implemented
   rules
 - Update `_devlog/02-progress.md` with a new "Implementation phase" entry

@@ -1,6 +1,6 @@
 # Homework module decisions
 
-Sixteen decisions from the homework module design phase, September 2026.
+Thirty decisions from the homework module design phase, September 2026.
 Each has a full rationale. Numbered with the module's own prefix, `HW-D`,
 so they can never collide with the framework's `D-` sequence (HW-D11).
 
@@ -15,6 +15,20 @@ HW-D13 makes homework optional for the validator and for scaffolding.
 HW-D14 renames the numeric answer's `units` to `measurement_units`.
 HW-D15 aligns `/create-homework` with the spec and makes its two gates explicit.
 HW-D16 gives `homework-defaults.yaml` a schema and a consistency rule.
+HW-D17 removes `/review-homework`.
+HW-D18 skips tool-dependent items and gives the teacher an aid for every skipped item.
+HW-D19 adds a material-fit check to `item-critic`.
+HW-D20 puts homework document export in the module's scope.
+HW-D21 keeps the framework's item bank as the single question bank.
+HW-D22 makes the item-bank overview an on-demand `classkit` report.
+HW-D23 has an agent create the Word documents, with a leak check.
+HW-D24 lets the teacher choose where the Word documents go; git never holds them.
+HW-D25 drops `answer_release`.
+HW-D26 targets versions at Guiding Questions from a quiz report and keeps student data out.
+HW-D27 replaces the class mix with item counts per class.
+HW-D28 records per-item tools in the manifest, not in the item schema.
+HW-D29 drops `prerequisites` from the manifest.
+HW-D30 lays out the Word documents from a course settings file.
 HW-D01 has one addendum for the `/write-items homework` hand-off.
 
 ## HW-D01 — Homework as a first-class content type
@@ -509,7 +523,7 @@ when an item was auto-overridden to persona_attempt.
 ---
 
 ## HW-D08 — The homework module carries out the framework's D-031g rename
-**Date:** 2026-09-28 · **Status:** provisional · **Needs Chen's confirmation at merge.**
+**Date:** 2026-09-28 · **Status:** provisional · **Needs Chen's confirmation.**
 
 The framework already decided (D-031g) to rename the assessment item's
 `answer` field to `model_answer`: a guiding question's `answer` is a *list
@@ -517,7 +531,7 @@ of locators*, an item's `answer` was a *string*, and one key should not mean
 two things. The framework's roadmap schedules the rename for **step 5
 (Entry quiz)**, not yet started.
 
-**Decision.** The homework module does not wait for step 5. Its branch
+**Decision.** The homework module does not wait for step 5. It
 carries out D-031g for the parts it touches, and uses `model_answer`
 everywhere. This is not a new design; the name and the reason are Chen's.
 
@@ -526,7 +540,7 @@ numeric items both need a reference answer). Writing the module against
 `answer` would force a second rename across every homework agent and
 document once step 5 lands.
 
-**Scope — framework files the branch changes for this:**
+**Scope — framework files the module changes for this:**
 - `schemas/assessment-item.schema.json` — `answer` → `model_answer`
 - `templates/assessment/item-open.md` — same rename in the template
 
@@ -539,11 +553,11 @@ uses it for `open` and `numeric` only; a `code` item's reference is the
 runnable `expected_solution`, which the autograder executes. Chen should
 confirm this split.
 
-**For Chen at merge (not edited by the module):**
-- `dev/ROADMAP.md` ledger row "(g) rename `answer` → `model_answer`" can be
-  marked done, and step 5 no longer needs to do it.
-- If step 5 work on `assessment-item.schema.json` starts on `main` before
-  this branch merges, the two changes touch the same lines — coordinate
+**For Chen (not edited by the module):**
+- `dev/ROADMAP.md`'s two ledger rows for the rename (schema, `item-open.md`)
+  are ticked; step 5 no longer needs to do them.
+- If step 5 work on `assessment-item.schema.json` starts before
+  the homework module lands, the two changes touch the same lines — coordinate
   first.
 
 ---
@@ -561,7 +575,7 @@ two-mode agent. That changed Chen's quiz behavior as a side effect (it
 dropped the `writing-guiding-questions` skill for every mode), and it
 edited the file his roadmap step 5 plans to rewrite ("`assessment-writer`
 scoped to the entry quiz"). A separate agent keeps the module independent
-and removes that merge conflict.
+and removes that conflict.
 
 **How the craft stays shared.** Framework rule: craft used by more than
 one agent belongs in one place. `homework-item-writer` does not copy the
@@ -606,9 +620,10 @@ the module only adds optional fields.
 - `item-code.md` stays, reframed as the **Coding-class** template (it sets
   `item_class: Coding` and carries the Coding fields; `est_minutes` removed
   per HW-D06).
-- The numeric, multiple-select and true-false templates are plain format
-  templates, so they leave the module. Drafts are kept in
-  `dev/homework/for-chen/` as suggestions for the framework.
+- The numeric, multiple-select and true-false templates are plain framework
+  format templates. They live at their final paths under
+  `templates/assessment/` so review can approve or remove each one directly;
+  their presence does not make those formats homework-owned.
 
 ---
 
@@ -621,7 +636,7 @@ refer to the framework's own devlog (for example D-031g, Q-002, Q-026).
 
 **Why:** the module first continued the framework's sequence (D-035…D-044,
 Q-032…Q-036). The framework's next decision on `main` would also have been
-D-035, so after the merge two different decisions would have shared a number.
+D-035, so once both were in the framework, two different decisions would have shared a number.
 A prefix removes the collision without asking Chen to reserve numbers, and
 shows at a glance which entries belong to the homework module.
 
@@ -671,7 +686,7 @@ may complain about that.
 - `classkit scaffold course` does **not** create `homework-defaults.yaml`,
   `item-classes.yaml` or `homework/.plans/`. The first `/create-homework`
   (or `/new-hw-type`) run creates them from their templates.
-- 19 of the 20 validator rules are **consistency** rules (D-033): they judge
+- 20 of the 21 validator rules are **consistency** rules (D-033): they judge
   only homework files and item classes that exist, and are silent when there
   are none.
 - `assessment_scheme_complete` is the one **completeness** rule. It runs only
@@ -704,7 +719,8 @@ considered and rejected: the framework has a *Metrics* phase, and in CS
 courses "metric" usually means what is measured (accuracy, F1), not its unit.
 
 **Consequence:** renamed in `assessment-item.schema.json`, spec §3.3,
-`homework-item-writer.md`, and the numeric template draft in `for-chen/`.
+`homework-item-writer.md`, and the numeric template at
+`templates/assessment/item-numeric.md`.
 Nothing used the old name yet.
 
 ---
@@ -753,3 +769,405 @@ ones a schema cannot.
 
 **Consequence:** spec §3.5, §7.1, §7.2 (21 rules) and §11 updated; handoff
 tasks 2 and 3 name the loader, `SCHEMA_FOR` entry and the tolerance.
+
+---
+
+## HW-D17 — `/review-homework` removed
+**Date:** 2026-09-29 · **Status:** provisional
+
+**Decision.** The module has no `/review-homework` command. Homework is
+checked inside `/create-homework`: the planner against the teacher's
+expectations (Gate 1), `item-critic` and `item-solver` on every item, the
+validator, and the teacher at Gate 2.
+
+**Why:** the command was not part of the intended flow (interview → create →
+check → teacher approval → output). It also did its review by borrowing the
+framework's `course-critic`, an agent written for units, which the framework's
+roadmap step 7 plans to change — a hidden dependency like the one HW-D09
+removed.
+
+**Consequence:** the command file is deleted; the spec, roadmap, root
+`CLAUDE.md`, `GETTING-STARTED.md` and `dev/CLAUDE.md` no longer mention it.
+Its unique use — re-reviewing a finished or old homework as a whole (item
+order, redundancy, overlap with earlier homework) — is kept as HW-Q07.
+
+---
+
+## HW-D18 — Tool-dependent items are skipped; skipped items get a teacher aid
+**Date:** 2026-09-29 · **Status:** provisional
+
+**Decision.**
+- An item whose answer needs a tool or data the pipeline cannot run
+  (Wireshark, lab-only software, a teacher-provided dataset) is not
+  attempted. `homework-item-writer` sets `evaluation_strategy: skip` on it
+  (reusing HW-D07); `item-solver` also refuses to attempt one it meets under
+  `persona_attempt`. Tool output is never invented.
+- Every skipped item — Research or tool-dependent — gets a **teacher aid**
+  from `item-solver`, returned in its report and shown at Gate 2. It is not
+  saved yet — storing confidential teacher material is HW-Q06: for Research, up to 3–5 references and a short summary of what a
+  strong answer covers; for tool-dependent items, the expected approach and
+  "check by hand".
+- References come from the course's own materials first (`materials/source/`,
+  `textbooks`, Guiding Question `answer` locators). An outside reference
+  must be verifiable, or it is marked "unverified — check before use". No
+  invented URLs, pages or DOIs (framework rule).
+
+**Why:** the solver chose its check by class only, so a Practicing item
+needing Wireshark would have been "answered" with invented tool output —
+the fake signal HW-D05 forbids for Research. And a plain skip left the
+teacher with nothing for exactly the items they must grade by hand.
+
+**Consequence:** instruction changes only, no schema changes:
+`item-solver.md`, `homework-item-writer.md`, `create-homework.md` (Gate 2),
+`writing-research-items`, and spec §4.3 and §5.1. `item-solver` has no web
+tools, so outside references it proposes will usually be marked unverified.
+
+---
+
+## HW-D19 — `item-critic` checks material fit
+**Date:** 2026-09-29 · **Status:** provisional
+
+**Decision.** `item-critic` checks that what an item needs is in the
+material students were actually assigned.
+
+- Evidence, in order: the `answer` locators of the Guiding Questions the item
+  tests; otherwise the session's study paths and the resources they
+  reference. A file merely existing in `materials/source/` is not evidence —
+  only what was assigned counts.
+- Missing concept → `should-fix`, naming the concept and the session.
+- No evidence to check against → "couldn't verify material fit", listed at
+  Gate 2. Never a guess.
+- `homework-item-writer` revises the **item** to fit the material; it never
+  changes learning materials. If the material should change, that is the
+  teacher's decision at Gate 2.
+- Research items are exempt from the material containing their answer; the
+  critic checks only that students got enough course context to begin.
+
+**Why:** the critic checked that an item tests its Guiding Question, but not
+that students studied what the item requires. An item could match its
+Guiding Question and still need something no assigned material covers.
+
+**Consequence:** `item-critic.md`, `homework-item-writer.md`,
+`create-homework.md` (Gate 2), spec §4.1 step 7 and §5.1. Answer locators
+are the framework's D-019, not built yet, so early courses will rely on study
+paths — and often on "couldn't verify".
+
+---
+
+## HW-D20 — Homework document export is in the module's scope
+**Date:** 2026-09-29 · **Status:** provisional · **Scope only.**
+
+**Decision.** The module designs its own output: a **student homework
+document** (Word) and a **separate, editable teacher answers document**.
+Homework rendering is homework-specific (student vs teacher versions,
+`answer_release`), so it belongs here rather than in the framework's generic
+Exports phase.
+
+Boundaries:
+- The item files and the homework manifest remain the **canonical source**;
+  the Word documents are **generated artifacts**.
+- Rendering happens only **after Gate 2 approval**.
+- The student document must enforce `answer_release` and confidentiality.
+- Where the teacher document is stored cannot be final until HW-Q06 is
+  resolved.
+
+**This decision sets scope only.** Still to decide, separately: code versus
+agent generation; the contents and paths of each document; whether edits to
+the documents flow back into the items.
+
+**Why:** a Word homework and a separate answers file are the deliverables the
+teacher's workflow ends with. Without them the teacher receives framework
+source files, not usable documents.
+
+---
+
+## HW-D21 — One shared item bank
+**Date:** 2026-09-29 · **Status:** provisional
+
+**Decision.** The question bank for quizzes, homework and exams is the
+framework's existing item bank. Homework is a *usage* of an Assessment Item,
+not a separate kind of item.
+
+- `course/assessments/items/` remains the single canonical item bank.
+- Homework manifests reference bank items; they never embed copies.
+- Fresh and adapted homework items enter the shared bank. Adaptation creates
+  a new item with `source_ref`; the original is never modified.
+- No hand-maintained map is added. Links already exist (item → Guiding
+  Questions → session → unit → objectives → Course Outcomes); any overview is
+  **generated** by `classkit` from the items, the manifests and those links.
+- Usage history is derived from homework, quiz and exam manifests (and course
+  offering metadata), not stored as a growing list inside each item. Only
+  provenance that cannot be derived — uploaded vs generated, the original
+  source — may justify new item fields.
+- Importing past quizzes, homework and exams remains HW-Q02 (and framework
+  Q-028); mapping an imported item to current Guiding Questions needs the
+  teacher's confirmation. Importing confidential assessments stays blocked by
+  framework Q-002 and HW-Q06.
+- Changes to identifiers or shared item metadata are proposed to the framework
+  (Chen), not introduced by the homework module (HW-Q08).
+
+**Why:** a separate homework bank would duplicate storage, stop items being
+reused across quiz, homework and exam, and undo HW-D01. Word files are an
+output (HW-D20), not the storage: they cannot be validated, diffed, or
+reliably read and written by agents.
+
+**Still to decide, separately:** ingestion (HW-Q02), identifier capacity and
+provenance (HW-Q08).
+
+---
+
+## HW-D22 — The item-bank overview is generated on demand
+**Date:** 2026-09-29 · **Status:** provisional
+
+**Decision.** `classkit bank` generates the shared-bank overview when a
+teacher or agent asks for it. It prints a human-readable report by default;
+`--format json` provides a stable contract for agents. `--output <file>` saves
+the selected representation only when explicitly requested. No overview file
+is maintained in the repository by default.
+
+The report is derived from items, their Guiding Question links, and the
+manifests that actually exist. It shows:
+
+- Per unit and Guiding Question: counts by format, item class, declared
+  `usage`, and Bloom level.
+- Coverage gaps: no items, or no homework-eligible items.
+- Declared use separately from actual use. A `usage` value means eligible;
+  only a manifest reference proves assignment. Missing quiz or exam manifests
+  produce unavailable data, not an inference.
+- Which available manifests reference each item, plus items never referenced.
+- Draft items separately, so abandoned runs do not inflate shipped counts.
+
+`homework-planner` runs `classkit bank --format json` before planning to find
+gaps and reuse candidates. Until H5 implements the command, it scans the same
+files directly rather than blocking homework creation.
+
+**Why:** an on-demand report cannot drift when items are edited by hand and
+does not add noisy generated diffs. Human and machine outputs serve teachers
+and agents without making presentation text an integration contract.
+
+---
+
+## HW-D23 — An agent creates the Word documents; both stay editable
+**Date:** 2026-09-29 · **Status:** provisional
+
+**Decision.**
+- `/create-homework` gains step 12, after Gate 2 approval: an agent creates a
+  **student document** (Word, no answers) and a separate **teacher answers
+  document** (Word) from the approved manifest and item files.
+- **Leak check:** the agent confirms that none of the items' answer fields
+  (`model_answer`, choices marked `correct`, `expected_solution`, `tests`,
+  `rubric`) appear in the student document; anything suspicious is shown to
+  the teacher. The check is repeated after every edit to the student document.
+- **Both documents stay editable** by the teacher and the agent. An agent edit
+  changes the item file in the bank first (through `classkit write`), then
+  both documents. A manual teacher edit reaches the bank only when the teacher
+  asks for a sync; each change is confirmed with the teacher.
+- The item files and the manifest remain the canonical source (HW-D20).
+- Where the documents are saved is not decided (HW-Q06); until then the agent
+  asks the teacher.
+
+**Why:** the teacher wants the agent to produce the final Word files once
+everything is approved, and both teacher and agent to keep working on them.
+An agent-written student document has no structural guarantee against
+leaking answers, so the leak check replaces the guarantee code would give.
+
+**Consequence:** `create-homework.md` (new step 12; defaults become step 13,
+the report step 14), spec §4.1 (fourteen steps), `GETTING-STARTED.md` §6.
+
+---
+
+## HW-D24 — The Word documents go where the teacher chooses, never into git
+**Date:** 2026-09-29 · **Status:** provisional
+
+**Decision.** The homework is kept in the bank — the manifest and the item
+files. The two Word documents (HW-D23) are outputs, so they have no fixed
+location: the agent asks the teacher where to save them. They are never
+committed. Any folder outside the repository is acceptable. Inside the
+repository, the teacher must choose a dedicated generated-output directory
+that contains no tracked files — never the repository root or a broad existing
+directory such as `course/`, `assessments/`, `materials/`, or `units/`.
+
+The agent checks the repository-relative destination with both `git ls-files`
+and `git check-ignore`. If anything at the destination is tracked, it stops and
+asks for another location: an ignore rule cannot untrack a file. If the
+dedicated directory is untracked but not ignored, the agent adds only its exact
+anchored directory pattern to `.git/info/exclude`, verifies the result with
+`git check-ignore`, and tells the teacher. It never changes `.gitignore`, runs
+`git rm`, or excludes a broader parent directory. For later edits the agent
+asks where the files are.
+
+**Why:** everything needed to rebuild or reuse the homework is already in the
+bank, so the documents need no canonical place. Keeping them out of git keeps
+the confidential answers file out of the repository's permanent history, and
+avoids binary files in version control. The dedicated-directory and tracked-
+file checks prevent a convenient local exclusion from hiding unrelated course
+work. Using `.git/info/exclude` rather than `.gitignore` changes no framework
+file.
+
+**Consequence:** `create-homework.md` step 12 and spec §4.1. This settles
+where the *Word documents* live; HW-Q06 still covers whether answers may be
+kept in the item files in the repository at all.
+
+---
+
+## HW-D25 — `answer_release` dropped
+**Date:** 2026-09-29 · **Status:** provisional · **Supersedes** the
+`answer_release` parts of HW-D01, HW-D20 and the defaults (HW-D16).
+
+**Decision.** Homework has no `answer_release` field. The pipeline always
+gives the answers to the **teacher** (the teacher answers document, HW-D23);
+whether and when **students** see solutions is the teacher's decision, made
+outside the pipeline (for example by publishing solutions on Moodle).
+
+**Why:** the field only described when students would see answers, but
+nothing in the design produced a student solution sheet — the teacher answers
+document holds rubrics and teacher aids and is not meant for students. Its
+only effect was one validator rule. The student document's protection is the
+leak check (HW-D23), which applies whatever the teacher later publishes.
+
+**Consequence:** removed from `homework.schema.json` (with its "graded
+requires `answer_release`" condition), `homework-defaults.schema.json`, both
+templates, `create-homework.md` and the spec. The rule
+`graded_answer_release_safe` is removed: **20 validator rules** remain
+(19 consistency, 1 completeness).
+
+## HW-D26 — Versions are targeted at Guiding Questions from a quiz report
+**Date:** 2026-09-29 · **Status:** provisional · **Replaces** the "grouped
+variants" meaning of `versions` in HW-D01 and the rule `homework_versions_fair`.
+
+**Decision.** `versions` means **targeted versions**. After a quiz, the
+teacher may give different groups of students different follow-up work, each
+aimed at the Guiding Questions that group struggled with. Every student gets
+the shared top-level `items` plus the `items` of their version.
+
+- Each version has a unique `label`, at least one `target` (Guiding Question
+  id) and at least one item.
+- Targets are valid Guiding Question ids from the homework's declared `units`.
+- A homework with versions has `source.kind: quiz_report`, and its `ref` must
+  resolve.
+- Each version item tests at least one of its version's targets and no other
+  Guiding Question; practice everyone needs goes in the shared items.
+- Every target is covered by at least one of the version's items.
+- An item appears at most once in a version and is not also a shared item;
+  the same item may serve several versions.
+- Documents: one student document per version (shared plus version items);
+  one teacher document with every version clearly labeled (HW-D23).
+- Gate 1 shows every version's targets, item coverage and approximate
+  workload. On graded homework, differing versions need the teacher's explicit
+  approval.
+
+**Privacy.** The quiz report holds aggregated Guiding Question results only.
+Student names, identifiers, grades and assignments to versions never enter the
+repository. Labels never identify students. If a report contains student data,
+the pipeline stops and asks for an aggregated version.
+
+**Why:** the old model assumed parallel variants of equal content (for example
+against copying), and its rule warned when versions covered different Guiding
+Questions. The teacher's real use is the opposite: versions differ on purpose,
+driven by the quiz report.
+
+**Consequence:** `homework.schema.json` version objects gain required
+`targets`, unique items and a "versions require a `quiz_report` source with
+`ref`" condition; the template, `create-homework.md`, `homework-planner.md`
+and the spec are updated. `homework_versions_fair` (warn) is replaced by
+`homework_versions_targeted` (error); the count stays at **20 validator rules**
+(19 consistency, 1 completeness).
+
+## HW-D27 — Item counts per class replace the class mix
+**Date:** 2026-09-29 · **Status:** provisional · **Amends** HW-D02 (how the
+planner reads the typical shape) and HW-D16 (what the defaults rule checks).
+
+**Decision.** The teacher states a homework as a count per item class ("one
+DIY, one Coding"). `homework-defaults.yaml` stores `default_class_counts`
+(whole numbers, class name → count) instead of `default_class_mix`
+(fractions). The number of items is the sum of the counts; there is no
+separate item-total setting.
+
+- For targeted versions (HW-D26) the interviewer asks counts for the shared
+  items and for each version separately; Gate 1 shows the workload per student
+  for each version.
+- Defaults describe an ordinary homework. Version labels and per-version
+  counts are never stored in the defaults, and a targeted homework does not
+  update `default_class_counts` at step 13.
+- A class added with `/new-hw-type` starts at 0.
+
+**Rule change.** `homework_defaults_consistent` (warn) now checks: every count
+is a non-negative integer (also enforced by the schema); at least one count is
+positive; every named class exists in `item-classes.yaml`; the estimated work
+(count × class `typical_minutes` midpoint) is within `budget_tolerance_minutes`
+of `total_minutes`. Still **20 validator rules**.
+
+**Why:** counts match how teachers describe homework, avoid rounding, and
+cannot disagree with a separate item total.
+
+**Consequence:** `homework-defaults.schema.json`, the defaults template
+(DIY 2, Practicing 2, Coding 1, Research 0 — about 96 minutes against 90 ± 15),
+`create-homework.md`, `new-hw-type.md`, `homework-planner.md`, the spec and
+`GETTING-STARTED.md`.
+
+## HW-D28 — Per-item tools live in the manifest
+**Date:** 2026-09-29 · **Status:** provisional · **Extends** HW-D03.
+
+**Decision.** A homework manifest may carry `item_tools`: a map from item id
+to the tools that item needs, for example `U03-I05: [wireshark, gns3]` or
+`U03-I07: [python]`. Several tools per item are allowed, and a programming
+language counts as a tool. Every tool must be declared in `course.yaml`'s
+`tools` map. `allowed_tools` stays as the policy for the whole homework.
+
+**Not on the item.** Chen's `assessment-item.schema.json` gets no tools
+field. The tools are needed only while creating the homework — the planner
+puts them on each slot, the writer writes for them, the solver uses them to
+decide whether it can attempt the item (HW-D18) — and in the student
+document. Nothing else reads them. The cost: when an item is reused, the new
+homework states its tools again.
+
+**Rules.** No new rule; still **20**. `homework_tools_declared` also checks
+`item_tools`; `homework_item_reference` also checks that every `item_tools`
+key is an item of this homework (shared or in a version).
+
+**Consequence:** `homework.schema.json`, the manifest template,
+`create-homework.md`, `homework-planner.md`, `homework-item-writer.md`,
+`item-solver.md` and the spec.
+
+## HW-D29 — `prerequisites` dropped
+**Date:** 2026-09-29 · **Status:** provisional · **Amends** HW-D01.
+
+**Decision.** The homework manifest has no `prerequisites` field, and the rule
+`homework_prerequisites_precede` is removed.
+
+**Why:** nothing in the pipeline used it. The planner never read it, and the
+units a homework declares already say what it builds on. The module keeps only
+what creating the homework needs (see HW-D28).
+
+**Consequence:** removed from `homework.schema.json`, the manifest template and
+the spec. **19 validator rules** remain (18 consistency, 1 completeness).
+
+## HW-D30 — The Word documents are laid out from `homework-document.yaml`
+**Date:** 2026-09-29 · **Status:** provisional · **Extends** HW-D23.
+
+**Decision.** A course file, `course/assessments/homework-document.yaml`, says
+how the homework Word documents look. At step 12 the agent fills the student
+document and the teacher answers document from it plus the approved manifest
+and items. Fields: `course_title`, `instructor`, `semester`, `title_format`
+(placeholders `{course_title}`, `{semester}`, `{number}`, `{id}`, `{units}`;
+`{number}` is the homework number from the id), `due_date_format`,
+`submission_instructions`, `header`, `footer`, `logo`, `language`,
+`direction`, `font`, `font_size`, `show_est_minutes`.
+
+- The manifest gains an optional `due_date`; if it is missing at step 12, the
+  agent asks and records it (covered by the Gate 2 approval).
+- If `semester` looks out of date, the agent asks before using it.
+- Created from its template on the first `/create-homework` (HW-D13);
+  validated by its own schema; holds no answers, so it is committed.
+
+**Why not a Word template:** a `.docx` template is binary, cannot be validated
+like the framework's other templates, and its placeholders break easily when
+edited. The teacher chooses among fields instead of designing the page in
+Word; for a homework handout that is enough.
+
+**Not included:** points per item — items have no points field.
+
+**Consequence:** new `schemas/homework-document.schema.json` and
+`templates/course/homework-document.yaml`; `due_date` in
+`homework.schema.json` and the manifest template; `create-homework.md` steps 1
+and 12; the spec; `GETTING-STARTED.md`. No new validator rule; still **19**.

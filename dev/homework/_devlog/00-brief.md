@@ -20,14 +20,15 @@ grading scheme remain deferred.
 
 ## Timeline
 
-The module's design phase ran September 2026, produced sixteen decisions
-(HW-D01 through HW-D16) and six open questions (HW-Q01 through HW-Q06), and
+The module's design phase ran September 2026, produced thirty decisions
+(HW-D01 through HW-D30) and eight open questions (HW-Q01 through HW-Q08), and
 was reviewed across multiple audit rounds. See `02-progress.md` for the
 detailed log.
 
 The design is complete and internally consistent. Implementation (Python
 runtime, scaffolding, validator rules, tests) has not started. See
-`04-handoff.md` for the implementation task list.
+`../ROADMAP.md` for the implementation plan, and `04-handoff.md` for
+implementation notes.
 
 ## Scope
 
@@ -47,7 +48,7 @@ runtime, scaffolding, validator rules, tests) has not started. See
 - Exam confidentiality — Q-002 still open in framework
 - Grading scheme — not yet designed
 - Autograding infrastructure beyond design (sandbox is HW-Q05)
-- Rendering the manifest to student-facing PDF/Moodle
+- Moodle export (the Word documents are in scope, HW-D20)
 
 ## Key design commitments
 

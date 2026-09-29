@@ -9,10 +9,10 @@ first if you're new to the module.
 | File | What it holds |
 |---|---|
 | `00-brief.md` | One-page brief — what the module is, why it exists, its scope |
-| `01-decisions.md` | Every design decision (HW-D01..HW-D16) with rationale |
+| `01-decisions.md` | Every design decision (HW-D01..HW-D30) with rationale |
 | `02-progress.md` | Development log — what was done when, in what order |
-| `03-open-questions.md` | Open questions (HW-Q01..HW-Q06) with framing and options |
-| `04-handoff.md` | Handoff notes for the next implementer |
+| `03-open-questions.md` | Open questions (HW-Q01..HW-Q08) with framing and options |
+| `04-handoff.md` | Implementation notes (plan and ledger: `../ROADMAP.md`) |
 
 ## Relationship to the framework devlog
 
@@ -28,7 +28,7 @@ devlog carries only a cross-reference note.
 1. `README.md` (module root) — 5 minutes
 2. `HOMEWORK-SPEC.md` (module root) — 30 minutes
 3. `_devlog/00-brief.md` — 5 minutes
-4. `_devlog/04-handoff.md` — 15 minutes (what to do next)
+4. `ROADMAP.md`, then `_devlog/04-handoff.md` — 15 minutes (what to do next, and how)
 5. `_devlog/01-decisions.md` (as needed, for rationale on specific fields)
 6. `_devlog/03-open-questions.md` (as needed, when hitting ambiguity)
 

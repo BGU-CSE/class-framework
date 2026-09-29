@@ -1,6 +1,6 @@
 # Homework module open questions
 
-Six questions raised during the homework module design phase. Each is
+Eight questions raised during the homework module design phase. Each is
 open — worth resolving before the corresponding sub-feature is trusted in
 production, but not blocking on the design itself. Numbered with the
 module's own prefix, `HW-Q`, separate from the framework's `Q-` sequence
@@ -10,7 +10,7 @@ HW-Q04 and HW-Q05 surfaced during audit rounds; HW-Q01, HW-Q02, HW-Q03 were
 raised inline with earlier decisions.
 
 Q-026 in the framework's devlog is marked resolved by HW-D01, and Q-029 carries an
-update note; both edits were made in the `homework-by-shira` branch (2026-09-28).
+update note (2026-09-28).
 
 ## HW-Q01 — Assessment item format extensibility
 **Raised 2026-09-22 by Shira, during the homework design phase.**
@@ -56,7 +56,9 @@ is a proposal, not a build.
 
 ## HW-Q02 — Item bank ingest: reference-only vs. fully-materialized items
 **Raised 2026-09-22 by Shira, during the homework design phase.**
-**Related:** Q-026 (resolved → HW-D01), Q-028 (material extraction).
+**Related:** Q-026 (resolved → HW-D01), Q-028 (material extraction), Q-002
+(confidential assessment material), HW-Q06 (homework confidentiality), HW-Q08
+(identifier capacity and provenance).
 
 Teachers arrive with existing assessment items in heterogeneous formats:
 past exams as PDFs, homework as Word docs, Moodle XML exports, MCQs in
@@ -128,6 +130,31 @@ the moment a teacher wants to reuse existing questions rather than
 authoring everything fresh. The pilot course has ~100+ existing items
 across old exams and homework; without ingest, the bank starts empty and
 fills at the speed the teacher writes new homework.
+
+### Coordination boundary
+
+Do not design or implement a homework-only importer. The framework has one
+shared item bank (HW-D21), and framework Q-028 already owns ingestion from the
+same source materials. HW-Q02 stays open until that design is coordinated with
+Chen; a second command or a second conversion path would create incompatible
+items in the same bank.
+
+The homework module contributes these requirements to the framework ingest
+design:
+
+- Read candidate assessments from Word, PDF, Moodle exports, and other source
+  formats the framework elects to support.
+- Split an assessment into candidate Assessment Items without silently
+  treating extraction guesses as approved content.
+- Ask the teacher to confirm every mapping to the current course's unit and
+  Guiding Questions.
+- Keep an item that fits no current Guiding Question in an explicit review
+  state; never invent a mapping merely to satisfy the schema.
+- Apply the framework's confidentiality decision before importing past exams
+  or other restricted material (Q-002 and HW-Q06).
+- Write accepted items only to the shared `course/assessments/items/` bank.
+- Add provenance only after the framework settles HW-Q08's identifier and
+  metadata proposals.
 
 ---
 
@@ -373,8 +400,9 @@ For a graded homework the correct answers live in the item files —
 `model_answer`, `rubric`, `expected_solution`, `tests` — inside the course
 repo, which is shared with collaborators and whose git history is permanent.
 The framework already stops and asks before writing exam items (Q-002); the
-homework pipeline only controls *when students see answers*
-(`answer_release`), not *where the answers are stored*.
+homework pipeline does not control *where the answers are stored*.
+(`answer_release`, which controlled when students saw answers, was dropped in
+HW-D25; publishing solutions is the teacher's call, outside the pipeline.)
 
 How sensitive that is depends on the **item class** and the **purpose**,
 not on "graded or not" alone:
@@ -406,5 +434,50 @@ exposes, instead of one blanket warning.
 ### Sequencing
 
 Revisit when Q-002 is decided or when a course first grades homework on
-VPL. Until then the module changes no behavior: `answer_release` and
-`graded_answer_release_safe` remain the only safeguards.
+VPL. (Partly settled by HW-D24: the Word documents, including the teacher
+answers document, are never committed. The answers inside the item files
+remain the open part.) Until then the module changes no behavior: the leak check on the
+student document (HW-D23) is the safeguard.
+
+---
+
+## HW-Q07 — Re-reviewing a finished or old homework
+**Raised 2026-09-29, when `/review-homework` was removed (HW-D17).**
+
+The pipeline checks each item (critic, solver) and the teacher approves the
+whole at Gate 2. Nothing re-checks a **finished homework as a whole**: item
+order and difficulty ramp, redundancy between items, tone consistency,
+balance between targeted versions (HW-D26), overlap with earlier homework. Nor is there a way
+to re-check an **old** homework before reusing it next semester.
+
+### Not decided
+
+- Whether this is needed at all, or Gate 2 is enough.
+- If needed: a module-owned agent (not the framework's `course-critic`), a
+  step inside `/create-homework` before Gate 2, or a standalone command.
+
+### Sequencing
+
+Revisit after the first real homework, if teachers ask for it.
+
+---
+
+## HW-Q08 — Bank growth: identifier capacity and provenance
+**Raised 2026-09-29, with HW-D21.** **For the framework (Chen):** both touch
+the shared item schema.
+
+- **Identifier capacity.** Item ids are `U01-I01`…`U01-I99` — at most 99 items
+  per unit. A bank that keeps every homework, quiz and exam item across
+  semesters, plus imported past items, will reach that limit.
+- **Provenance.** Nothing records whether an item was generated by the
+  pipeline or imported, or where an imported item came from (which past
+  exam, which semester's homework). Usage history can be derived from
+  manifests (HW-D21); provenance cannot.
+
+### Not decided
+
+- A wider id pattern (e.g. three digits) versus another scheme.
+- Which provenance fields, if any (for example `origin: generated | imported`
+  and a free-text source), and whether they are optional.
+- Both are changes to `assessment-item.schema.json` and the framework's id
+  conventions, so they are proposals to Chen, not module decisions.

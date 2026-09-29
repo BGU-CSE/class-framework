@@ -1,7 +1,7 @@
 # Homework module
 
 The Homework feature for the class-framework. Separate module, consistent with
-the framework's conventions, developed in the `homework-by-shira` branch.
+the framework's conventions.
 
 ## What this module adds
 
@@ -17,36 +17,35 @@ the framework's conventions, developed in the `homework-by-shira` branch.
 - A general-purpose interview agent, tools as course-declared strings, and
   a hand-off from `/write-items homework` to the pipeline
 
-Sixteen decisions (HW-D01 through HW-D16) and six open questions (HW-Q01 through
-HW-Q06) capture the design; the module's own devlog holds them.
+Thirty decisions (HW-D01 through HW-D30) and eight open questions (HW-Q01 through
+HW-Q08) capture the design; the module's own devlog holds them.
 
 ## Module structure
 
-The module lives in the `homework-by-shira` branch of the framework repo and
-merges into `main` after approval. Its documents live under `dev/homework/`;
-its runtime files sit at their normal framework paths.
+Its documents live under `dev/homework/`; its runtime files sit at their
+normal framework paths.
 
 ```
 dev/homework/                  Module documents
 ├── README.md                  This file
 ├── HOMEWORK-SPEC.md           The module specification (source of truth)
+├── ROADMAP.md                 Implementation plan and ledger (what is built)
 ├── _devlog/                   Module's design history
 │   ├── README.md              Devlog index (and old → new number mapping)
 │   ├── 00-brief.md            One-page brief of what this module is
-│   ├── 01-decisions.md        HW-D01 through HW-D16
+│   ├── 01-decisions.md        HW-D01 through HW-D30
 │   ├── 02-progress.md         Development log
-│   ├── 03-open-questions.md   HW-Q01 through HW-Q06
-│   └── 04-handoff.md          Handoff notes for implementers
-└── for-chen/                  Suggested framework templates (not part of the module)
+│   ├── 03-open-questions.md   HW-Q01 through HW-Q08
+│   └── 04-handoff.md          Implementation notes (the plan is in ROADMAP.md)
 
-.claude/                       5 agents, 4 commands, 3 skills (see HOMEWORK-SPEC §7.1)
-schemas/                       3 new schemas, 2 framework schemas with small additions
-templates/                     4 new templates, 2 framework templates with small changes
+.claude/                       5 agents, 3 commands, 3 skills (see HOMEWORK-SPEC §7.1)
+schemas/                       4 new schemas, 2 framework schemas with small additions
+templates/                     8 new templates, 2 framework templates with small changes
 ```
 
-The module has **31 files**: 8 documents under `dev/homework/` and 23
+The module has **36 files**: 9 documents under `dev/homework/` and 27
 runtime files. Of the runtime files, 5 change existing framework files and
-18 are new. In addition, 7 framework documents carry short cross-references
+22 are new. In addition, 7 framework documents carry short cross-references
 to the module: `CLAUDE.md`, `GETTING-STARTED.md` and `README.md` at the
 root, `FRAMEWORK-SPEC.md`, `ROADMAP.md`, and the framework's decisions and
 open-questions logs. In the three root documents every homework addition is
@@ -82,19 +81,20 @@ Otherwise the module is additive.
 
 ## Install
 
-There is no separate install step: the branch *is* the module. Merging
-`homework-by-shira` into `main` puts every file in place. After merging, run
-`pip install -e ".[dev]"`, then `pytest`, to confirm the framework still
-validates. The Python implementation is the next phase (see `04-handoff.md`).
+There is no separate install step: the files are already at their
+framework paths. Run `pip install -e ".[dev]"`, then `pytest`, to confirm the
+framework still validates. The Python implementation is the next phase: the plan and
+ledger are in `ROADMAP.md`, the implementer's notes in `_devlog/04-handoff.md`.
 
 ## Current status
 
-- Design: **complete and reviewed**. Sixteen decisions recorded, six open
+- Design: **complete and reviewed**. Thirty decisions recorded, eight open
   questions logged as future work.
 - Implementation: **not started**. The Python runtime (`classkit`) does
   not yet load homework manifests, item classes, or the new templates.
-  Scaffolding does not create the homework files. The 21 validator rules
+  Scaffolding does not create the homework files. The 19 validator rules
   are specified but unimplemented.
 - Tests: **not started**. No homework-specific tests exist.
 
-See `_devlog/04-handoff.md` for the implementation task list.
+See `ROADMAP.md` for the implementation plan and what is built, and
+`_devlog/04-handoff.md` for the implementer's notes.
