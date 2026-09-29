@@ -1022,7 +1022,7 @@ write path (§8.6), which refuses, and the command shows the teacher the edit an
 **A removed source** is marked in the manifest, never deleted: locators pointing at it must fail
 validation visibly rather than disappear.
 
-### 8.8 The course log **(target, D-036)**
+### 8.8 The course log (D-036)
 
 `LOG.md` at the course root records **what changed in the course and why** — the meaning that
 git's history of bytes does not carry. It covers the course only: materials, syllabus, units,
@@ -1040,7 +1040,25 @@ Append-only. One entry per non-trivial change:
 - **Every approved step of every command is an entry** — the log and the approval gates (§5.2) are
   the same moments. So is each ingest run.
 - It is written by **`classkit log`**, not by each agent in its own style, so the format stays
-  consistent and parseable.
+  consistent and parseable:
+
+  ```
+  classkit log TITLE --changed TEXT --why TEXT [--file PATH]... [--date YYYY-MM-DD] [--course DIR]
+  ```
+
+  `TITLE` is the heading after the date — who or which command, and what happened
+  (`"/design-unit 3, step 1 approved"`). `--changed` (what changed, by ID) and `--why` are
+  required: an entry without a *why* is what git already records. Each field is one line (runs of
+  whitespace, newlines included, collapse to a space); `Files` is comma-separated. The date
+  defaults to today.
+- **Append-only, structurally.** `classkit log` opens `LOG.md` for appending and never rewrites
+  it, so — like the write path (§8.6) — it cannot lose a teacher's text, including hand-written
+  entries. If `LOG.md` does not exist it is created (header, then the entry).
+- **`classkit scaffold course` starts the log**, create-only like everything scaffold writes, with
+  a first entry listing the files that run created. On a course that predates the log, re-running
+  scaffold creates it and says that everything else already existed.
+- Parsing is tolerant: a hand-written heading with no date keeps its whole text as the title, and
+  lines that are not a `Changed`/`Why`/`Files` field are kept as notes.
 - **Agents read the recent entries before starting work**, so they know what was done last time and
   why — which is what makes year-to-year revision possible without re-deriving intent.
 - The teacher may add entries by hand ("taught U03 — students found S02 too long").

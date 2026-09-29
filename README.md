@@ -139,6 +139,7 @@ designer, the critic and the assessment writer apply the same standard.
 | `classkit scaffold item U05` | Add an assessment item |
 | `classkit validate` | Check the course against its methodology and schemas |
 | `classkit write` | The write path agents use — refuses to replace existing content without explicit confirmation |
+| `classkit log` | Append an entry to the course log, `LOG.md` — what changed and why |
 
 Scaffolding **never overwrites**. Re-run it any time — you get whatever is missing and keep
 everything you wrote. Skipped files are reported.

@@ -15,6 +15,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import log
 from .model import load_methodology, load_yaml
 from .write import write
 
@@ -137,6 +138,29 @@ def scaffold_course(
                 "units": units,
                 "methodology": methodology,
             },
+        ),
+        result,
+    )
+
+    # The course log (D-036) is written last, so its first entry can say truthfully what
+    # this run created — on a fresh course, everything; on an older course that predates
+    # the log, only what was missing.
+    created = [
+        str(path.relative_to(course_root))
+        for path in result.created
+        if path.name != ".gitkeep"
+    ]
+    write_new(
+        course_root / log.LOG_FILE,
+        log.new_log(
+            log.Entry(
+                title="classkit scaffold course",
+                changed=f"course log started; created {', '.join(created)}"
+                if created
+                else "course log started; every other file already existed",
+                why=f"setting up {title} ({code})",
+                files=[*created, log.LOG_FILE],
+            )
         ),
         result,
     )

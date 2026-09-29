@@ -70,6 +70,7 @@ src/classkit/
   model.py                locating and loading a course tree
   scaffold.py             create-only content generation
   write.py                the overwrite-safe write path — every agent and command writes here
+  log.py                  the course log, LOG.md — `classkit log`, append-only (D-036)
   mode.py                 teacher / framework-developer hat: `classkit mode` (D-034)
   validate.py             schema layer + semantic rules
   cli.py                  argparse entry point

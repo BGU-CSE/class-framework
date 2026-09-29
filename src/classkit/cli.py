@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import datetime
 import sys
 from pathlib import Path
 
+from . import log
 from .frontmatter import FrontMatterError
 from .mode import DEVELOPER, TEACHER, UnsafeMarker, current_mode, set_mode
 from .model import LayoutError, find_course_root, find_framework_root, load_course
@@ -88,6 +90,29 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="report what would happen without writing anything",
     )
+
+    # The course log (D-036): what changed in the course and why. Append-only.
+    log_cmd = subcommands.add_parser(
+        "log",
+        help="append an entry to the course log, LOG.md (what changed, and why)",
+    )
+    log_cmd.add_argument(
+        "title",
+        help="who or which command, and what happened, e.g. '/design-unit 3, step 1 approved'",
+    )
+    log_cmd.add_argument(
+        "--changed", required=True, help="what changed, by ID, e.g. 'U03-S01..S04 created'"
+    )
+    log_cmd.add_argument("--why", required=True, help="why it changed")
+    log_cmd.add_argument(
+        "--file",
+        dest="files",
+        action="append",
+        default=[],
+        help="a file the change touched, relative to the course (repeatable)",
+    )
+    log_cmd.add_argument("--date", help="YYYY-MM-DD (default: today)")
+    log_cmd.add_argument("--course", help="course directory (default: search upward)")
 
     # Which hat a session in this repo wears (D-034). Teacher is the default; switching
     # to framework-developer creates a gitignored marker, and refuses if the ignore rule
@@ -225,6 +250,30 @@ def run_write(args) -> int:
     return 0
 
 
+def run_log(args) -> int:
+    if args.date:
+        try:
+            datetime.date.fromisoformat(args.date)
+        except ValueError:
+            print(f"error: --date must be YYYY-MM-DD, not {args.date!r}", file=sys.stderr)
+            return 2
+    course_root = find_course_root(Path(args.course) if args.course else None)
+    entry = log.Entry(
+        title=args.title,
+        changed=args.changed,
+        why=args.why,
+        files=args.files,
+        date=args.date or "",
+    )
+    try:
+        path = log.append(course_root, entry)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(f"logged  {path}")
+    return 0
+
+
 def run_mode(args, framework_root: Path) -> int:
     if args.mode is None:
         mode = current_mode(framework_root)
@@ -258,6 +307,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "write":
             return run_write(args)
+        if args.command == "log":
+            return run_log(args)
         framework_root = find_framework_root()
         if args.command == "mode":
             return run_mode(args, framework_root)

@@ -308,11 +308,11 @@ All land in **step 3**, with the coverage chain.
 
 | | Artifact | Change |
 |---|---|---|
-| ⬜ | `src/classkit/log.py` (new), `cli.py` | `classkit log` — append a structured entry (date, actor, changed IDs, why, files) to `LOG.md` |
-| ⬜ | `src/classkit/scaffold.py` | create `LOG.md` with a first entry when a course is scaffolded |
+| ✅ | `src/classkit/log.py` (new), `cli.py` | `classkit log` — append a structured entry (date, actor, changed IDs, why, files) to `LOG.md`. The actor is part of the title, as in the spec's example heading |
+| ✅ | `src/classkit/scaffold.py` | create `LOG.md` with a first entry when a course is scaffolded |
 | ⬜ | `.claude/commands/*.md` (all) | log each approved step (with the D-030 gates) |
 | ⬜ | `.claude/agents/*.md` (writers) | read recent log entries before starting work |
-| ⬜ | `tests/` | append-only; format parseable |
+| ✅ | `tests/` | append-only; format parseable — `tests/test_course_log.py` |
 
 ## D-037 — Teacher authority: integrity vs advisory
 

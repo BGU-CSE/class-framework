@@ -53,6 +53,12 @@ course goal and its **Course Outcomes** (`CO1`, `CO2`, …): what a student who 
 outcomes are the roof of everything below them — each unit's objectives roll up to them, so the
 validator can ask whether your units together deliver what the course promised.
 
+It also starts **`course/LOG.md`, the course log**: what changed in the course and *why* — the part
+git's history does not record. The commands add an entry at each step you approve, and the agents
+read the recent entries before they start work, so next year's revision knows what this year's
+decided. Add your own entries by hand whenever something worth remembering happens ("taught U03 —
+students found S02 too long"), or with `classkit log "taught U03" --changed "…" --why "…"`.
+
 The syllabus is a **Bologna-style course descriptor**: alongside the goal and outcomes it has room
 for level, course type, when it is offered, teaching methods, reading, workload and the assessment
 scheme. Fill it in over time, or leave parts out — only the goal and the outcomes are required.
@@ -108,7 +114,7 @@ one that looks wrong. The shipped defaults are placeholders; adjust them to your
 
 **`in_class.max_unmapped_minutes` is the guardrail on the class hour.** Most activities should build
 on the week's guiding questions. A few legitimately do not, and those are fine — but if they add up
-past this cap, validation fails, because an hour made of them is a lecture again. Raise it if your
+past this cap, the validator warns you, because an hour made of them is a lecture again. Raise it if your
 teaching genuinely needs more; set it to the full hour to switch the guardrail off entirely. It is
 your course.
 
@@ -194,8 +200,11 @@ accepted:
     reason: "long session on purpose — exam week"
 ```
 
-— or change a rule for the whole course under `rules:` in `course.yaml`. Agents never do this on
-their own; only you do. *(Alerts and `accepted:` are not built yet.)*
+— or change a rule for the whole course under `rules:` in `course.yaml` (e.g.
+`session_count: off`). Agents never do this on their own; only you do. The rule's name is the one
+`classkit validate` prints in brackets; a name it does not recognise gets a warning, because a
+mistyped exception silently does nothing. Accepted exceptions are still counted at the end of the
+report, so they never disappear from view.
 
 Some checks only run once your unit map is complete — a half-built course is a normal state, and
 the validator says when it has skipped something for that reason.

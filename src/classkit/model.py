@@ -4,6 +4,7 @@ Layout, as created by `classkit scaffold course`:
 
     course/
       course.yaml
+      LOG.md                the course log (D-036) — not loaded here; see log.py
       syllabus/syllabus.md
       units/
         01-slug/
