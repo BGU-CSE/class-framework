@@ -1074,3 +1074,163 @@ Decisions for the homework part of the Assessment phase are recorded separately,
 `HW-D01`, `HW-D02`, … (open questions `HW-Q01`, …), in `dev/homework/_devlog/`. They resolve Q-026.
 HW-D08 carries out this log's D-031g rename (`answer` → `model_answer`). Plain `D-` and `Q-` numbers
 remain this log's own.
+
+## D-035 — Ingest: a derived, addressable layer over whatever the teacher has
+**Date:** 2026-09-29 · **Status:** locked (design) · **implementation pending** · resolves **Q-028**
+
+**Sequencing first.** Claude proposed implementing step 3 (`/plan-units`) before designing ingest,
+on the grounds that step 3 does not structurally depend on it and would teach us what ingest needs.
+Avin disagreed and was right: **the organization of materials is the input contract for every agent
+downstream**, so building `/plan-units` against an unspecified heap means reworking it once ingest
+defines the contract; and a teacher never runs step 3 without step 2, so testing it without ingest
+would test a workflow nobody follows. It is also simply the "workflow order outside" principle.
+
+**Assumptions (Avin):** the framework is general, not DS&A-shaped; the teacher is **not** assumed to
+be organized — one folder of everything or a tidy tree; material may be duplicated (a PPTX and its
+PDF); any format may appear; material is added over time.
+
+**Decisions** (full normative text in spec §8.7):
+
+- **Two layers.** `materials/source/` is the teacher's and agents never modify it;
+  `materials/ingested/` is derived — **one `.md` per material, flat, keyed by a stable id `M<NNNN>`**
+  (not `S`, which already means Study Session). Flat rather than mirroring `source/` so that renaming
+  or moving a file never breaks a locator; the manifest re-matches it by content hash.
+- **A manifest** (`materials/manifest.yaml`) records every material: id, title, format, kind,
+  source paths (plural, for merged duplicates), the canonical source, hashes, status, likely units.
+- **Explicit anchors** — one heading per slide or page, or the document's own headings — so a locator
+  like `M0007#slide-18` names a place that demonstrably exists. **New rule
+  `material_locator_resolves` (error)** makes invariant 7 *partly mechanical* for the first time: a
+  fabricated "slide 18" in a 12-slide deck now fails validation instead of reaching a student.
+- **Links:** `materials/source/links.md`, one URL per line with an optional note, plus **`classkit
+  add-url`** (Avin's request) to append safely; URLs found *inside* documents are collected too. Core
+  records links and fetchable metadata, not their content.
+- **Extraction is code** (D-018 — anchors must be reproducible): built in for md/txt/pptx/pdf/docx;
+  pandoc and LibreOffice used *if installed* for odt/rtf/html/epub/ppt/doc/odp; anything else is
+  recorded `unsupported`, reported, never fatal. Proactive for common formats, reactive for the rest;
+  a new format is one extractor registered by extension. Scanned PDFs (`no-text`) and audio/video
+  (`media`) are flagged, not handled, in Core. This also keeps the install light — the heavy tools
+  are optional.
+- **Classification and duplicate *confirmation* are agent work**; exact duplicates merge by hash
+  without asking, suspected same-material duplicates are confirmed by the teacher.
+- **Pre-flight report first** (Avin's point: ingest can be long) — counts, duplicates, links,
+  unsupported files, a time estimate — then an approval gate. **Incremental and resumable** by hash.
+- **Ingested text is editable** (Avin): a hand edit is detected by `ingested_hash` and preserved —
+  re-ingest goes through the write path, which refuses, and the teacher is asked.
+- **A removed source is marked, never deleted**, so locators to it fail visibly.
+
+---
+
+## D-036 — The course log
+**Date:** 2026-09-29 · **Status:** locked (design) · **implementation pending**
+
+Avin's idea: a log of every non-trivial change to the course — syllabus added, unit created, session
+changed, materials added — "such a log can help agents in the future". **Scope, per Avin: the course
+only**, never framework development.
+
+Why it is not redundant with git: git records *which bytes changed*; the log records **what the
+change meant and why** ("reworked U03-S02 — students found it too long"). An agent revising a course
+next year needs the second.
+
+- `LOG.md` at the course root, append-only, one entry per non-trivial change: date, which command or
+  who, what changed **by ID**, why, files.
+- **Every approved step of every command is an entry** — the log entries and the approval gates of
+  D-030 are the same moments. Each ingest run is an entry.
+- Written by **`classkit log`**, so the format is consistent and parseable, not left to each agent.
+- Agents read recent entries before starting work. The teacher may add entries by hand.
+
+Cross-cutting (every command writes to it), but lands with step 2 because ingest is its first user.
+
+---
+
+## D-037 — The teacher is the authority: validation informs, it does not overrule
+**Date:** 2026-09-29 · **Status:** locked (design) · **implementation pending** · amends D-021,
+D-028, D-031e, D-033 (severities) and the wording of invariant 4
+
+Avin: *"I think you over-push for validation tools… I'm afraid they may cause problems for a teacher
+to make progress. The teacher is the authority, and it is his responsibility to check everything he
+delivers to students. I don't want the framework to be too strict in preventing out-of-the-box
+solutions or some inconsistencies (which are sometimes ok in class)."*
+
+Correct, and Claude owned it: `VISION.md` already said validation is a *feature* that exists to catch
+what **agents** get wrong, yet decision after decision promoted pedagogical checks to `error` —
+`syllabus_missing`, the unmapped-time cap, coverage. Each looked reasonable alone; together they
+turned a teacher's deliberate choices into failures.
+
+**Principle:** validation checks the agents' work and reports on the teacher's; it never overrules
+the teacher. *Code verifies; agents judge; the teacher decides.*
+
+**Two kinds of rule, split by a mechanical line.** *Names something that does not exist, or cannot be
+read* → **integrity → `error`** (dangling ids, missing items, a locator to a nonexistent slide,
+unparseable front matter — almost never intentional, and agents cannot reason over them). *Something
+missing, or a departure from the methodology* → **advisory → `warn`**. One concern can yield both: an
+objective naming a nonexistent `CO9` is integrity; an objective naming no outcome is advisory.
+
+**A third severity, `alert`** — high-priority advisory, reported first, never failing `validate`.
+Avin's call for coverage: *"advisory, since this could be a temporary glitch and it is still the
+teacher's responsibility, but a HIGH-priority alert."* Alert: `outcome_coverage`,
+`objective_coverage`, `objective_maps_to_outcome`, `syllabus_missing`.
+
+**Demoted from error to warn:** `session_count`, `goal_count`, `goal_type`, `in_class_missing` (a
+holiday or online week is legitimate), `in_class_duration_match`, `activity_count`, `activity_type`,
+`require_opening_quiz`, `answer_reference_present`, `deferred_question_resolved_in_class`,
+`session_budget_feasibility`, `in_class_unmapped_time_cap`. Split: an activity naming a guiding
+question from *another* unit becomes advisory (also unblocks Q-029's homework-checking quiz); an item
+with no correct choice becomes advisory. New integrity rule `outcome_reference`.
+
+**Exceptions stop nagging** (a warning that always fires trains the teacher to ignore all warnings):
+`course.yaml` `rules:` overrides any rule course-wide — the teacher's last word, above the
+methodology; and `accepted: [{rule, reason}]` in any artifact's front matter suppresses one rule for
+that file. Accepted exceptions are counted in `validate`'s output (never invisible) and logged.
+
+**Agents fix what they caused and never overrule the teacher:** they resolve or surface findings
+from their own output, never add `accepted:`, change `rules:` or raise a threshold unless asked, and
+never "correct" a teacher's decision. Invariant 4's "never raise the cap to make a validation pass"
+becomes a rule about agents, not teachers.
+
+**Schemas check shape, not pedagogy** — otherwise a schema `required` turns advice back into an
+error by the back door (e.g. `answer` and `outcomes` presence move from schema to advisory rules).
+
+**Unchanged and deliberately so:** never-overwrite (invariant 5) is not validation. It constrains
+nothing the teacher chooses; it protects the teacher's work from an agent.
+
+---
+
+## D-038 — Step 2a review outcomes: the teacher's own exceptions are advice; one write path
+**Date:** 2026-09-29 · **Status:** locked (design + implemented) · sources:
+`reviews/impl-gaps-step-2a.md` (implementer), `reviews/impl-review-step-2a.md` (Gemini review)
+
+Step 2a (D-037 re-classification, D-036 course log) was implemented in a fresh session and reviewed
+by an independent agent. Avin accepted Claude's consolidated recommendations. Claude's assessment of
+the review itself: its main finding was right and was reached independently, but it was thinner than
+it looked — it skipped the test-quality check, covered only one invariant, and reported "no nits";
+reading one schema file surfaced two things it missed (findings 1–2 below).
+
+**Decided:**
+
+- **G-6 — `reason` in `accepted:` is optional**; a missing or blank one is the new advisory rule
+  `accepted_without_reason` (warn). The implementer had made it a schema error. The reviewer and
+  Claude both flagged that this contradicts the implementer's own G-10 reasoning — a mistake in a
+  teacher's *own exception* should not fail the build — and D-037.
+- **Review miss 2 — `rule` is no longer pattern-checked.** The schema pattern made a capitalised typo
+  a schema error while a lowercase typo was only an `unknown_rule` warning — the same inconsistency
+  as G-6. Now every mistyped code is `unknown_rule`.
+- **Review miss 1 — the documented `accepted:` example used `session_budget_feasibility`**, a rule
+  that does not exist until step 4; a teacher copying it got `unknown_rule`. The example is now
+  `in_class_missing` ("holiday week"), in `unit.md` — a rule that exists and the better case anyway.
+- **G-17 — the course log appends *through* the write path.** Rather than document the log as an
+  exception to "every write goes through `classkit.write`", the write path gained an append mode
+  (`append()`, `classkit write --append`), so the rule stays literally true. The reviewer offered
+  both options; Claude preferred this one as keeping a single path.
+- **G-1** split-rule names kept; **G-10** `unknown_rule` stays warn; **G-13** wording — only an
+  acceptance an *agent* adds at the teacher's request is logged; `validate` is read-only.
+- **Ratified** the implementer's own design decisions G-7 (unit-level findings accepted in
+  `unit.md`), G-9 (what the accepted count reports), G-11 (every rule registered; an unregistered
+  code raises), G-14 (`classkit log` arguments; cost accepted: `--changed` is required even for a
+  simple CLI entry — hand-editing `LOG.md` has no such constraint), G-15, G-16.
+- **Recorded ahead of time:** G-20 — a goal's `est_minutes` is not schema-required; step 4's budget
+  rule reports a missing estimate as *unverifiable*. G-19 — an `open` item's `rubric` moves from
+  schema `required` to an advisory rule in step 5.
+- **Kept deliberately (review question):** a unit's `objectives` stays schema-required, ≥1. Without
+  objectives the coverage chain cannot even be expressed for that unit — shape, not pedagogy.
+
+99 tests (92 + 7).

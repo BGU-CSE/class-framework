@@ -97,6 +97,13 @@ stops firing is caught; you cannot unit-test a prompt, and a silently broken rul
 confidence. And the agent that wrote a unit must not be the one certifying it — self-review is
 systematically generous.
 
+**Validation serves the teacher, it does not overrule them** (D-037). The teacher is the authority
+and is responsible for what reaches students. Only *integrity* findings — references to things that
+do not exist — are errors; everything pedagogical is advice, which a teacher may accept as a
+deliberate exception (§8.4). What the framework enforces without exception is different in kind:
+**never overwriting the teacher's work** (invariant 5) protects the teacher; it does not constrain
+them.
+
 **Agents do what code cannot attempt:** is this guiding question a topic label in disguise? Would
 this activity still work if nobody did the prework? Is eight minutes honest for eight pages of
 proofs? This is why `course-critic` exists, and why it is explicitly told not to repeat the
@@ -142,9 +149,11 @@ option (D-011). Drop a YAML file in `methodologies/`, name it in `course.yaml`, 
 read, never hardcoded. The contract is the study-session schema (§8.5). *This claim is untested —
 see §9.*
 
-**Adding a validation rule.** Add the check to `Validator`, give it a code, set a default severity in
-`DEFAULT_SEVERITY` if it is not an error, and add a test that breaks a scaffolded course and asserts
-the code fires. A rule with no such test is worse than no rule.
+**Adding a validation rule.** Add the check to `Validator`, give it a code, register its default
+severity in `DEFAULT_SEVERITY` — **every** rule, errors included: the table is complete, reporting an
+unregistered code raises, and it is how a mistyped rule name in `rules:` or `accepted:` is caught —
+and add a test that breaks a scaffolded course and asserts the code fires **at that severity**. A
+rule with no such test is worse than no rule. Only an integrity rule may default to `error` (§8.4).
 
 **Adding an agent.** New file in `.claude/agents/`. If its craft overlaps an existing agent's, put
 the craft in a skill and have both load it — otherwise the two drift and the teacher gets
@@ -178,6 +187,10 @@ adding to or reworking it. Deferred: `gem-builder` and `/build-gem` (Exports); t
 role of `assessment-writer` and `/write-items` (Assessment). Homework items are written by the
 homework module's own pipeline: `/write-items N homework` hands off to `/create-homework`
 (`dev/homework/HOMEWORK-SPEC.md`).
+
+**Tooling commands used across Core:** `classkit ingest` (the deterministic half of `/ingest`,
+§8.7), `classkit add-url` (add a link to the course's materials, §8.7), and `classkit log` (append
+to the course log, §8.8).
 
 ### 3.2 The shape of a flipped course
 
@@ -235,7 +248,12 @@ when people do this:
    doing it, and the contact hour collapses because it assumed they had.
 
 Both are *structural* failures, not motivational ones. Core's bet is that both can be made
-**mechanically detectable**, so they fail loudly at design time rather than silently in week three.
+**mechanically visible** at design time, rather than discovered in week three.
+
+*Visible*, not *fatal*: since D-037 both checks are advisory warnings the teacher may accept, because
+the teacher is the authority. That is a real weakening of the original bet ("fail loudly"), accepted
+knowingly. The residual risk is that a warning is seen and ignored; `alert`, counted exceptions and
+the course log reduce that risk but do not remove it (§9).
 
 ### 3.4 Core's central mechanism: the Guiding Question
 
@@ -334,7 +352,15 @@ glossary is in `CLAUDE.md`; the identifiers are in §8.1.
 Course-level setup runs once; then units are designed one at a time.
 
 ```
-/ingest            read materials/source/*, report what the course actually covers
+/ingest            (§8.7) 1. pre-flight scan: count files by format, slides/pages, duplicates,
+                      links, unsupported files, a rough time estimate — then WAIT for approval
+                   2. classkit ingest converts each new or changed source into
+                      materials/ingested/M<NNNN>-slug.md with addressable anchors, and
+                      updates materials/manifest.yaml (incremental, resumable)
+                   3. an agent classifies each source (kind, likely units), asks the teacher
+                      to confirm suspected same-material duplicates, and reports what the
+                      course actually covers and where it is thin
+                   Every approved step appends to course/LOG.md (§8.8).
 /plan-units        ONE flow, two agents, sequential and file-based (D-029, D-031i):
                    1. syllabus-designer writes syllabus/syllabus.md — goal, Course
                       Outcomes (CO1…), workload, prerequisites. Written to disk first.
@@ -423,7 +449,10 @@ sessions 1, 2 and 4 — and it is how a course is maintained year to year.
 | `syllabus/syllabus.md` | syllabus-designer | validator, critic | Core (the rendered syllabus export is Exports) |
 | `methodologies/*.yaml` | framework (or a teacher adding one) | designer, planner, validator | Core |
 | `defaults/time-constants.yaml` | framework, overridable per course | designer, critic (advisory) | Core |
-| `materials/source/*` | teacher | `/ingest`, curriculum-architect, designer | Core |
+| `materials/source/*` | teacher (and `classkit add-url` → `links.md`) | `/ingest` only | Core |
+| `materials/manifest.yaml` | `classkit ingest` (+ agent classification) | every agent that cites material, validator | Core |
+| `materials/ingested/*.md` | `classkit ingest`; the teacher may hand-edit | curriculum-architect, designer, assessment-writer, critic | Core |
+| `LOG.md` | `classkit log`, called by every command at each approved step | every agent (recent entries), the teacher | Core |
 | `unit.md` | curriculum-architect | designer, validator | Core |
 | `sessions/NN.md` | study-session-designer | planner, assessment-writer, validator | Core |
 | `in-class.md` | lesson-planner | critic, validator | Core |
@@ -445,8 +474,7 @@ they are repeated here with their reasons.
 4. **The class hour is built on the home study.** Activities reference that unit's guiding questions.
    An activity referencing none is permitted but flagged, and the **total unmapped time in an hour is
    capped** (§8.4) — the cap is what stops the hour drifting back into a lecture. Legitimate
-   exceptions exist (exam logistics, a current-events hook); an hour made of them does not. Never
-   raise the cap to make a validation pass (D-028).
+   exceptions exist (exam logistics, a current-events hook); an hour made of them does not. **An agent never raises the cap, or accepts an exception, on its own**; the teacher may (D-028, D-037).
 5. **Nothing overwrites a teacher's work without permission — enforced in code.** Scaffolding is
    create-only (`write_new()` is its only path to disk), and every agent and command writes through a
    `classkit` path that structurally refuses to overwrite existing content without explicit
@@ -476,8 +504,16 @@ Mechanically checked. `NN` is two digits; `N` is one or more.
 | `U<NN>-IC` | In-Class Session (one per unit) | `U01-IC` |
 | `U<NN>-A<N>` | Activity | `U01-A1` |
 | `U<NN>-I<NN>` | Assessment Item | `U01-I01` |
+| `M<NNNN>` | Material — one ingested source (a file or a link) **(target, D-035)** | `M0007` |
+| `M<NNNN>#<anchor>` | A locator inside a material: `slide-N`, `page-N`, or a heading slug | `M0007#slide-18` |
+
+`M` is used rather than `S` because `S` already means Study Session.
 
 ### 8.2 Artifact field specifications
+
+Every artifact below that has front matter — syllabus, unit, study session, in-class session,
+assessment item — also takes an optional `accepted: [{rule, reason}]` list: the teacher's deliberate
+exceptions to validation rules for that file (§8.4). It is not repeated in each table.
 
 #### File and directory naming
 
@@ -488,6 +524,11 @@ Mechanically checked. `NN` is two digits; `N` is one or more.
 | `units/NN-slug/in-class.md` | fixed name, one per unit |
 | `syllabus/syllabus.md` | fixed name, one per course |
 | `assessments/items/UNN-INN.md` | the item's id |
+| `materials/source/**` | anything, any structure — the teacher's; never modified by agents (§8.7) |
+| `materials/source/links.md` | fixed name; the course's list of links (§8.7) |
+| `materials/ingested/MNNNN-slug.md` | the material's id plus a slug of its title; flat, one per material |
+| `materials/manifest.yaml` | fixed name, one per course |
+| `LOG.md` | fixed name, one per course, at the course root (§8.8) |
 
 #### `course.yaml` — course configuration (plain YAML, no body)
 
@@ -504,6 +545,7 @@ Mechanically checked. `NN` is two digits; `N` is one or more.
 | `time_constants` | object | | per-course overrides of `defaults/time-constants.yaml` (any subset) |
 | `in_class` | object | | **(target, D-031e)** per-course overrides of the methodology's in-class settings. Currently one key: `max_unmapped_minutes` (integer ≥0) — the cap on in-class time spent on activities that reference no guiding question. Overrides the methodology default (10). Setting it to the full hour length disables the guardrail, which is the teacher's right (D-014) |
 | `agents` | object | | course-local agent-role → replacement name (Q-007) |
+| `rules` | object | | (D-037) rule-code → `error \| alert \| warn \| off`. The teacher's course-wide override of any validation rule; wins over the methodology (§8.4). A bare `off` is read as the severity, although YAML 1.1 parses it as boolean false |
 
 Deferred: a `gem` block (Exports phase).
 
@@ -549,7 +591,7 @@ overview assembled from the units.
 | `title` | string | ✓ | the week's subject |
 | `summary` | string | | |
 | `prerequisites` | array\<`U<NN>`\> | | units that must precede this one |
-| `objectives` | array\<obj\> | ✓ (≥1) | see below |
+| `objectives` | array\<obj\> | ✓ (≥1) | see below. **Kept as shape, deliberately** (D-038): a unit with no objectives has nothing for guiding questions to roll up to, so the coverage chain cannot even be expressed for it — unlike an absent `outcomes` list, which is merely unfinished |
 
 Objective object:
 
@@ -558,7 +600,7 @@ Objective object:
 | `id` | `U<NN>-O<N>` | ✓ | |
 | `statement` | string | ✓ | |
 | `bloom` | enum | | optional Bloom level |
-| `outcomes` | array\<`CO<N>`\> | ✓ (≥1) | **(target, D-021)** Course Outcomes this objective rolls up to |
+| `outcomes` | array\<`CO<N>`\> | | (D-021) Course Outcomes this objective rolls up to. **Not schema-required** (D-037): naming none is advisory (`objective_maps_to_outcome`, **target**); naming one the syllabus does not declare is an integrity error (`outcome_reference`) |
 
 #### `units/NN-slug/sessions/NN.md` — a study session
 
@@ -584,8 +626,8 @@ Goal object (the Guiding Question):
 | `type` | enum | ✓ | `question \| task \| reading \| exercise`; question-driven-25 allows only `question` |
 | `prompt` | string | ✓ | the guiding question, phrased so a student can answer and check it |
 | `objectives` | array\<`U<NN>-O<N>`\> | ✓ (≥1) | unit objectives this goal rolls up to |
-| `est_minutes` | number ≥0 | ✓ | **(target, D-020)** teacher-approved study time; the session budget sums these |
-| `answer` | array\<obj\> | ✓ (≥1) **unless** `defer_to_class` | **(target, D-019)** precise locators of the correct answer; each `{ kind (enum), ref (string), note (opt) }`; `kind ∈ textbook \| slide \| video \| article \| web \| other`; never the answer in prose |
+| `est_minutes` | number ≥0 | | **(target, D-020, D-038)** teacher-approved study time; the session budget sums these. **Not schema-required** — a missing estimate is pedagogy (the teacher has not estimated yet), not shape: the budget rule reports the session as *unverifiable* (warn) instead |
+| `answer` | array\<obj\> | advisory: ≥1 **unless** `defer_to_class` — not schema-required (D-037) | **(target, D-019)** precise locators of the correct answer; each `{ kind (enum), ref (string), note (opt) }`; `kind ∈ textbook \| slide \| video \| article \| web \| other`; never the answer in prose. **Prefer a material locator** — `ref: "M0007#slide-18"` — which the validator can check (D-035); a textbook key with a locator (`"CLRS §2.3.1"`) remains allowed for sources that are cited but not ingested |
 | `defer_to_class` | boolean | | **(target, D-023)** default `false`. If `true`: no `answer`; a pre-class thinking prompt that **must** be referenced by ≥1 in-class activity |
 
 > A goal's `answer` is a **list of locators** — where the answer can be found. It is not the answer
@@ -610,7 +652,7 @@ Activity object:
 | `type` | enum | ✓ | from methodology `allowed_activity_types`, e.g. `quiz \| discussion \| critical-thinking \| worked-example \| group-work \| synthesis` |
 | `title` | string | | |
 | `duration_minutes` | integer ≥1 | ✓ | |
-| `guiding_questions` | array\<`U<NN>-S<NN>-G<N>`\> | | **(target: no longer required; D-028)** the guiding questions of *this unit* the activity builds on. Normally non-empty; an activity with none is flagged, and unmapped time is capped (§8.4) |
+| `guiding_questions` | array\<`U<NN>-S<NN>-G<N>`\> | | not required by the schema (D-028, D-037) — the guiding questions of *this unit* the activity builds on. Normally non-empty; an activity with none is flagged, and unmapped time is capped (§8.4) |
 | `reason` | string | | **(target, D-028)** why this activity references no guiding question, e.g. `"exam logistics"`, `"current-events hook"`. Only meaningful when `guiding_questions` is absent or empty; the critic judges whether it is legitimate |
 | `items` | array\<`U<NN>-I<NN>`\> | | assessment items used (typically the entry quiz). Every id **must resolve to an existing item of this unit** — checked by `activity_item_reference` (D-031a) |
 | `grouping` | enum | | `individual \| pairs \| small-group \| plenary` |
@@ -632,7 +674,7 @@ Activity object:
 | `stem` | string | ✓ | the question as presented to the student |
 | `choices` | array\<obj\> | ✓ for `multiple-choice`/`multiple-select` | each `{ label (`^[A-Za-z]$`), text, correct (bool), rationale }`; every distractor's `rationale` names the misconception it detects |
 | `model_answer` | string | | **(renamed from `answer`; D-031g — carried out by the homework module, HW-D08)** the model answer, for `open`/`numeric`/`code`. Renamed because a guiding question's `answer` is a *list of locators* and an item's was a *string* — one key, two meanings |
-| `rubric` | array\<obj\> | ✓ in practice for `open` | each `{ criterion, points, notes }` |
+| `rubric` | array\<obj\> | | each `{ criterion, points, notes }`. **(target, D-038)** Presence is pedagogy, not shape: an `open` item without a rubric is readable, so the schema's current `required` for `open` moves to an advisory rule in step 5. (`choices` stays required for choice formats — an item without choices cannot be read) |
 
 #### `methodologies/*.yaml` — the methodology definition
 
@@ -646,7 +688,7 @@ Activity object:
 | `home_study` | object | ✓ | `{ total_minutes, sessions_per_unit, session_minutes, goals_per_session: {min,max}, default_goal_type?, allowed_goal_types?, budget_tolerance_minutes? }` **(target: `budget_tolerance_minutes`; D-020)** |
 | `in_class` | object | ✓ | `{ scope (unit\|session), minutes, activities: {min,max}?, duration_tolerance_minutes? (default 5), require_opening_quiz? (default false), max_unmapped_minutes? (default 10), allowed_activity_types }` **(target: `max_unmapped_minutes`; D-028, default lowered by D-031e)**. `max_unmapped_minutes` is overridable per course in `course.yaml` |
 | `study_paths` | object | | `{ allowed_kinds?, min_paths_per_session? }` **(target: renamed from `min_paths_per_goal`; D-020)** |
-| `rules` | object | | rule-code → `error \| warn \| off`; overrides the defaults in §8.4 |
+| `rules` | object | | rule-code → `error \| alert \| warn \| off`; overrides the defaults in §8.4 for courses using this methodology. A course's own `course.yaml` `rules:` overrides it in turn |
 
 `question-driven-25` values: `unit.total_minutes 150`, `objectives 2–4`; `home_study.total_minutes
 100`, `sessions_per_unit 4`, `session_minutes 25`, `goals_per_session 3–5`, `allowed_goal_types
@@ -669,40 +711,117 @@ Activity object:
 
 ### 8.4 Validation rules
 
-`classkit validate` runs a schema layer, then a semantic layer. Severity below is the default; a
-methodology's `rules:` block may override any to `error | warn | off`. Rules tagged **(target)** are
-not built yet.
+**The teacher is the authority** (D-037). The validator exists to catch what *agents* get wrong and to
+*inform* the teacher — never to overrule a teacher's deliberate choice. It reports; it does not
+gatekeep. So every rule is one of two kinds:
 
-| Code | Checks | Default |
+- **Integrity** — the course is broken *as data*: something is referenced that does not exist, or a
+  file cannot be read. Almost never intentional, and agents and tools cannot reason correctly over
+  it. Severity **`error`**.
+- **Advisory** — something is missing, or departs from the methodology's good practice. A teacher may
+  have good reasons for any of these (a holiday week with no class hour, a deliberately long
+  session). Severity **`warn`**, or **`alert`** for the checks that matter most.
+
+The dividing line is mechanical: **a finding that names something that does not exist is integrity;
+a finding that something is absent or unconventional is advisory.** So one concern can yield both —
+an objective naming `CO9` when there is no `CO9` is an integrity error; an objective naming no outcome
+at all is an advisory alert.
+
+#### Severities
+
+| Severity | Meaning | `classkit validate` |
 |---|---|---|
-| `schema` | each file's front matter matches its JSON Schema | error |
-| `schema_unavailable` | `jsonschema` not installed → schema layer skipped | warn |
-| `unit_count` | units on disk vs `course.yaml` `units` | warn |
-| `id_consistency` | every id matches its unit/number/session/prefix rules | error |
-| `session_count` | sessions per unit == methodology `sessions_per_unit` | error |
-| `goal_count` | goals per session within `goals_per_session` | error |
-| `goal_type` | `goal.type ∈ allowed_goal_types` | error |
-| `goal_maps_to_objective` | each `goal.objectives` names an objective the unit defines | error |
-| `objective_coverage` | every unit objective addressed by ≥1 guiding question | error |
-| `objective_maps_to_outcome` | every unit objective names ≥1 Course Outcome | error **(target, D-021)** |
-| `outcome_coverage` | every Course Outcome covered by ≥1 unit objective. **Completeness rule — runs only when the unit map is complete** (see below) | error **(target, D-021/D-033)** |
-| `syllabus_missing` | the course has no `syllabus/syllabus.md` | error **(target, D-033)** |
-| `answer_reference_present` | each goal has ≥1 `answer` unless `defer_to_class` | error **(target, D-019/23)** |
-| `deferred_question_resolved_in_class` | each `defer_to_class` goal is referenced by ≥1 activity | error **(target, D-023)** |
-| `session_budget_feasibility` | `sum(est_minutes) + overhead ≤ budget`, within tolerance (renamed from `session_path_feasibility`) | error **(target, D-020)** |
-| `min_paths_per_session` | session has ≥ `study_paths.min_paths_per_session` paths | warn **(target, D-020)** |
-| `in_class_missing` | unit has an `in-class.md` | error |
-| `in_class_duration_match` | declared == methodology `minutes`, and activities sum to it within tolerance | error |
-| `activity_count` | activities within `in_class.activities` | error |
-| `activity_type` | `activity.type ∈ allowed_activity_types` | error |
-| `require_opening_quiz` | if set, the first activity is a `quiz` | error |
-| `activity_references_guiding_question` | an activity references no guiding question (a legitimate exception, but worth seeing); also errors if it references a question **not of this unit** | warn **(target: was error; D-028)** |
-| `in_class_unmapped_time_cap` | total duration of activities referencing no guiding question ≤ `max_unmapped_minutes` (course override, else methodology default 10) | error **(target, D-028/D-031e)** |
-| `activity_item_reference` | every id in an activity's `items` resolves to an existing item of this unit | error **(target, D-031a)** |
-| `syllabus_workload_missing` | there is no `syllabus/syllabus.md`, or it declares no `workload` | warn |
-| `item_reference` | an item's `unit` exists, its `guiding_questions` all exist, and a choice-format item has ≥1 `correct` | error |
-| `guiding_question_assessed` | every guiding question is tested by ≥1 assessment item | **`off` in Core**; warn from the Assessment phase **(D-031c)** |
-| `unit_has_entry_quiz_items` | the unit has ≥1 assessment item with `usage: in-class-quiz` | warn **(target, D-031c)** |
+| `error` | integrity — broken data | reported; exit code 1 |
+| `alert` | **high-priority advisory** — look at this soon | reported **first**, marked `ALERT`; does not fail |
+| `warn` | advisory | reported; does not fail |
+| `off` | not checked | — |
+
+`--strict` counts alerts and warnings as failures too, for a teacher who wants that.
+
+#### Overrides — who has the last word
+
+1. A **methodology's** `rules:` block sets defaults for courses that use it.
+2. The course's **`course.yaml` `rules:`** block overrides the methodology — the teacher's last word,
+   for any rule. (Switching an *integrity* rule off is allowed, but tools may then misbehave over the
+   broken references it would have caught.)
+3. **Per instance, a teacher accepts an exception** in the artifact's own front matter:
+
+   ```yaml
+   accepted:
+     - rule: in_class_missing
+       reason: "holiday week — no class meeting"
+   ```
+
+   That rule's findings for that file are then suppressed, so a known exception stops nagging — a
+   warning that always fires trains the teacher to ignore every warning. `validate` still prints a
+   one-line count of accepted exceptions, so they are never invisible — how many findings they
+   suppressed, and how many entries no longer match anything. Each acceptance **an agent adds, at
+   the teacher's request,** is recorded in the course log (§8.8); `validate` itself is read-only and
+   never writes to the log, and a teacher editing by hand may log it or not (D-038).
+   `accepted:` is a field on every artifact that has front matter (syllabus, unit, session,
+   in-class session, item). **Only `rule` is required** — an entry with no rule cannot be read.
+   **`reason` is optional**: a missing or blank reason is reported by the advisory rule
+   `accepted_without_reason`, never as a schema error. Likewise `rule` is **not pattern-checked**:
+   any mistyped code, whatever its case, is reported by `unknown_rule`. Both follow the same
+   principle — a mistake in the teacher's *own exception* is advice, not a failure (D-038).
+   Findings about a unit as a whole — `session_count`, `in_class_missing`, `objective_coverage` —
+   are reported against its `unit.md`, so that is where they are accepted. Findings reported
+   against `course.yaml` (which has no front matter) are adjusted course-wide with `rules:`.
+
+**Agents fix what they caused, and never overrule the teacher.** An agent must fix or surface any
+finding its own output produced, and may **never** add an `accepted:` entry, change `rules:`, or
+raise a threshold on its own — only on the teacher's explicit instruction, which is then logged. And
+an agent never "corrects" something the teacher decided: a teacher's exception or a teacher-made
+inconsistency is reported and left alone unless the teacher asks.
+
+**Schemas check shape, not pedagogy.** JSON Schema enforces what tools need to *read* a file — ids,
+types, allowed keys. Whether a guiding question *has* an answer, or an objective *has* an outcome, is
+advisory, so it is expressed as a rule below, not as a schema `required` — otherwise the schema layer
+would turn advice back into errors.
+
+#### The rules
+
+Severity is the default; **(target)** means not built yet. Every rule is also a *consistency* or
+*completeness* rule (see below).
+
+| Code | Checks | Kind | Default |
+|---|---|---|---|
+| `schema` | front matter parses and has the shape tools need (ids, types, allowed keys) | integrity | error |
+| `schema_unavailable` | `jsonschema` not installed → schema layer skipped | — | warn |
+| `id_consistency` | every id matches its unit/number/session/prefix rules | integrity | error |
+| `goal_maps_to_objective` | each objective a goal names is defined by its unit | integrity | error |
+| `outcome_reference` | each outcome an objective names exists in the syllabus (D-037) | integrity | error |
+| `activity_references_guiding_question` | a guiding question an activity names exists somewhere in the course | integrity | error |
+| `activity_item_reference` | every id in an activity's `items` resolves to an existing item | integrity | error **(target, D-031a)** |
+| `item_reference` | an item's `unit` and `guiding_questions` exist | integrity | error |
+| `material_locator_resolves` | every `M<NNNN>` / `M<NNNN>#anchor` locator names a real material and anchor | integrity | error **(target, D-035)** |
+| `outcome_coverage` | every Course Outcome is covered by ≥1 unit objective. Completeness rule | advisory | **alert** **(target, D-021/D-033/D-037)** |
+| `objective_coverage` | every unit objective is addressed by ≥1 guiding question | advisory | **alert** |
+| `objective_maps_to_outcome` | every unit objective names ≥1 Course Outcome | advisory | **alert** **(target, D-021/D-037)** |
+| `syllabus_missing` | the course has no `syllabus/syllabus.md` | advisory | **alert** **(target, D-033/D-037)** |
+| `unit_count` | units on disk vs `course.yaml` `units` | advisory | warn |
+| `session_count` | sessions per unit == methodology `sessions_per_unit` | advisory | warn |
+| `goal_count` | goals per session within `goals_per_session` | advisory | warn |
+| `goal_type` | `goal.type ∈ allowed_goal_types` | advisory | warn |
+| `answer_reference_present` | each goal has ≥1 `answer` unless `defer_to_class` | advisory | warn **(target, D-019/D-023/D-037)** |
+| `deferred_question_resolved_in_class` | each `defer_to_class` goal is referenced by ≥1 activity | advisory | warn **(target, D-023/D-037)** |
+| `session_budget_feasibility` | `sum(est_minutes) + overhead ≤ budget`, within tolerance | advisory | warn **(target, D-020/D-037)** |
+| `min_paths_per_session` | session has ≥ `study_paths.min_paths_per_session` paths | advisory | warn **(target, D-020)** |
+| `in_class_missing` | unit has an `in-class.md` | advisory | warn |
+| `in_class_duration_match` | declared == methodology `minutes`, activities sum to it within tolerance | advisory | warn |
+| `activity_count` | activities within `in_class.activities` | advisory | warn |
+| `activity_type` | `activity.type ∈ allowed_activity_types` | advisory | warn |
+| `require_opening_quiz` | if set, the first activity is a `quiz` | advisory | warn |
+| `activity_without_guiding_question` | an activity names ≥1 guiding question (split from `activity_references_guiding_question`, D-028/D-037) | advisory | warn |
+| `activity_references_other_unit` | a guiding question an activity names belongs to *this* unit, not another (split, D-037; the case Q-029's homework-checking quiz needs) | advisory | warn |
+| `in_class_unmapped_time_cap` | total time of activities referencing no guiding question ≤ `max_unmapped_minutes` | advisory | warn **(target, D-028/D-031e/D-037)** |
+| `item_no_correct_choice` | a choice-format item has ≥1 choice marked `correct` (split from `item_reference`, D-037) | advisory | warn |
+| `syllabus_workload_missing` | the syllabus declares no `workload` | advisory | warn |
+| `unknown_rule` | a rule code in `course.yaml` `rules:`, a methodology's `rules:`, or an `accepted:` entry names no rule — a typo that would otherwise silently do nothing | advisory | warn |
+| `accepted_without_reason` | an `accepted:` entry gives no `reason` (or a blank one). The exception still takes effect (D-038) | advisory | warn |
+| `materials_not_ingested` | a source file is new or changed since the last ingest | advisory | warn **(target, D-035)** |
+| `unit_has_entry_quiz_items` | the unit has ≥1 item with `usage: in-class-quiz` | advisory | warn **(target, D-031c)** |
+| `guiding_question_assessed` | every guiding question is tested by ≥1 assessment item | advisory | **off in Core**; warn from the Assessment phase **(D-031c)** |
 
 Retired by D-020: `path_estimate_missing`, and the per-path `_estimate_path` helper.
 
@@ -734,11 +853,11 @@ caught immediately), while **outcome → objective is a completeness rule** (an 
 yet is simply unfinished work). The chain is checked in both directions, but the two directions
 become meaningful at different times.
 
-**Why `syllabus_missing` is an error, not a warning (D-033).** `scaffold course` always creates the
+**Why `syllabus_missing` is a high-priority alert (D-033, softened from error by D-037).** `scaffold course` always creates the
 syllabus, so it can only be absent if it was deleted. Worse, a course with no syllabus has **no
 Course Outcomes**, which makes `outcome_coverage` *vacuously true* — the rule that closes the
-coverage chain would pass most confidently exactly when the roof is gone. An error is the honest
-severity for a silently-empty guarantee.
+coverage chain would pass most confidently exactly when the roof is gone. An alert is the honest
+severity: the teacher may be mid-rewrite, but a silently-empty guarantee must not go unnoticed.
 
 **Why `guiding_question_assessed` is off in Core (D-031c).** In Core the only assessment items are
 entry-quiz items, and a short entry quiz cannot test all ~15–20 of a unit's guiding questions. The
@@ -786,13 +905,14 @@ before taking it.
 | `replaced` | the target existed and either held no content, or `overwrite` was given | yes |
 | `unchanged` | the target already holds exactly this content | no (no-op) |
 | `refused` | the target has content and `overwrite` was not given | **no** |
+| `appended` | `append()` / `--append`: content added to the end; existing bytes untouched | yes |
 
 Two cases are deliberately *not* refusals, because nothing can be lost in either: a file holding
 only whitespace, and a file already holding exactly the content being written — so re-running a
 command is safe. Anything unreadable as text counts as content; refusing is the safe direction.
 
 ```
-classkit write PATH [--from FILE] [--overwrite] [--dry-run]
+classkit write PATH [--from FILE] [--overwrite | --append] [--dry-run]
 ```
 
 Content comes from standard input unless `--from` names a file. Exit codes: `0` written or already
@@ -800,12 +920,164 @@ identical, `3` refused — distinct from the generic failure code `2`, so a call
 teacher first"* apart from *"something broke"*. `--dry-run` answers "may I write here?" without
 writing, which is what a command uses to check a target before it generates anything.
 
+**Appending** — `classkit.write.append()`, `classkit write --append` — adds to the end of a file and
+never rewrites existing bytes, so it needs no confirmation; a missing file is created through
+`write()`. It exists so that *every* write, including the course log's, goes through this one path
+(D-038). `--append` and `--overwrite` are mutually exclusive.
+
 `scaffold` is this path's create-only special case: `write_new()` calls it and never passes
 `overwrite`, so scaffolding has no way to replace a teacher's file at all.
 
 > **The guarantee is only as structural as the agents' tool sets.** An agent that still has `Write`
 > or `Edit` in its front matter can bypass this path entirely. Routing each writing agent through it
 > — and removing those tools — is a per-agent change, made in the step where that agent is built.
+
+### 8.7 Materials and ingest **(target, D-035)**
+
+Ingest turns whatever a teacher already has — in whatever state it is in — into something every later
+agent can read and **cite precisely**. It assumes no organization: one folder of everything, or a
+tidy tree, duplicates included.
+
+#### Layout — two layers, never mixed
+
+```
+course/materials/
+  source/                  the teacher's: any files, any structure. Agents never modify it.
+    links.md               the course's links, one per line
+  ingested/                derived: one .md per material, flat, named by id
+    M0007-heaps.md
+    M0012-2024-final.md
+  manifest.yaml            every material: id, kind, format, paths, hashes, status
+```
+
+`ingested/` is **flat and keyed by a stable id**, not a mirror of `source/`. A file that is renamed or
+moved keeps its id (the manifest matches it by content hash), so **locators never break when the
+teacher reorganizes `source/`**.
+
+#### `links.md`
+
+One link per line, optionally followed by `—` and a note:
+
+```
+https://www.youtube.com/watch?v=… — heaps explained, 12 min, good for U06
+https://en.wikipedia.org/wiki/Binary_heap
+```
+
+`classkit add-url URL [--note TEXT]` appends a line, rejecting a malformed URL or one already listed.
+`/ingest` also collects every URL it finds *inside* slides and documents, recording where it was
+found. Each link becomes a material of kind `link` or `video`. **In Core only the link and safely
+fetchable metadata (title, duration) are recorded — not its content.**
+
+#### The manifest
+
+`materials/manifest.yaml` — a list; each material:
+
+| Field | Type | Req | Notes |
+|---|---|---|---|
+| `id` | `M<NNNN>` | ✓ | assigned once, never reused |
+| `title` | string | ✓ | from the file's metadata or first heading; editable |
+| `format` | string | ✓ | `pptx`, `pdf`, `docx`, `md`, `odt`, `url`, … |
+| `kind` | enum | ✓ | `slides \| textbook \| notes \| exam \| exercise \| syllabus \| reading \| link \| video \| other` — set by the classifying agent, correctable by the teacher |
+| `sources` | array\<string\> | ✓ | paths under `source/` (or the URL); **more than one when duplicates were merged** |
+| `canonical` | string | ✓ | which of `sources` the anchors refer to (a PPTX over its PDF export, since "slide 18" beats "page 18") |
+| `source_hash` | string | ✓ | hash of the canonical source's content |
+| `ingested_hash` | string | | hash of the `.md` ingest last wrote — lets a hand edit be detected |
+| `status` | enum | ✓ | `ingested \| unsupported \| no-text \| media \| link` |
+| `status_reason` | string | | e.g. "install LibreOffice, or export to PDF" |
+| `units` | array\<`U<NN>`\> | | units this material appears to support — a hint, set by the agent |
+| `found_in` | `M<NNNN>` | | for a link discovered inside another material |
+| `ingested_at` | date | | |
+
+#### An ingested file
+
+Front matter carries the id, title, format, canonical source path and `source_hash`. The body is the
+extracted text with **explicit anchors**, so a locator names a place that demonstrably exists:
+
+| Format | Anchor | Locator |
+|---|---|---|
+| PPTX, ODP | one heading per slide: `## Slide 18` | `M0007#slide-18` |
+| PDF | one heading per page: `## Page 34` | `M0003#page-34` |
+| DOCX, ODT, RTF, MD, HTML | the document's own headings, slugified | `M0012#question-3` |
+| link, video | none — the material is the link | `M0020` (a timestamp goes in the locator's `note`) |
+
+#### Extractors — proactive for common formats, reactive for the rest
+
+Conversion is **code**, not agent work (D-018): it must produce the *same anchors every time*, or
+locators rot.
+
+- **Built in** (Python, installed with the framework): `.md`, `.txt`, `.pptx`, `.pdf` (text layer),
+  `.docx`.
+- **Through optional external converters**, when installed: pandoc (`.odt`, `.rtf`, `.html`,
+  `.epub`) and LibreOffice (`.ppt`, `.doc`, `.odp`, converted first to a built-in format). If they are
+  missing, those files are marked `unsupported` with a hint — never silently dropped.
+- **Anything else**: recorded as `unsupported`, listed in the pre-flight report, never fatal to the run.
+  The teacher can export it to PDF and re-ingest.
+- **Flagged, not handled in Core:** scanned PDFs with no text layer (`no-text` — would need OCR) and
+  audio/video files (`media` — recorded, content not extracted).
+- **Adding a format** is one extractor registered by file extension — an extension point like adding a
+  methodology (§2.5).
+
+#### How a run works
+
+1. **Pre-flight, no processing.** Files found by format, total slides and pages, exact and suspected
+   duplicates, links found, unsupported files, and a rough time estimate. Then the command **waits
+   for approval** (§5.2).
+2. **Convert** — `classkit ingest` processes only materials that are new or whose `source_hash`
+   changed. Because the manifest records per-material state, **an interrupted run resumes where it
+   stopped**.
+3. **Classify and confirm** — an agent sets `kind` and `units`, and **asks the teacher to confirm**
+   suspected same-material duplicates (a PPTX and its PDF) before merging them. Exact duplicates
+   (same hash) merge without asking.
+4. **Report** what the course actually covers and where it is thin.
+
+**Hand edits are preserved.** A teacher may fix a bad extraction in `ingested/`. If the file's hash no
+longer matches `ingested_hash`, re-ingest **does not regenerate it silently** — it writes through the
+write path (§8.6), which refuses, and the command shows the teacher the edit and asks.
+
+**A removed source** is marked in the manifest, never deleted: locators pointing at it must fail
+validation visibly rather than disappear.
+
+### 8.8 The course log (D-036)
+
+`LOG.md` at the course root records **what changed in the course and why** — the meaning that
+git's history of bytes does not carry. It covers the course only: materials, syllabus, units,
+sessions, the hour, items. Never framework development.
+
+Append-only. One entry per non-trivial change:
+
+```markdown
+## 2026-10-02 — /design-unit 3, step 1 approved
+- **Changed:** U03-S01..S04 created (14 guiding questions)
+- **Why:** first design of unit 3; teacher asked for fewer proof-heavy questions
+- **Files:** units/03-heaps/sessions/01.md … 04.md
+```
+
+- **Every approved step of every command is an entry** — the log and the approval gates (§5.2) are
+  the same moments. So is each ingest run.
+- It is written by **`classkit log`**, not by each agent in its own style, so the format stays
+  consistent and parseable:
+
+  ```
+  classkit log TITLE --changed TEXT --why TEXT [--file PATH]... [--date YYYY-MM-DD] [--course DIR]
+  ```
+
+  `TITLE` is the heading after the date — who or which command, and what happened
+  (`"/design-unit 3, step 1 approved"`). `--changed` (what changed, by ID) and `--why` are
+  required: an entry without a *why* is what git already records. Each field is one line (runs of
+  whitespace, newlines included, collapse to a space); `Files` is comma-separated. The date
+  defaults to today.
+- **Append-only, structurally, through the write path.** `classkit log` adds entries with the write
+  path's append mode (§8.6), which never rewrites existing bytes — so it cannot lose a teacher's
+  text, including hand-written entries. If `LOG.md` does not exist it is created (header, then the
+  entry) through `write()` (D-038).
+- **`classkit scaffold course` starts the log**, create-only like everything scaffold writes, with
+  a first entry listing the files that run created. On a course that predates the log, re-running
+  scaffold creates it and says that everything else already existed.
+- Parsing is tolerant: a hand-written heading with no date keeps its whole text as the title, and
+  lines that are not a `Changed`/`Why`/`Files` field are kept as notes.
+- **Agents read the recent entries before starting work**, so they know what was done last time and
+  why — which is what makes year-to-year revision possible without re-deriving intent.
+- The teacher may add entries by hand ("taught U03 — students found S02 too long").
 
 ---
 
@@ -828,6 +1100,15 @@ Honest list, kept current.
   overridable per course, so a teacher can raise it to the full hour and switch the protection off
   entirely. That is deliberate (a course repo is sovereign, D-014) and it means the guarantee is a
   *default*, not something the framework can insist on.
+- **The two headline guarantees are advisory.** Since D-037 a class hour drifting into a lecture, or
+  a session over its budget, produces a warning, not a failure. The design relies on the teacher
+  reading warnings; one who ignores them gets none of the protection §3.3 promises.
+- **Some locators cannot be verified.** `material_locator_resolves` proves a slide or page exists,
+  not that the answer is on it; and video timestamps and un-ingested textbook citations cannot be
+  checked at all. Invariant 7 becomes *partly* mechanical — the critic still owns the rest.
+- **Extraction quality varies.** Slides that are mostly images or diagrams extract to little text, and
+  scanned PDFs to none. The teacher can fix a bad extraction by hand (it is preserved), but an agent
+  reading a poor extraction will under-rate that material.
 - **The agent layer has never been run on a real course.** Every prompt in `.claude/` is untested
   against real materials. Expect substantial revision after the first unit.
 - **The pluggable-methodology claim is unverified.** D-011 says another methodology works without code

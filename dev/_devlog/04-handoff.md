@@ -19,7 +19,32 @@ Then, for history and what is still open:
 6. `02-progress.md` (last block) — where we stopped.
 7. `03-open-questions.md` — what's unresolved.
 
-## Current state — 2026-09-10
+## Current state — 2026-09-29 (after step 2a and its review)
+
+**Steps 0, 1 and 2a are built, and 2a has been independently reviewed.** Suite: **99 tests**, green.
+Ledger: 33 built, 3 in progress, 101 not started — `../ROADMAP.md` is authoritative.
+
+- **Step 2a — validation re-founded (D-037) and the course log (D-036).** Only integrity findings
+  are errors; `alert` exists and prints first; the teacher overrides any rule in `course.yaml`
+  `rules:` and accepts single exceptions with `accepted:` in front matter (counted, never
+  invisible). `classkit log` appends to `LOG.md`, which `scaffold course` starts.
+- **Its review, applied as D-038:** a missing `reason` in `accepted:` and a mistyped rule code are
+  both *advice*, never schema errors (`accepted_without_reason`, `unknown_rule`); the write path
+  gained an append mode and the log goes through it; the documented `accepted:` example uses a rule
+  that exists today (`in_class_missing`, "holiday week", in `unit.md`). Session 27 in
+  `02-progress.md`; reports in `../reviews/impl-gaps-step-2a.md` and `impl-review-step-2a.md`.
+- **Not built yet, deliberately:** agent/command wiring (log each approved step; never add
+  `accepted:`) lands as each is rewritten; `syllabus_missing` and the coverage alerts are step 3;
+  `guiding_question_assessed: off` is step 5.
+- **Pre-decided for later steps — don't re-argue:** a goal's `est_minutes` is optional and a missing
+  one makes the session budget *unverifiable* (step 4); an `open` item's rubric becomes an advisory
+  rule (step 5); a unit's `objectives` stays schema-required, deliberately.
+- **Next: step 2b — ingest (D-035, spec §8.7).** A fresh session from the spec with a gap report
+  (`../reviews/impl-gaps-step-2b.md`); then an independent review **given the same scope block as
+  the implementer** (`impl-review-step-2b.md`); then Avin hand-tests `/ingest` on real, messy
+  materials — the check no document or code review can do. Then step 3 (`/plan-units`, with D-032).
+
+## Earlier state — 2026-09-10
 
 **Implementation has started.** Steps 0 and 1 of the plan in `../ROADMAP.md` are built and
 committed; the suite is 36 tests, green. `dev/ROADMAP.md`'s ledger is ticked: 13 of 90 rows built.
@@ -46,16 +71,18 @@ committed; the suite is 36 tests, green. `dev/ROADMAP.md`'s ledger is ticked: 13
   bypass the write path) is a ledger row now: each agent drops those tools in the step that touches
   it.
 
-## What is next — 2026-09-10
+## What was next — 2026-09-29 (before step 2a; kept for history)
 
-1. **Avin will hand-test steps 0 and 1** in a clean clone. **The procedure is written and verified:
-   `../MANUAL-TESTING.md`** — clean-environment setup, exact commands, expected output, and a table
-   of *expected noise* so known-but-unbuilt decisions are not reported as bugs.
-2. **Step 3 (`/plan-units`) is unblocked** — no open questions remain for it. Its implementation
-   session should **also fold in D-032**, which reopens step 1's syllabus schema and template.
-3. **Step 2 (ingest) is still blocked on Q-028**, deliberately unanswered until we reach it. Avin
-   expects it to be the hard one (organizing heterogeneous materials, additions over time, and
-   possibly post-processing raw slides into something `answer` locators can point at).
+1. **Steps 0–1 were hand-tested by Avin** in a clean clone (after a two-week break) — reported fine.
+2. **Step 2 is next: ingest + the course log.** Its design is now settled (Q-028 → **D-035**, spec
+   §8.7; course log **D-036**, spec §8.8). Order was debated: Claude proposed doing step 3 first;
+   Avin correctly insisted on ingest first, because the materials layout is the input contract for
+   every later agent, and a teacher never reaches step 3 without step 2.
+3. **Validation re-founded (D-037):** the teacher is the authority. Only *integrity* findings
+   (references to things that don't exist) are errors; everything pedagogical is advice — `warn`, or
+   `alert` for coverage — and a teacher can accept any exception. Fold this into step 2, which
+   touches the validator anyway.
+4. **Then step 3** (`/plan-units`), folding in D-032 (Bologna syllabus fields).
 
 **How implementation sessions are run:** a *fresh, context-free* session, working from
 `../FRAMEWORK-SPEC.md` alone, which doubles as a test of the spec's self-containment claim (D-026).
@@ -134,6 +161,11 @@ The kickoff prompt pattern and the required "spec-gap report" deliverable are de
    the output of the 2 home hours — entry tickets, misconception data, unfinished exercises.
 
 ## Working agreements with Avin
+
+- **Be honest, rigorous and unbiased — no reflexive agreement** (2026-09-29, now in the root
+  `CLAUDE.md` for both hats). Avin noticed a pattern of "good call" / "good catch" and quick
+  concessions. Assess on the merits, name the cost of each decision *before* it is made, and when
+  conceding say what argument changed your mind.
 
 - Propose a plan before building. He'll critique and clarify.
 - He answers direct questions directly — ask them.

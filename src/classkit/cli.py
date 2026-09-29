@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import datetime
 import sys
 from pathlib import Path
 
+from . import log
 from .frontmatter import FrontMatterError
 from .mode import DEVELOPER, TEACHER, UnsafeMarker, current_mode, set_mode
 from .model import LayoutError, find_course_root, find_framework_root, load_course
@@ -16,8 +18,8 @@ from .scaffold import (
     scaffold_session,
     scaffold_unit,
 )
-from .validate import validate
-from .write import write
+from .validate import Validator
+from .write import append, write
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -32,7 +34,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     check.add_argument("path", nargs="?", help="course directory (default: search upward)")
     check.add_argument(
-        "--strict", action="store_true", help="treat warnings as errors"
+        "--strict",
+        action="store_true",
+        help="fail on alerts and warnings too, not only on errors",
     )
 
     scaffold = subcommands.add_parser(
@@ -82,10 +86,38 @@ def build_parser() -> argparse.ArgumentParser:
         help="explicit confirmation that replacing the existing content is intended",
     )
     put.add_argument(
+        "--append",
+        action="store_true",
+        help="add the content to the end of the file; existing content is never rewritten",
+    )
+    put.add_argument(
         "--dry-run",
         action="store_true",
         help="report what would happen without writing anything",
     )
+
+    # The course log (D-036): what changed in the course and why. Append-only.
+    log_cmd = subcommands.add_parser(
+        "log",
+        help="append an entry to the course log, LOG.md (what changed, and why)",
+    )
+    log_cmd.add_argument(
+        "title",
+        help="who or which command, and what happened, e.g. '/design-unit 3, step 1 approved'",
+    )
+    log_cmd.add_argument(
+        "--changed", required=True, help="what changed, by ID, e.g. 'U03-S01..S04 created'"
+    )
+    log_cmd.add_argument("--why", required=True, help="why it changed")
+    log_cmd.add_argument(
+        "--file",
+        dest="files",
+        action="append",
+        default=[],
+        help="a file the change touched, relative to the course (repeatable)",
+    )
+    log_cmd.add_argument("--date", help="YYYY-MM-DD (default: today)")
+    log_cmd.add_argument("--course", help="course directory (default: search upward)")
 
     # Which hat a session in this repo wears (D-034). Teacher is the default; switching
     # to framework-developer creates a gitignored marker, and refuses if the ignore rule
@@ -122,14 +154,19 @@ def report_scaffold(result: Result, root: Path) -> None:
 def run_validate(args, framework_root: Path) -> int:
     course_root = find_course_root(Path(args.path) if args.path else None)
     course = load_course(course_root, framework_root)
-    findings = validate(course, framework_root)
+    validator = Validator(course, framework_root)
+    validator.run()
 
-    errors = [f for f in findings if f.level == "error"]
-    warnings = [f for f in findings if f.level == "warn"]
-
-    for finding in errors + warnings:
+    # Alerts are printed first (spec §8.4): they are what the teacher should look at soonest,
+    # even though only errors — broken data — fail the run.
+    for finding in validator.ordered():
         print(finding)
         print()
+
+    findings = validator.findings
+    errors = [f for f in findings if f.level == "error"]
+    alerts = [f for f in findings if f.level == "alert"]
+    warnings = [f for f in findings if f.level == "warn"]
 
     units = len(course.units)
     goals = sum(len(session.data.get("goals") or []) for u in course.units for session in u.sessions)
@@ -137,11 +174,24 @@ def run_validate(args, framework_root: Path) -> int:
         f"{course.config.get('title', 'course')} — {units} units, "
         f"{goals} guiding questions, {len(course.items)} assessment items"
     )
-    print(f"{len(errors)} errors, {len(warnings)} warnings")
+    print(f"{len(alerts)} alerts, {len(errors)} errors, {len(warnings)} warnings")
+
+    # Accepted exceptions stop nagging, but are never invisible (spec §8.4).
+    acceptances = validator.acceptances
+    if acceptances:
+        files = {a.path for a in acceptances}
+        unused = sum(1 for a in acceptances if not a.suppressed)
+        line = (
+            f"{len(validator.suppressed)} findings suppressed by {len(acceptances)} accepted "
+            f"exceptions in {len(files)} files"
+        )
+        if unused:
+            line += f" ({unused} no longer match anything)"
+        print(line)
 
     if errors:
         return 1
-    return 1 if (args.strict and warnings) else 0
+    return 1 if (args.strict and (alerts or warnings)) else 0
 
 
 def run_scaffold(args, framework_root: Path) -> int:
@@ -188,9 +238,15 @@ def run_write(args) -> int:
         else sys.stdin.read()
     )
 
-    outcome = write(
-        Path(args.path), content, overwrite=args.overwrite, dry_run=args.dry_run
-    )
+    if args.append and args.overwrite:
+        print("error: --append and --overwrite are mutually exclusive", file=sys.stderr)
+        return 2
+    if args.append:
+        outcome = append(Path(args.path), content, dry_run=args.dry_run)
+    else:
+        outcome = write(
+            Path(args.path), content, overwrite=args.overwrite, dry_run=args.dry_run
+        )
 
     if outcome.refused:
         print(f"refused: {outcome.path}", file=sys.stderr)
@@ -202,6 +258,30 @@ def run_write(args) -> int:
         return 3
 
     print(f"{outcome.status}  {outcome.path}")
+    return 0
+
+
+def run_log(args) -> int:
+    if args.date:
+        try:
+            datetime.date.fromisoformat(args.date)
+        except ValueError:
+            print(f"error: --date must be YYYY-MM-DD, not {args.date!r}", file=sys.stderr)
+            return 2
+    course_root = find_course_root(Path(args.course) if args.course else None)
+    entry = log.Entry(
+        title=args.title,
+        changed=args.changed,
+        why=args.why,
+        files=args.files,
+        date=args.date or "",
+    )
+    try:
+        path = log.append(course_root, entry)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(f"logged  {path}")
     return 0
 
 
@@ -238,6 +318,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "write":
             return run_write(args)
+        if args.command == "log":
+            return run_log(args)
         framework_root = find_framework_root()
         if args.command == "mode":
             return run_mode(args, framework_root)

@@ -13,9 +13,10 @@ from pathlib import Path
 
 import pytest
 
+from classkit.cli import main
 from classkit.model import load_course
-from classkit.scaffold import scaffold_course, scaffold_unit
-from classkit.validate import validate
+from classkit.scaffold import scaffold_course, scaffold_item, scaffold_unit
+from classkit.validate import DEFAULT_SEVERITY, Validator, validate
 
 FRAMEWORK_ROOT = Path(__file__).resolve().parents[1]
 
@@ -57,12 +58,21 @@ def session(course_root: Path, number: int) -> Path:
     return next(course_root.glob(f"units/01-*/sessions/{number:02d}.md"))
 
 
+def item(course_root: Path, number: int) -> Path:
+    return course_root / "assessments" / "items" / f"U01-I{number:02d}.md"
+
+
 def syllabus(course_root: Path) -> Path:
     return course_root / "syllabus" / "syllabus.md"
 
 
 def warnings(course_root: Path, code: str) -> list:
     return [f for f in findings(course_root) if f.code == code and f.level == "warn"]
+
+
+def levels(course_root: Path, code: str) -> set[str]:
+    """The severities at which `code` fired — empty if it did not fire."""
+    return {f.level for f in findings(course_root) if f.code == code}
 
 
 def edit(path: Path, old: str, new: str) -> None:
@@ -185,55 +195,128 @@ def test_a_deleted_syllabus_is_reported_not_ignored(course_root: Path):
     assert warnings(course_root, "syllabus_workload_missing")
 
 
-# -- the validator catches what it exists to catch -------------------------
+# -- integrity: a reference to something that does not exist is an error (D-037) --
 
-def test_activity_referencing_unknown_guiding_question(course_root: Path):
+def test_activity_referencing_a_guiding_question_that_exists_nowhere(course_root: Path):
     edit(in_class(course_root), "[U01-S03-G1]", "[U01-S09-G7]")
-    assert "activity_references_guiding_question" in codes(course_root)
-
-
-def test_activity_referencing_nothing(course_root: Path):
-    edit(in_class(course_root), "guiding_questions: [U01-S03-G1]", "guiding_questions: []")
-    assert "activity_references_guiding_question" in codes(course_root)
-
-
-def test_session_that_cannot_be_done_in_time(course_root: Path):
-    edit(session(course_root, 2), "est_minutes: 6", "est_minutes: 40")
-    assert "session_path_feasibility" in codes(course_root)
-
-
-def test_activities_overrunning_the_hour(course_root: Path):
-    edit(in_class(course_root), "duration_minutes: 13", "duration_minutes: 40")
-    assert "in_class_duration_match" in codes(course_root)
-
-
-def test_missing_entry_quiz(course_root: Path):
-    edit(in_class(course_root), "    type: quiz", "    type: discussion")
-    assert "require_opening_quiz" in codes(course_root)
+    assert levels(course_root, "activity_references_guiding_question") == {"error"}
 
 
 def test_goal_pointing_at_a_nonexistent_objective(course_root: Path):
     edit(session(course_root, 2), "objectives: [U01-O2]", "objectives: [U01-O9]")
-    assert "goal_maps_to_objective" in codes(course_root)
+    assert levels(course_root, "goal_maps_to_objective") == {"error"}
 
 
-def test_objective_no_guiding_question_addresses(course_root: Path):
+def test_item_testing_a_guiding_question_that_exists_nowhere(course_root: Path):
+    scaffold_item(course_root, FRAMEWORK_ROOT, "U01")
+    edit(item(course_root, 1), "guiding_questions: [U01-S01-G1]", "guiding_questions: [U01-S09-G1]")
+    assert levels(course_root, "item_reference") == {"error"}
+
+
+def test_item_belonging_to_a_unit_that_does_not_exist(course_root: Path):
+    scaffold_item(course_root, FRAMEWORK_ROOT, "U01")
+    edit(item(course_root, 1), "unit: U01", "unit: U07")
+    assert levels(course_root, "item_reference") == {"error"}
+
+
+# -- advisory: absent or unconventional is a warning, never an error (D-037) ---
+
+def test_activity_referencing_nothing_warns(course_root: Path):
+    edit(in_class(course_root), "guiding_questions: [U01-S03-G1]", "guiding_questions: []")
+    assert levels(course_root, "activity_without_guiding_question") == {"warn"}
+    assert errors(course_root) == []
+
+
+def test_activity_with_no_guiding_questions_key_passes_the_schema(course_root: Path):
+    """Presence is pedagogy, not shape: the schema must not turn this advice into an error."""
+    edit(in_class(course_root), "    guiding_questions: [U01-S03-G1]\n", "")
+    assert levels(course_root, "activity_without_guiding_question") == {"warn"}
+    assert errors(course_root) == []
+
+
+def test_activity_referencing_another_units_guiding_question_warns(course_root: Path):
+    scaffold_unit(course_root, FRAMEWORK_ROOT, 2, "Second Unit")
+    edit(in_class(course_root), "[U01-S03-G1]", "[U02-S03-G1]")
+    assert levels(course_root, "activity_references_other_unit") == {"warn"}
+    assert "activity_references_guiding_question" not in codes(course_root)
+
+
+def test_item_with_no_correct_choice_warns(course_root: Path):
+    scaffold_item(course_root, FRAMEWORK_ROOT, "U01")
+    edit(item(course_root, 1), "correct: true", "correct: false")
+    assert levels(course_root, "item_no_correct_choice") == {"warn"}
+    assert errors(course_root) == []
+
+
+def test_session_that_cannot_be_done_in_time_warns(course_root: Path):
+    edit(session(course_root, 2), "est_minutes: 6", "est_minutes: 40")
+    assert levels(course_root, "session_path_feasibility") == {"warn"}
+
+
+def test_activities_overrunning_the_hour_warns(course_root: Path):
+    edit(in_class(course_root), "duration_minutes: 13", "duration_minutes: 40")
+    assert levels(course_root, "in_class_duration_match") == {"warn"}
+
+
+def test_declared_hour_length_differing_from_the_methodology_warns(course_root: Path):
+    edit(in_class(course_root), "duration_minutes: 50", "duration_minutes: 90")
+    assert levels(course_root, "in_class_duration_match") == {"warn"}
+
+
+def test_missing_entry_quiz_warns(course_root: Path):
+    edit(in_class(course_root), "    type: quiz", "    type: discussion")
+    assert levels(course_root, "require_opening_quiz") == {"warn"}
+
+
+def test_too_few_activities_warns(course_root: Path):
+    path = in_class(course_root)
+    text = path.read_text(encoding="utf-8")
+    head, _, _ = text.partition("  - id: U01-A3")
+    path.write_text(head.rstrip() + "\n---\n", encoding="utf-8")
+    assert levels(course_root, "activity_count") == {"warn"}
+
+
+def test_activity_type_the_methodology_disallows_warns(course_root: Path):
+    """The schema's enum still limits activity types to the known set; this checks the
+    methodology's narrower `allowed_activity_types`, so a stricter methodology is needed."""
+    course = load_course(course_root, FRAMEWORK_ROOT)
+    course.methodology["in_class"]["allowed_activity_types"] = ["quiz", "discussion"]
+    found = {f.level for f in validate(course, FRAMEWORK_ROOT) if f.code == "activity_type"}
+    assert found == {"warn"}
+
+
+def test_a_week_with_no_class_meeting_warns(course_root: Path):
+    in_class(course_root).unlink()
+    assert levels(course_root, "in_class_missing") == {"warn"}
+    assert errors(course_root) == []
+
+
+def test_objective_no_guiding_question_addresses_is_an_alert(course_root: Path):
     for number in range(1, 5):
         path = session(course_root, number)
         path.write_text(
             path.read_text(encoding="utf-8").replace("[U01-O2]", "[U01-O1]"), encoding="utf-8"
         )
-    assert "objective_coverage" in codes(course_root)
+    assert levels(course_root, "objective_coverage") == {"alert"}
+    assert errors(course_root) == []
 
 
-def test_wrong_number_of_sessions(course_root: Path):
+def test_wrong_number_of_sessions_warns(course_root: Path):
     session(course_root, 4).unlink()
-    assert "session_count" in codes(course_root)
+    assert levels(course_root, "session_count") == {"warn"}
 
 
-def test_goal_type_the_methodology_disallows(course_root: Path):
+def test_wrong_number_of_goals_warns(course_root: Path):
+    path = session(course_root, 1)
+    text = path.read_text(encoding="utf-8")
+    head, _, _ = text.partition("  - id: U01-S01-G2")
+    path.write_text(head.rstrip() + "\n---\n", encoding="utf-8")
+    assert levels(course_root, "goal_count") == {"warn"}
+
+
+def test_goal_type_the_methodology_disallows_warns(course_root: Path):
     edit(session(course_root, 1), "type: question", "type: reading")
-    assert "goal_type" in codes(course_root)
+    assert levels(course_root, "goal_type") == {"warn"}
 
 
 def test_unassessed_guiding_question_is_a_warning_not_an_error(course_root: Path):
@@ -241,3 +324,281 @@ def test_unassessed_guiding_question_is_a_warning_not_an_error(course_root: Path
     assessed = [f for f in all_findings if f.code == "guiding_question_assessed"]
     assert assessed, "expected unassessed guiding questions in a fresh scaffold"
     assert all(f.level == "warn" for f in assessed)
+
+
+# -- the severity model itself (D-037) --------------------------------------
+
+def test_every_default_severity_is_a_known_severity():
+    assert set(DEFAULT_SEVERITY.values()) <= {"error", "alert", "warn", "off"}
+
+
+def test_only_integrity_rules_default_to_error():
+    """The mechanical line of D-037: only a rule that names something that does not exist
+    may fail the build by default. A new rule defaulting to error must be added here
+    deliberately, with a reason."""
+    integrity = {
+        "schema",
+        "id_consistency",
+        "goal_maps_to_objective",
+        "outcome_reference",
+        "activity_references_guiding_question",
+        "item_reference",
+    }
+    defaults_to_error = {code for code, level in DEFAULT_SEVERITY.items() if level == "error"}
+    assert defaults_to_error <= integrity
+
+
+def test_the_methodology_uses_only_known_rules_and_severities():
+    import yaml
+
+    data = yaml.safe_load(
+        (FRAMEWORK_ROOT / "methodologies" / "question-driven-25.yaml").read_text(encoding="utf-8")
+    )
+    for code, level in (data.get("rules") or {}).items():
+        assert code in DEFAULT_SEVERITY, code
+        assert level in {"error", "alert", "warn", "off"}
+
+
+def test_alerts_are_reported_before_errors_and_warnings(course_root: Path):
+    edit(in_class(course_root), "[U01-S03-G1]", "[U01-S09-G7]")  # an error
+    for number in range(1, 5):  # an alert
+        path = session(course_root, number)
+        path.write_text(
+            path.read_text(encoding="utf-8").replace("[U01-O2]", "[U01-O1]"), encoding="utf-8"
+        )
+    validator = Validator(load_course(course_root, FRAMEWORK_ROOT), FRAMEWORK_ROOT)
+    validator.run()
+    order = [f.level for f in validator.ordered()]
+
+    assert order == sorted(order, key=["alert", "error", "warn"].index)
+    assert order[0] == "alert"
+    assert str(validator.ordered()[0]).startswith("ALERT")
+
+
+def run_cli(course_root: Path, *args: str) -> int:
+    return main(["validate", str(course_root), *args])
+
+
+def test_validate_exits_zero_on_alerts_and_warnings(course_root: Path, capsys):
+    for number in range(1, 5):
+        path = session(course_root, number)
+        path.write_text(
+            path.read_text(encoding="utf-8").replace("[U01-O2]", "[U01-O1]"), encoding="utf-8"
+        )
+    assert run_cli(course_root) == 0
+    out = capsys.readouterr().out
+    assert "ALERT" in out
+    assert "1 alerts, 0 errors" in out
+
+
+def test_validate_exits_one_on_an_error(course_root: Path):
+    edit(in_class(course_root), "[U01-S03-G1]", "[U01-S09-G7]")
+    assert run_cli(course_root) == 1
+
+
+def test_strict_fails_on_alerts_and_warnings(course_root: Path):
+    # A fresh scaffold has warnings (workload, unassessed questions, unit count).
+    assert run_cli(course_root) == 0
+    assert run_cli(course_root, "--strict") == 1
+
+
+def test_a_rule_with_no_default_severity_is_a_programming_error(course_root: Path):
+    validator = Validator(load_course(course_root, FRAMEWORK_ROOT), FRAMEWORK_ROOT)
+    with pytest.raises(KeyError):
+        validator.report("no_such_rule", course_root, "never registered")
+
+
+# -- the teacher's last word: course.yaml `rules:` (D-037) ------------------
+
+def set_rules(course_root: Path, rules: dict[str, str]) -> None:
+    lines = "".join(f"  {code}: {level}\n" for code, level in rules.items())
+    with (course_root / "course.yaml").open("a", encoding="utf-8") as handle:
+        handle.write(f"\nrules:\n{lines}")
+
+
+def test_course_rules_can_raise_a_warning_to_an_error(course_root: Path):
+    session(course_root, 4).unlink()
+    set_rules(course_root, {"session_count": "error"})
+    assert levels(course_root, "session_count") == {"error"}
+
+
+def test_course_rules_win_over_the_methodology(course_root: Path):
+    # question-driven-25 sets guiding_question_assessed: warn
+    set_rules(course_root, {"guiding_question_assessed": "alert"})
+    assert levels(course_root, "guiding_question_assessed") == {"alert"}
+
+
+def test_course_rules_can_switch_a_rule_off(course_root: Path):
+    set_rules(course_root, {"guiding_question_assessed": "off"})
+    assert levels(course_root, "guiding_question_assessed") == set()
+
+
+def test_course_rules_can_switch_even_an_integrity_rule_off(course_root: Path):
+    edit(in_class(course_root), "[U01-S03-G1]", "[U01-S09-G7]")
+    set_rules(course_root, {"activity_references_guiding_question": "off"})
+    assert errors(course_root) == []
+
+
+def test_course_rules_with_an_unknown_severity_fail_the_schema(course_root: Path):
+    set_rules(course_root, {"session_count": "fatal"})
+    assert "schema" in codes(course_root)
+
+
+def test_a_mistyped_rule_name_in_course_rules_warns(course_root: Path):
+    set_rules(course_root, {"sesion_count": "off"})
+    assert levels(course_root, "unknown_rule") == {"warn"}
+
+
+# -- a single deliberate exception: `accepted:` (D-037) ---------------------
+
+def accept(path: Path, rule: str, reason: str = "deliberate — the teacher's call") -> None:
+    text = path.read_text(encoding="utf-8")
+    assert text.startswith("---\n"), f"fixture drifted: {path.name} has no front matter"
+    entry = f"accepted:\n  - rule: {rule}\n    reason: \"{reason}\"\n"
+    path.write_text("---\n" + entry + text[len("---\n"):], encoding="utf-8")
+
+
+def run_validator(course_root: Path) -> Validator:
+    validator = Validator(load_course(course_root, FRAMEWORK_ROOT), FRAMEWORK_ROOT)
+    validator.run()
+    return validator
+
+
+def test_accepted_suppresses_that_rule_for_that_file(course_root: Path):
+    edit(session(course_root, 2), "est_minutes: 6", "est_minutes: 40")
+    accept(session(course_root, 2), "session_path_feasibility", "long session on purpose")
+
+    validator = run_validator(course_root)
+
+    assert not [f for f in validator.findings if f.code == "session_path_feasibility"]
+    assert [f.code for f in validator.suppressed] == ["session_path_feasibility"]
+
+
+def test_accepted_does_not_reach_other_files(course_root: Path):
+    edit(session(course_root, 2), "est_minutes: 6", "est_minutes: 40")
+    edit(session(course_root, 3), "est_minutes: 6", "est_minutes: 40")
+    accept(session(course_root, 2), "session_path_feasibility")
+
+    still_reported = [
+        f for f in findings(course_root) if f.code == "session_path_feasibility"
+    ]
+    assert [Path(f.where).name for f in still_reported] == ["03.md"]
+
+
+def test_accepted_does_not_reach_other_rules_in_the_same_file(course_root: Path):
+    edit(session(course_root, 2), "est_minutes: 6", "est_minutes: 40")
+    edit(session(course_root, 2), "type: question", "type: reading")
+    accept(session(course_root, 2), "session_path_feasibility")
+
+    assert levels(course_root, "goal_type") == {"warn"}
+
+
+def test_a_week_with_no_class_meeting_can_be_accepted_in_unit_md(course_root: Path):
+    in_class(course_root).unlink()
+    accept(next(course_root.glob("units/01-*/unit.md")), "in_class_missing", "holiday week")
+    assert levels(course_root, "in_class_missing") == set()
+
+
+def test_accepted_is_allowed_on_every_front_matter_artifact(course_root: Path):
+    scaffold_item(course_root, FRAMEWORK_ROOT, "U01")
+    for path in [
+        syllabus(course_root),
+        next(course_root.glob("units/01-*/unit.md")),
+        session(course_root, 1),
+        in_class(course_root),
+        item(course_root, 1),
+    ]:
+        accept(path, "goal_count")
+
+    assert "schema" not in codes(course_root)
+
+
+def test_the_accepted_definition_is_identical_in_every_schema():
+    """Five copies of one definition — this is what stops them drifting apart."""
+    import json
+
+    definitions = {
+        name: json.loads((FRAMEWORK_ROOT / "schemas" / name).read_text(encoding="utf-8"))[
+            "properties"
+        ]["accepted"]
+        for name in [
+            "syllabus.schema.json",
+            "unit.schema.json",
+            "study-session.schema.json",
+            "in-class-session.schema.json",
+            "assessment-item.schema.json",
+        ]
+    }
+    first = next(iter(definitions.values()))
+    assert all(d == first for d in definitions.values())
+
+
+def test_an_accepted_entry_without_a_reason_is_advice_not_a_schema_error(course_root: Path):
+    """D-038: a missing reason is the teacher's call — it warns, and the entry still works."""
+    path = session(course_root, 1)
+    text = path.read_text(encoding="utf-8")
+    path.write_text(
+        "---\naccepted:\n  - rule: goal_count\n" + text[len("---\n"):], encoding="utf-8"
+    )
+    assert "schema" not in codes(course_root)
+    assert levels(course_root, "accepted_without_reason") == {"warn"}
+
+
+def test_an_empty_reason_counts_as_missing(course_root: Path):
+    accept(session(course_root, 1), "goal_count", reason="  ")
+    assert levels(course_root, "accepted_without_reason") == {"warn"}
+
+
+def test_a_capitalised_rule_typo_is_advice_not_a_schema_error(course_root: Path):
+    """D-038: every mistyped code is caught the same way — by `unknown_rule`, at warn."""
+    accept(session(course_root, 1), "Goal_Count")
+    assert "schema" not in codes(course_root)
+    assert levels(course_root, "unknown_rule") == {"warn"}
+
+
+def test_accepting_a_rule_that_does_not_exist_warns(course_root: Path):
+    accept(session(course_root, 1), "sesion_budget")
+    assert levels(course_root, "unknown_rule") == {"warn"}
+
+
+def test_validate_counts_accepted_exceptions(course_root: Path, capsys):
+    edit(session(course_root, 2), "est_minutes: 6", "est_minutes: 40")
+    accept(session(course_root, 2), "session_path_feasibility")
+    accept(session(course_root, 3), "goal_type")  # nothing to suppress
+
+    run_cli(course_root)
+    out = capsys.readouterr().out
+
+    assert "1 findings suppressed by 2 accepted exceptions in 2 files" in out
+    assert "(1 no longer match anything)" in out
+    assert "[session_path_feasibility]" not in out
+
+
+# -- objectives roll up to outcomes that exist (outcome_reference, D-037) ----
+
+def unit_md(course_root: Path) -> Path:
+    return next(course_root.glob("units/01-*/unit.md"))
+
+
+def test_an_objective_naming_a_declared_outcome_is_fine(course_root: Path):
+    edit(unit_md(course_root), "    bloom: understand\n", "    bloom: understand\n    outcomes: [CO1]\n")
+    assert levels(course_root, "outcome_reference") == set()
+    assert errors(course_root) == []
+
+
+def test_an_objective_naming_an_undeclared_outcome_is_an_error(course_root: Path):
+    edit(unit_md(course_root), "    bloom: understand\n", "    bloom: understand\n    outcomes: [CO9]\n")
+    assert levels(course_root, "outcome_reference") == {"error"}
+
+
+def test_an_objective_naming_no_outcome_is_not_a_schema_error(course_root: Path):
+    """Presence is advisory (D-037) — `objective_maps_to_outcome` lands with step 3."""
+    assert "schema" not in codes(course_root)
+
+
+def test_a_bare_yaml_off_in_rules_means_off(course_root: Path):
+    """YAML 1.1 reads an unquoted `off` as boolean false; it must still mean severity off."""
+    with (course_root / "course.yaml").open("a", encoding="utf-8") as handle:
+        handle.write("\nrules:\n  guiding_question_assessed: off\n")
+    assert "schema" not in codes(course_root)
+    assert levels(course_root, "guiding_question_assessed") == set()

@@ -27,8 +27,9 @@ Start at `VISION.md` (why the project exists) and `FRAMEWORK-SPEC.md` (what the 
 contain). `ROADMAP.md` carries the implementation plan and the ledger — **the ledger is authoritative
 for what actually exists**, because the spec deliberately runs ahead of the code.
 
-**The vocabulary and ID conventions are in the root `CLAUDE.md`.** They are shared by both hats and
-are deliberately not duplicated here — two copies would drift.
+Three things live in the root `CLAUDE.md` and apply here fully: **how to work** (honest, rigorous,
+unbiased — no reflexive agreement), **the vocabulary**, and **the ID conventions**. Both hats share
+them, so they are deliberately not duplicated here — two copies would drift.
 
 ## Invariants — do not break these
 
@@ -44,8 +45,8 @@ are deliberately not duplicated here — two copies would drift.
 4. **The class hour is built on the home study.** Activities reference that unit's Guiding
    Questions. An activity referencing none is permitted but flagged, and the **total unmapped
    time in an hour is capped** (`in_class.max_unmapped_minutes`). Legitimate exceptions exist —
-   exam logistics, a current-events hook — but an hour made of them is a lecture. Never raise the
-   cap to make a validation pass (D-028).
+   exam logistics, a current-events hook — but an hour made of them is a lecture. An agent never raises the cap, or accepts an
+   exception, on its own; the teacher may (D-028, D-037).
 5. **Nothing overwrites a teacher's work without permission — enforced in code, not by prompt.**
    Scaffolding is create-only (`write_new()` is the only way scaffold touches disk), and **every
    agent and command writes through `classkit.write.write()` / `classkit write`, which structurally
@@ -69,6 +70,7 @@ src/classkit/
   model.py                locating and loading a course tree
   scaffold.py             create-only content generation
   write.py                the overwrite-safe write path — every agent and command writes here
+  log.py                  the course log, LOG.md — `classkit log`, append-only through write.append (D-036, D-038)
   mode.py                 teacher / framework-developer hat: `classkit mode` (D-034)
   validate.py             schema layer + semantic rules
   cli.py                  argparse entry point
@@ -97,10 +99,18 @@ A decision marked `locked (design)` must get a row in `ROADMAP.md`'s ledger in t
 
 ## Adding a validation rule
 
-Add the check to `Validator`, give it a code, and put its default severity in
-`DEFAULT_SEVERITY` if it is not an error. Methodologies override severities in their
-`rules:` block. Every rule needs a test in `tests/test_course_lifecycle.py` that breaks a
-scaffolded course and asserts the code fires — a rule that never fires is worse than no rule.
+Add the check to `Validator`, give it a code, and register its default severity in
+`DEFAULT_SEVERITY` — every rule, errors included (the table is complete; an unregistered code
+raises). Methodologies override severities in their `rules:` block, and a course overrides the
+methodology in `course.yaml` `rules:`. Every rule needs a test in `tests/test_course_lifecycle.py`
+that breaks a scaffolded course and asserts the code fires **at its severity** — a rule that never
+fires is worse than no rule.
+
+**Say which kind it is** (D-037). *Integrity* — it names something that does not exist, or a file
+cannot be read — defaults to `error`. *Advisory* — something is missing or departs from the
+methodology — defaults to `warn` (`alert` if it matters most). **The teacher is the authority:** do
+not make a pedagogical check an error, and do not put pedagogical presence into a schema's
+`required`, which would turn advice back into an error by the back door.
 
 **Say which course state the rule judges** (D-033). A course is half-built for almost all of its
 life, and invariant 6 requires a fresh scaffold to validate clean. A **consistency** rule (does

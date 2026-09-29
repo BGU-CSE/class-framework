@@ -53,6 +53,12 @@ course goal and its **Course Outcomes** (`CO1`, `CO2`, …): what a student who 
 outcomes are the roof of everything below them — each unit's objectives roll up to them, so the
 validator can ask whether your units together deliver what the course promised.
 
+It also starts **`course/LOG.md`, the course log**: what changed in the course and *why* — the part
+git's history does not record. The commands add an entry at each step you approve, and the agents
+read the recent entries before they start work, so next year's revision knows what this year's
+decided. Add your own entries by hand whenever something worth remembering happens ("taught U03 —
+students found S02 too long"), or with `classkit log "taught U03" --changed "…" --why "…"`.
+
 The syllabus is a **Bologna-style course descriptor**: alongside the goal and outcomes it has room
 for level, course type, when it is offered, teaching methods, reading, workload and the assessment
 scheme. Fill it in over time, or leave parts out — only the goal and the outcomes are required.
@@ -70,6 +76,17 @@ Drop whatever you already have into **`course/materials/source/`** — slides, P
 past exams, reading lists, lecture notes. Any format. Nothing is required, and more is better:
 the agents read this to work out what your course actually covers instead of inventing a
 generic version of it.
+
+It doesn't need to be organized — one folder of everything is fine, and duplicates (a deck and its
+PDF export) are detected. For videos and web pages, list them in
+`course/materials/source/links.md`, one per line with an optional note, or run
+`classkit add-url URL --note "…"` *(not built yet)*.
+
+`/ingest` then turns all of it into a readable, citable copy in `course/materials/ingested/` —
+one file per source, with every slide and page marked — so that an answer can point at
+`M0007#slide-18` and the validator can check that slide exists. Your originals are never touched,
+and you can correct a badly extracted file by hand; a later ingest won't overwrite your fix without
+asking. Add material any time and run `/ingest` again — only what's new or changed is processed.
 
 If your textbook isn't a file, record it in `course/course.yaml` under `textbooks:` — study
 paths and answer references cite it by key.
@@ -98,7 +115,7 @@ one that looks wrong. The shipped defaults are placeholders; adjust them to your
 
 **`in_class.max_unmapped_minutes` is the guardrail on the class hour.** Most activities should build
 on the week's guiding questions. A few legitimately do not, and those are fine — but if they add up
-past this cap, validation fails, because an hour made of them is a lecture again. Raise it if your
+past this cap, the validator warns you, because an hour made of them is a lecture again. Raise it if your
 teaching genuinely needs more; set it to the full hour to switch the guardrail off entirely. It is
 your course.
 
@@ -204,25 +221,39 @@ homework validates exactly as before.
 
 <!-- homework-module:end -->
 
-## What the validator will not let you get away with
+## What the validator tells you
 
-- **A class hour that has drifted off the home study.** Activities reference the week's guiding
-  questions; ones that don't are flagged, and if their total time passes
-  `max_unmapped_minutes`, that's an error. If the hour doesn't depend on the prework, it's a
-  lecture with extra steps.
-- **A study session that doesn't fit its budget.** The session's guiding questions carry study
-  times, and they have to sum to roughly the session length. That's how "two hours at home"
-  quietly becomes four.
-- **A guiding question with nowhere to find the answer.** Every question records where its answer
-  lives — a textbook section, a slide, a video timestamp — unless you deliberately mark it as one
-  to be resolved in class, in which case an activity has to pick it up.
-- **A unit objective no guiding question addresses**, and an objective that rolls up to no Course
-  Outcome.
-- **An assessment item testing something students were never asked to learn.**
+**You are the authority.** The validator catches what the agents get wrong and tells you what it
+sees; it does not overrule you. It reports three kinds of finding:
 
-Warnings are advisory. Errors mean the design is broken, not that the tool is fussy. Some checks
-only run once your unit map is complete — a half-built course is a normal state, not a failing one,
-and the validator says when it has skipped something for that reason.
+- **Errors — broken data.** A reference to something that doesn't exist: a guiding question an
+  activity names but nobody wrote, a quiz item that isn't there, an answer pointing at slide 18 of a
+  12-slide deck. These are almost never intentional, and the agents can't work correctly over them.
+- **Alerts — high priority, shown first.** Coverage: a Course Outcome no unit delivers, an objective
+  no guiding question addresses, an objective that rolls up to no outcome, a missing syllabus. Often
+  a temporary state while you build — but worth looking at.
+- **Warnings — departures from good practice.** A session over its time budget, a guiding question
+  with no recorded answer, a class hour drifting off the home study, a week with no class meeting.
+  Sometimes that is exactly what you meant.
+
+When a departure is deliberate, mark it so it stops nagging — in the front matter of the file the
+finding is reported against. A week with no class meeting is reported against the unit's `unit.md`:
+
+```yaml
+accepted:
+  - rule: in_class_missing
+    reason: "holiday week — no class meeting"
+```
+
+— or change a rule for the whole course under `rules:` in `course.yaml` (e.g.
+`session_count: off`). Agents never do this on their own; only you do. The rule's name is the one
+`classkit validate` prints in brackets; a name it does not recognise gets a warning, because a
+mistyped exception silently does nothing. A missing `reason` is allowed but also gets a warning —
+the reason is what explains the exception to you, or a colleague, next year. Accepted exceptions are still counted at the end of the
+report, so they never disappear from view.
+
+Some checks only run once your unit map is complete — a half-built course is a normal state, and
+the validator says when it has skipped something for that reason.
 
 ## What you still have to do yourself
 

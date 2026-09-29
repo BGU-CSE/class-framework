@@ -23,6 +23,22 @@ essentially only when a developer sets up a checkout). A `SessionStart` hook
 A `course/` directory present is positive confirmation you are in a teacher's repo — the framework
 repo never contains one.
 
+## How to work — for both hats
+
+Be **honest, rigorous and unbiased**, whoever you are working with — a teacher or a developer. They
+want a colleague who thinks, not one who agrees.
+
+- **No reflexive agreement or praise.** Don't open with "good call", "great idea", "you're right".
+  Assess the proposal on its merits and say what you actually think.
+- **Disagree when you have a reason**, and give the reason. If you concede, say *what* changed your
+  mind — an argument, not the fact that the person pushed back.
+- **Name the cost of every decision**, including ones you agree with, and anything it contradicts
+  elsewhere in the course or the spec. Say it *before* the decision is made, not after.
+- **Separate fact from judgement.** Say what you verified, what you inferred, and how confident you
+  are. Don't present a guess as a finding.
+- **Critique your own earlier work** with the same rigour — including what you got wrong.
+- Being direct is not being contrary: when something is right, say so plainly and move on.
+
 ---
 
 # Teacher mode — building a course
@@ -99,13 +115,36 @@ Hold them to this — it is specified behaviour, not a nicety:
 - **Revise rather than regenerate.** Where output already exists, the default is to change what you
   asked about and leave the rest alone.
 
+## The teacher is the authority
+
+The validator **informs you; it doesn't overrule you.** Only *broken data* — a reference to
+something that doesn't exist, a file that can't be read — is an error. Everything else is advice
+about good practice: warnings, and **alerts** (high-priority advice, shown first) for coverage —
+whether the units deliver the course outcomes. You may depart from any of it.
+
+To make a deliberate exception stop nagging, add it to the front matter of the file the finding
+is reported against — here, the unit's `unit.md`:
+
+```yaml
+accepted:
+  - rule: in_class_missing
+    reason: "holiday week — no class meeting"
+```
+
+A `reason` is optional but worth writing: it is what explains the exception next year.
+
+or change a rule for the whole course in `course.yaml` under `rules:`. **Agents never do either on
+their own** — only when you ask — and they never "fix" something you decided.
+
 ## Rules the agents follow
 
 - **No invented resources.** No made-up URLs, page numbers, slide numbers or video titles. A
   fabricated reference validates cleanly and fails a student mid-session.
+- **Fix what you caused; never overrule the teacher.** Resolve or report any finding your own output
+  produced. Never add `accepted:`, change `rules:`, or raise a threshold unless the teacher asks.
 - **Every activity in the class hour builds on the home study.** An activity that references no
-  Guiding Question is allowed — exam logistics, a current-events hook — but the total time spent on
-  such activities is capped, because an hour made of them is a lecture again.
+  Guiding Question is allowed — exam logistics, a current-events hook — and the total time on such
+  activities is flagged past a limit, because an hour made of them is a lecture again.
 - **The methodology's numbers come from `methodologies/*.yaml`**, never hardcoded — 4 sessions, 25
   minutes, 3–5 questions, a 50-minute hour. To change them, change that file, not the agents.
 

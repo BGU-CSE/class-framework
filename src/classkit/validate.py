@@ -2,31 +2,73 @@
 
 Two layers:
 
-1. **Schema** — does every file's front matter match its JSON Schema?
+1. **Schema** — does every file's front matter have the shape tools need to read it?
 2. **Semantics** — does the course hold together as a flipped course under its
-   declared methodology? These are the checks that matter. In particular:
+   declared methodology?
 
-   * every Study Session must have at least one complete Study Path inside its
-     time budget, or "2 hours at home" is fiction;
-   * every in-class Activity must reference a Guiding Question from that unit,
-     which is what structurally stops the meeting reverting to a lecture.
+**The teacher is the authority** (D-037): validation informs, it never overrules. Every
+rule is one of two kinds, split by a mechanical line:
+
+* **Integrity** — a finding that *names something that does not exist* (a dangling id, an
+  unreadable file). Default severity ``error``; the only kind that fails ``validate``.
+* **Advisory** — something is *absent or unconventional*: a session over budget, an hour
+  drifting off the home study, a week with no class meeting. Default ``warn``, or
+  ``alert`` (high priority, reported first) for the coverage chain.
+
+Severity is resolved as: the course's ``course.yaml`` ``rules:`` → the methodology's
+``rules:`` → ``DEFAULT_SEVERITY``. A teacher may also accept one exception in a file's
+own front matter (``accepted: [{rule, reason}]``); that rule's findings for that file are
+then suppressed, and counted rather than hidden.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .model import Course, Unit
 
-# Severity when a methodology's `rules:` block says nothing about a check.
+SEVERITIES = ("error", "alert", "warn", "off")
+
+# Every rule the validator knows, with its default severity (spec §8.4). Used when neither
+# the course nor the methodology says otherwise. The table is complete on purpose: a rule
+# missing from it is a programming error (``report`` raises), and a rule name a teacher
+# types that is not in it is a typo worth telling them about (``unknown_rule``).
 DEFAULT_SEVERITY = {
-    "guiding_question_assessed": "warn",
-    "path_estimate_missing": "warn",
-    "unit_count": "warn",
+    # -- integrity: names something that does not exist --------------------
+    "schema": "error",
+    "id_consistency": "error",
+    "goal_maps_to_objective": "error",
+    "outcome_reference": "error",
+    "activity_references_guiding_question": "error",
+    "item_reference": "error",
+    # -- advisory, high priority: the coverage chain -----------------------
+    "objective_coverage": "alert",
+    # -- advisory ----------------------------------------------------------
     "schema_unavailable": "warn",
+    "unit_count": "warn",
+    "session_count": "warn",
+    "goal_count": "warn",
+    "goal_type": "warn",
+    "min_paths_per_goal": "warn",
+    "path_estimate_missing": "warn",
+    "session_path_feasibility": "warn",
+    "in_class_missing": "warn",
+    "in_class_duration_match": "warn",
+    "activity_count": "warn",
+    "activity_type": "warn",
+    "require_opening_quiz": "warn",
+    "activity_without_guiding_question": "warn",
+    "activity_references_other_unit": "warn",
+    "item_no_correct_choice": "warn",
     "syllabus_workload_missing": "warn",
+    "guiding_question_assessed": "warn",
+    "unknown_rule": "warn",
+    "accepted_without_reason": "warn",
 }
+
+# The order findings are printed in: alerts first (spec §8.4), then errors, then warnings.
+REPORT_ORDER = {"alert": 0, "error": 1, "warn": 2}
 
 SCHEMA_FOR = {
     "course": "course.schema.json",
@@ -39,16 +81,33 @@ SCHEMA_FOR = {
 }
 
 
+_MARK = {"error": "ERROR", "alert": "ALERT", "warn": "warn "}
+
+
 @dataclass
 class Finding:
-    level: str  # "error" | "warn"
+    level: str  # "error" | "alert" | "warn"
     code: str
     where: str
     message: str
 
     def __str__(self) -> str:
-        mark = "ERROR" if self.level == "error" else "warn "
-        return f"{mark}  {self.where}\n       [{self.code}] {self.message}"
+        return f"{_MARK[self.level]}  {self.where}\n       [{self.code}] {self.message}"
+
+
+@dataclass
+class Acceptance:
+    """One `accepted:` entry: a teacher's deliberate exception to one rule, in one file."""
+
+    path: Path
+    rule: str
+    reason: str
+    #: findings this entry suppressed in the last run — 0 means it no longer matches anything
+    suppressed: list[Finding] = field(default_factory=list)
+
+
+def _as_dict(value) -> dict:
+    return value if isinstance(value, dict) else {}
 
 
 class Validator:
@@ -56,32 +115,70 @@ class Validator:
         self.course = course
         self.framework_root = framework_root
         self.findings: list[Finding] = []
-        self.rules = course.methodology.get("rules") or {}
+        # Who has the last word (spec §8.4): the course's own `rules:` over the
+        # methodology's, over the framework defaults.
+        self.rules = {
+            **_as_dict(course.methodology.get("rules")),
+            **_as_dict(course.config.get("rules")),
+        }
+        self.acceptances: list[Acceptance] = [
+            Acceptance(doc.path.resolve(), str(entry["rule"]), str(entry.get("reason") or "").strip())
+            for doc in course.documents()
+            for entry in doc.accepted
+        ]
 
     # -- reporting ---------------------------------------------------------
 
     def severity(self, code: str) -> str:
-        return self.rules.get(code, DEFAULT_SEVERITY.get(code, "error"))
+        if code not in DEFAULT_SEVERITY:
+            raise KeyError(f"validation rule {code!r} has no entry in DEFAULT_SEVERITY")
+        level = self.rules.get(code, DEFAULT_SEVERITY[code])
+        return level if level in SEVERITIES else DEFAULT_SEVERITY[code]
 
     def report(self, code: str, where: str | Path, message: str) -> None:
         level = self.severity(code)
         if level == "off":
             return
+        finding_path = Path(where).resolve()
         where_str = str(where)
         try:
             where_str = str(Path(where_str).relative_to(self.course.root.parent))
         except (ValueError, OSError):
             pass
-        self.findings.append(Finding(level, code, where_str, message))
+        finding = Finding(level, code, where_str, message)
+
+        # A teacher's accepted exception for this rule in this file suppresses it — but it
+        # is recorded against the acceptance, so `validate` can still count it.
+        for acceptance in self.acceptances:
+            if acceptance.rule == code and acceptance.path == finding_path:
+                acceptance.suppressed.append(finding)
+                return
+        self.findings.append(finding)
 
     @property
     def errors(self) -> list[Finding]:
         return [f for f in self.findings if f.level == "error"]
 
+    @property
+    def suppressed(self) -> list[Finding]:
+        """Findings a teacher's `accepted:` entry silenced — counted, never shown as noise."""
+        return [f for a in self.acceptances for f in a.suppressed]
+
+    def ordered(self) -> list[Finding]:
+        """Findings in report order: alerts, then errors, then warnings (stable within each)."""
+        return sorted(self.findings, key=lambda f: REPORT_ORDER[f.level])
+
     # -- entry point -------------------------------------------------------
 
     def run(self) -> list[Finding]:
+        self.course_goal_ids = {
+            str(goal.get("id"))
+            for unit in self.course.units
+            for goal in unit.goals()
+            if isinstance(goal, dict)
+        }
         self.check_schemas()
+        self.check_rule_names()
         self.check_syllabus()
         self.check_unit_count()
         for unit in self.course.units:
@@ -137,6 +234,43 @@ class Validator:
 
     # -- layer 2: semantics ------------------------------------------------
 
+    def check_rule_names(self) -> None:
+        """A rule name nothing recognises is almost certainly a typo — and a mistyped
+        override or acceptance silently does nothing, so the teacher believes a rule is
+        handled when it is not. Advisory: the unrecognised entry merely has no effect."""
+        known = set(DEFAULT_SEVERITY)
+        sources = [
+            (self.course.root / "course.yaml", "course.yaml `rules:`",
+             _as_dict(self.course.config.get("rules"))),
+            (
+                self.framework_root / "methodologies" / f"{self.course.methodology.get('id')}.yaml",
+                "the methodology's `rules:`",
+                _as_dict(self.course.methodology.get("rules")),
+            ),
+        ]
+        for where, label, rules in sources:
+            for code in sorted(set(rules) - known):
+                self.report("unknown_rule", where, f"{label} names {code!r}, which is not a "
+                            "validation rule, so the entry has no effect.")
+        for acceptance in self.acceptances:
+            if acceptance.rule not in known:
+                self.report(
+                    "unknown_rule",
+                    acceptance.path,
+                    f"`accepted:` names {acceptance.rule!r}, which is not a validation rule, "
+                    "so it suppresses nothing.",
+                )
+        # A silenced finding nobody can later explain is what a reason prevents — but a
+        # missing reason is the teacher's call, so it is advice, not a failure (D-038).
+        for acceptance in self.acceptances:
+            if not acceptance.reason:
+                self.report(
+                    "accepted_without_reason",
+                    acceptance.path,
+                    f"`accepted:` for {acceptance.rule!r} gives no `reason`. It still takes "
+                    "effect; a reason is what lets someone understand the exception next year.",
+                )
+
     def check_syllabus(self) -> None:
         """The syllabus's own checks. The coverage chain between Course Outcomes and unit
         objectives is checked separately, once objectives carry `outcomes`.
@@ -191,12 +325,27 @@ class Validator:
         objective_ids = {o.get("id") for o in unit.objectives if isinstance(o, dict)}
         goal_ids: set[str] = set()
 
+        # --- objectives roll up to Course Outcomes that exist (D-021, D-037). Whether an
+        # objective names any outcome at all is advisory, and lands with the coverage chain.
+        outcome_ids = {str(o.get("id")) for o in self.course.outcomes}
+        for objective in unit.objectives:
+            if not isinstance(objective, dict):
+                continue
+            for outcome in objective.get("outcomes") or []:
+                if outcome not in outcome_ids:
+                    self.report(
+                        "outcome_reference",
+                        unit.doc.path,
+                        f"objective {objective.get('id')} rolls up to {outcome!r}, which the "
+                        "syllabus does not declare as a Course Outcome.",
+                    )
+
         # --- study sessions
         expected_sessions = home.get("sessions_per_unit")
         if isinstance(expected_sessions, int) and len(unit.sessions) != expected_sessions:
             self.report(
                 "session_count",
-                unit.directory,
+                unit.doc.path,
                 f"{unit.id} has {len(unit.sessions)} study sessions; "
                 f"methodology '{methodology.get('id')}' expects {expected_sessions}.",
             )
@@ -293,7 +442,7 @@ class Validator:
 
         # --- in-class session
         if unit.in_class is None:
-            self.report("in_class_missing", unit.directory, f"{unit.id} has no in-class.md.")
+            self.report("in_class_missing", unit.doc.path, f"{unit.id} has no in-class.md.")
             return
 
         self.check_in_class(unit, goal_ids, in_class_cfg)
@@ -421,31 +570,37 @@ class Validator:
                     f"(allowed: {', '.join(allowed)}).",
                 )
 
+            # One concern, three findings (D-028, D-037): naming a guiding question that does
+            # not exist is broken data; naming one from another unit, or naming none, is a
+            # departure the teacher may have meant.
             referenced = activity.get("guiding_questions") or []
             if not referenced:
                 self.report(
-                    "activity_references_guiding_question",
+                    "activity_without_guiding_question",
                     doc.path,
-                    f"{activity_id} references no guiding question. Every activity must build "
-                    "on the home study, or the hour becomes a lecture again.",
+                    f"{activity_id} references no guiding question. Most activities should "
+                    "build on the home study, or the hour drifts back into a lecture.",
                 )
             for goal_id in referenced:
-                if goal_id not in goal_ids:
+                if goal_id in goal_ids:
+                    continue
+                if goal_id in self.course_goal_ids:
+                    self.report(
+                        "activity_references_other_unit",
+                        doc.path,
+                        f"{activity_id} references {goal_id!r}, a guiding question of another "
+                        f"unit rather than {unit.id}.",
+                    )
+                else:
                     self.report(
                         "activity_references_guiding_question",
                         doc.path,
                         f"{activity_id} references {goal_id!r}, which is not a guiding "
-                        f"question of {unit.id}.",
+                        "question anywhere in this course.",
                     )
 
     def check_items(self) -> None:
-        all_goal_ids = {
-            str(goal.get("id"))
-            for unit in self.course.units
-            for session in unit.sessions
-            for goal in (session.data.get("goals") or [])
-            if isinstance(goal, dict)
-        }
+        all_goal_ids = self.course_goal_ids
         unit_ids = {unit.id for unit in self.course.units}
 
         for item in self.course.items:
@@ -466,7 +621,7 @@ class Validator:
             choices = item.data.get("choices") or []
             if choices and not any(c.get("correct") for c in choices if isinstance(c, dict)):
                 self.report(
-                    "item_reference",
+                    "item_no_correct_choice",
                     item.path,
                     f"{item.id} has no choice marked correct.",
                 )

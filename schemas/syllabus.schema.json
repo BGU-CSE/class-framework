@@ -7,6 +7,26 @@
   "required": ["goal", "outcomes"],
   "additionalProperties": false,
   "properties": {
+    "accepted": {
+      "type": "array",
+      "description": "The teacher's deliberate exceptions for THIS file (D-037). Each entry suppresses one validation rule's findings for this file; `classkit validate` still counts them, so they are never invisible. Only the teacher adds these — an agent never does so on its own.",
+      "items": {
+        "type": "object",
+        "required": ["rule"],
+        "additionalProperties": false,
+        "properties": {
+          "rule": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The rule code, as `classkit validate` prints it in brackets, e.g. 'in_class_missing'. Not pattern-checked on purpose: a mistyped code is reported by the advisory rule `unknown_rule`, never as a schema error (D-038)."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why the departure is deliberate, e.g. 'holiday week — no class meeting'. Optional: a missing reason is reported by the advisory rule `accepted_without_reason`, never as a schema error (D-038)."
+          }
+        }
+      }
+    },
     "goal": {
       "type": "string",
       "description": "One-paragraph aim of the course."

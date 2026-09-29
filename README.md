@@ -38,24 +38,24 @@ The **Guiding Question** is the atomic unit of the whole system. Assessment item
 activities reference question IDs. That is what lets the tooling check the design rather than merely
 store it.
 
-## What the tooling actually enforces
+## What the tooling checks
 
-A flipped course fails in two predictable ways. Both are caught mechanically:
+A flipped course fails in two predictable ways, and the tooling flags both:
 
 - **The class hour quietly becomes a lecture again.** In-class activities are built on that unit's
-  guiding questions. An activity that references none is allowed — exam logistics, a current-events
-  hook — but the **total time spent on such activities is capped**, because an hour made of them is
-  a lecture.
+  guiding questions; activities that aren't — exam logistics, a current-events hook — are fine, but
+  their total time is flagged past a limit, because an hour made of them is a lecture.
 - **"Two hours at home" turns out to be fiction.** Each guiding question carries a teacher-approved
-  study time, and a session's questions have to sum to roughly its length. The budget is arithmetic,
-  not an assertion.
+  study time, and a session whose questions don't sum to roughly its length is flagged.
 
 Alongside those: every guiding question records where its answer can be found, objectives roll up to
-Course Outcomes and are covered by questions, references resolve, IDs are consistent, activity
-durations sum to the hour, and assessment items test something somebody was asked to learn.
+Course Outcomes and are covered by questions, and every reference points at something that exists.
 
-Because agents author the content, something has to catch what agents get wrong. That is why the
-framework validates — not rigour for its own sake. **Code verifies; agents judge.**
+**The teacher is the authority.** Only broken data — a reference to something that doesn't exist —
+is an error. Everything pedagogical is advice: warnings, and high-priority *alerts* for coverage. A
+teacher can accept any deliberate exception, and it stops nagging. Validation exists because agents
+author the content and something has to catch what they get wrong — not to overrule the person
+responsible for the course. **Code verifies; agents judge; the teacher decides.**
 
 ## Status
 
@@ -143,6 +143,7 @@ designer, the critic and the assessment writer apply the same standard.
 | `classkit scaffold item U05` | Add an assessment item |
 | `classkit validate` | Check the course against its methodology and schemas |
 | `classkit write` | The write path agents use — refuses to replace existing content without explicit confirmation |
+| `classkit log` | Append an entry to the course log, `LOG.md` — what changed and why |
 
 Scaffolding **never overwrites**. Re-run it any time — you get whatever is missing and keep
 everything you wrote. Skipped files are reported.

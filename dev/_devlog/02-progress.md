@@ -1319,3 +1319,161 @@ conclude the framework is broken.
 
 Unchanged: hand-test steps 0–1 with `dev/MANUAL-TESTING.md` (and now `GETTING-STARTED.md`). Step 3
 unblocked (fold in D-032). Step 2 waits on Q-028.
+
+---
+
+## Session 25 — 2026-09-29 — Ingest and the course log designed (→ D-035, D-036); Q-028 resolved
+
+Avin returned after hand-testing steps 0–1 in a clean clone ("I believe it went fine").
+
+**Sequencing disagreement, resolved in Avin's favour.** Claude recommended step 3 (`/plan-units`)
+next, deferring ingest design until step 4, on the grounds that step 3 has no structural dependency
+on ingest and would reveal what ingest needs. Avin: settle ingest first — how it works, what it
+does, how data is organized, how it runs incrementally — and anyway a teacher can't test step 3
+without having done ingest. Conceded: the materials layout is the input contract for every
+downstream agent, so building on an unspecified heap means rework; testing step 3 without ingest
+tests a workflow no teacher follows; and "workflow order outside" was our own principle.
+
+**Design (D-035, spec §8.7), built up with Avin:**
+- General, not DS&A-shaped (Avin caught Claude assuming the pilot course). Teachers are not assumed
+  organized: flat or nested, duplicates (PPTX + its PDF), any format, added over time.
+- `source/` (the teacher's, never modified) vs `ingested/` (derived, one `.md` per material, flat,
+  keyed by `M<NNNN>` — `M` because `S` already means Study Session). Flat so a rename or move never
+  breaks a locator; the manifest re-matches by hash.
+- Explicit anchors (`## Slide 18`, `## Page 34`, document headings) and a new rule
+  `material_locator_resolves` — which makes invariant 7 **partly mechanical** for the first time:
+  a fabricated "slide 18" in a 12-slide deck now fails validation.
+- Links: `links.md` + `classkit add-url` (Avin's suggestion), plus URLs harvested from documents.
+- Extraction is code (reproducible anchors): built-in md/txt/pptx/pdf/docx, optional pandoc and
+  LibreOffice, everything else `unsupported` and reported — proactive for common formats, reactive
+  for the rest. Scanned PDFs and media flagged, not handled.
+- Pre-flight report and approval gate before a long run (Avin's point); incremental and resumable
+  by hash; hand edits to ingested text detected and preserved (Avin wanted them editable).
+
+**Course log (D-036, spec §8.8)** — Avin's idea: `LOG.md` records what changed in the course and
+why, which git's byte history does not. Course only, never framework development. Every approved
+step of every command is an entry; written by `classkit log`; agents read recent entries first.
+
+Ledger: 18 new rows (13 decisions, 121 changes). GETTING-STARTED's materials step updated. Docs only.
+
+### Next
+
+Implement step 2 (ingest + course log) in a fresh session, from the spec, with a gap report. Then
+Avin hand-tests `/ingest` against real materials. Then step 3.
+
+---
+
+## Session 25b — 2026-09-29 — The teacher is the authority (→ D-037)
+
+Avin raised a concern about the whole validation direction: *"you over-push for validation tools…
+the teacher is the authority, and it is his responsibility to check everything he delivers… I don't
+want the framework to be too strict in preventing out-of-the-box solutions or some inconsistencies
+(which are sometimes ok in class)."*
+
+Claude agreed and owned the drift: `VISION.md` already framed validation as a feature for catching
+*agent* mistakes, yet successive decisions kept promoting pedagogical checks to `error`.
+
+**Resolution (D-037):** validation informs, never overrules. Rules split mechanically — *names
+something that doesn't exist* → integrity → `error`; *missing or unconventional* → advisory → `warn`.
+New severity **`alert`** for coverage (Avin: advisory, "could be a temporary glitch… but a
+HIGH-priority alert"). Twelve pedagogical rules demoted from error to warn — including
+`in_class_missing` (a holiday week is legitimate). Teachers override course-wide in `course.yaml`
+`rules:` and accept single exceptions with `accepted:` in front matter, which then stops nagging but
+stays counted and logged. Agents fix what they caused and never overrule the teacher. Schemas check
+shape, not pedagogy. Never-overwrite stays hard — it protects the teacher rather than constraining them.
+
+Written into VISION, the spec (§2.2, §8.2, §8.4 rewritten, invariant 4), both CLAUDE files, README
+and GETTING-STARTED. Ledger: 8 rows. Docs only; the re-classification of already-built rules is
+implementation work.
+
+### Next
+
+Implement step 2 (ingest + course log) — and fold D-037 in, since step 2 touches the validator
+anyway.
+
+---
+
+## Session 25c — 2026-09-29 — Working stance: honest, rigorous, unbiased
+
+Avin noticed Claude had been too agreeable — "good call", "good catch", fast concessions — and asked
+that the default behaviour, for both teachers and developers, be honest, rigorous, unbiased and
+critical, recorded in `CLAUDE.md`.
+
+The pattern was real, and it had a concrete cost: when agreeing to D-037 (validation advisory),
+Claude did not point out that it contradicts spec §3.3's founding claim that both failure modes
+"fail loudly at design time". Fixed now: §3.3 says the bet is that they are made *visible*, not
+fatal, states that this is a knowing weakening, and §9 lists the residual risk (a teacher who ignores
+warnings gets none of the protection).
+
+Recorded as "How to work — for both hats" in the root `CLAUDE.md` (loaded in every session; pointed
+to from `dev/CLAUDE.md`, not duplicated), in the handoff's working agreements, and in Claude's
+memory.
+
+---
+
+## Session 26 — 2026-09-29 — Step 2a built: validation re-classified (D-037), the course log (D-036)
+
+A fresh, context-free implementation session working from the spec, with the required gap report:
+`../reviews/impl-gaps-step-2a.md` (24 entries, 6 flagged ⚑ for Avin). Step 2 was split: **2a**
+(D-037 + D-036, this session) and **2b** (ingest, D-035).
+
+**Built** (three commits, each green):
+- **Severities.** New `alert`: printed first, never fails. `validate` exits 1 only on errors,
+  `--strict` also on alerts and warnings. `DEFAULT_SEVERITY` is now a *complete* table: an
+  unregistered rule raises, and a test pins that only integrity rules default to `error`. Ten
+  pedagogical rules demoted to `warn`; `objective_coverage` → `alert`.
+- **Splits.** `activity_without_guiding_question` and `activity_references_other_unit` (warn) split
+  from `activity_references_guiding_question` (error: exists nowhere); `item_no_correct_choice`
+  (warn) split from `item_reference`. Activity `guiding_questions` no longer schema-required.
+- **Teacher overrides.** `course.yaml` `rules:` over the methodology; `accepted: [{rule, reason}]` on
+  all five front-matter schemas, suppressing per file and counted (including entries that no longer
+  match anything); `unknown_rule` (warn) for a mistyped rule name.
+- **`outcome_reference`** (error), with objective `outcomes` added to the unit schema *optional*.
+- **Course log.** `classkit log TITLE --changed --why [--file]…`, append-only by construction;
+  `scaffold course` starts `LOG.md` with an entry listing what it created.
+
+**Found by a test, not by reading:** YAML 1.1 parses a bare `off` as `false`, so the spec's own
+`rules: {x: off}` failed the schema. It is normalised on load (G-5).
+
+**Housekeeping:** the ledger's count line was wrong before this session (said 14/1/88, table had
+16/1/112); recounted: **27 built, 3 in progress, 99 not started**. Ledger rows for steps 3/4/6 that
+still prescribed `error`/schema-`required` for rules D-037 demoted are struck through and annotated.
+§8.2's `Req` column contradicted §8.4 on `outcomes` and `answer`; fixed toward §8.4.
+
+Suite: 42 → 92 tests.
+
+### Next
+
+Avin: the ⚑ items in the gap report — the split rule names (G-1, now teacher-facing API), whether
+`accepted:` requires `reason` (G-6), `unknown_rule` at warn despite the mechanical line (G-10), who
+logs an acceptance (G-13), and two step-4/5 schema questions (G-19 `rubric`, G-20 `est_minutes`).
+Then step 2b (ingest) in a fresh session.
+
+---
+
+## Session 27 — 2026-09-29 — Step 2a reviewed and its outcomes applied (→ D-038)
+
+Step 2a (D-037 validation re-classification + D-036 course log) was implemented by a fresh session
+(gap report `reviews/impl-gaps-step-2a.md`, 24 entries, 6 needing a decision) and reviewed
+independently by Gemini (`reviews/impl-review-step-2a.md`; verdict "needs fixes first", one BLOCKING
+finding: G-6). Avin asked whether to review or triage gaps first; Claude advised review first — the
+flagged gaps were small, and the implementer had edited the spec in 13 places without author
+approval, which the review should see before Avin ratified them.
+
+Claude's assessment of the review, before acting on it: the BLOCKING finding verified in the schema
+and reached independently; but the review skipped test quality, touched only one invariant, reported
+no nits, mislabelled a couple of edits — and missed two defects found by reading one schema file (a
+documented example naming a rule that does not exist yet; the `rule` pattern re-creating the G-6
+inconsistency for capitalised typos).
+
+Avin accepted the consolidated recommendations; applied in this session (details in D-038): `reason`
+optional + `accepted_without_reason`; no pattern on `rule`; `write.append()` / `--append` and the log
+now writes through it; examples use `in_class_missing`; G-13 wording; G-7/9/11/14/15/16 ratified;
+G-19/G-20 recorded for steps 5/4; unit `objectives` kept required, deliberately. Spec §8.2, §8.4,
+§8.6, §8.8 updated. **99 tests green** (+7).
+
+### Next
+
+**Step 2b — ingest (D-035).** Implementation prompt and review prompt use the 2b scope block. Then
+Avin hand-tests `/ingest` on real, messy materials — the check no document or code review can do.
+
