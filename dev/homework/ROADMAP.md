@@ -13,7 +13,7 @@ Status: ✅ done · 🔨 in progress · ⬜ not started
 Homework is the **homework part of the framework's Assessment phase** (`FRAMEWORK-SPEC.md`
 phase table; exams and the grading scheme stay deferred), developed as a separate module.
 
-- ✅ **Design** — `HOMEWORK-SPEC.md`, HW-D01…HW-D30, HW-Q01…HW-Q08. The agents, commands,
+- ✅ **Design** — `HOMEWORK-SPEC.md`, HW-D01…HW-D31, HW-Q01…HW-Q08. The agents, commands,
   skills, schemas and templates are written.
 - ⬜ **Implementation** — the Python side: loaders, the 19 validator rules, scaffolding, tests.
   The plan below.
@@ -311,6 +311,12 @@ rows live.
 | ✅ | `schemas/homework.schema.json`, `templates/assessment/homework.md` | optional `due_date` |
 | ✅ | `create-homework.md` (steps 1 and 12), spec, `GETTING-STARTED.md` | created on first use; documents laid out from it |
 | ⬜ | `src/classkit/model.py`, `validate.py` | load it; register `homework-document.schema.json` in `SCHEMA_FOR` |
+
+## HW-D31 — Plan-only focus notes and pre-approved due dates
+
+| | Artifact | Change |
+|---|---|---|
+| ✅ | `create-homework.md`, `homework-planner.md`, spec | collect `focus_notes` and `due_date` before planning; show both at Gate 1; keep focus notes only in the plan; never add manifest metadata during document generation |
 
 ## Cross-cutting
 

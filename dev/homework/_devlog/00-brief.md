@@ -20,8 +20,8 @@ grading scheme remain deferred.
 
 ## Timeline
 
-The module's design phase ran September 2026, produced thirty decisions
-(HW-D01 through HW-D30) and eight open questions (HW-Q01 through HW-Q08), and
+The module's design phase ran September 2026, produced thirty-one decisions
+(HW-D01 through HW-D31) and eight open questions (HW-Q01 through HW-Q08), and
 was reviewed across multiple audit rounds. See `02-progress.md` for the
 detailed log.
 

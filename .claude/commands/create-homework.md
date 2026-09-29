@@ -53,11 +53,19 @@ separate approval. This is how this command applies the framework's
    - **Shape example:** a prior `HW0N.md` if one exists, otherwise
      the fields the manifest schema expects (`units`, `purpose`,
      `total_minutes`, `source`, `items` [as a count per item class, e.g.
-     "1 DIY, 1 Coding" (HW-D27), not concrete ids yet], `allowed_tools`, `collaboration`,
-     `open_book`); when the source is a quiz report, also whether the
+      "1 DIY, 1 Coding" (HW-D27), not concrete ids yet], `allowed_tools`, `collaboration`,
+      `open_book`, optional `due_date`, optional `focus_notes`); when the source is a quiz report, also whether the
      teacher wants **targeted versions** (HW-D26); then the counts are
      asked for the shared items and for each version separately
    - **Pre-filled:** `{units: $1, purpose: $2}` if given
+
+   `focus_notes` is free text for this creation run (for example, "focus on
+   hashing; avoid chaining"). It is saved only in the plan file, never in the
+   manifest or generated documents, and must not contain student names,
+   grades, identifiers or other personal data. Ask for `due_date` here; do not
+   defer it until document generation.
+   If `homework-document.yaml`'s `semester` looks out of date, confirm it in
+   this interview and retain the confirmed value in the plan.
 
    The interviewer returns a completed spec. Fields it left as defaults
    are noted in `defaults_used`; anything the teacher raised outside the
@@ -75,11 +83,13 @@ separate approval. This is how this command applies the framework's
 
 4. **Plan.** Invoke `homework-planner` with the spec. It writes its internal
    plan to `course/assessments/homework/.plans/HW0N.md` and shows the
-   teacher a prose brief.
+   teacher a prose brief. The plan retains `focus_notes`; the brief shows them
+   explicitly together with `due_date`.
 
 5. **Gate 1 — the teacher approves the brief.** Nothing but the plan file
    exists yet: no items, no manifest, no reuse edits are written before this
-   approval. For a homework with **targeted versions** (HW-D26), the brief
+   approval. The brief includes the due date and focus notes (if any). For a
+   homework with **targeted versions** (HW-D26), the brief
    shows for every version its target Guiding Questions, which items cover
    each target, and its approximate workload next to the other versions. On
    **graded** homework, versions whose workload or targets differ need the
@@ -123,7 +133,8 @@ separate approval. This is how this command applies the framework's
 
 9. **Write the manifest.** Emit `course/assessments/homework/HW0N.md`
    matching `schemas/homework.schema.json`, with `status: draft`. Item
-   references, not copies.
+   references, not copies. Include the Gate-1-approved `due_date` when one was
+   supplied. Never copy `focus_notes` into the manifest.
 
 10. **Validate.** Run `classkit validate`. On `graded` homework,
     `graded_requires_rubric` is an error that blocks the pipeline until
@@ -193,10 +204,10 @@ separate approval. This is how this command applies the framework's
     `course/assessments/homework-document.yaml` says (HW-D30): course title,
     instructor, semester, the title built from `title_format` (`{number}` is
     the homework number from its id), due date, submission instructions,
-    header, footer, logo, language and direction, font. If the manifest has
-    no `due_date`, ask the teacher for it first and add it to the manifest
-    through `classkit write --overwrite` (covered by the Gate 2 approval). If
-    `semester` looks out of date, ask before using it (with targeted
+    header, footer, logo, language and direction, font. The due date was
+    collected before Gate 1 and written with the manifest at step 9; step 12
+    never introduces or overwrites manifest metadata. Use the semester value
+    confirmed before Gate 1 (with targeted
     versions, HW-D26: one student document **per version** — the shared items
     plus that version's items — and a single teacher answers document with
     every version clearly labeled):

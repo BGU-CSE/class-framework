@@ -91,9 +91,9 @@ Mirrors the framework's own `02-progress.md`.
 
 ## Metrics
 
-- 30 decisions (HW-D01..HW-D30, plus HW-D01 addendum)
+- 31 decisions (HW-D01..HW-D31, plus HW-D01 addendum)
 - 8 open questions logged (HW-Q01..HW-Q08)
-- 21 validator rules specified (all tagged `target` pending Python
+- 19 validator rules specified (all tagged `target` pending Python
   implementation)
 - 5 audit rounds, all specific issues addressed
 - Estimated ~2000 lines of documentation across SPEC, devlog, and README
@@ -214,3 +214,6 @@ See `04-handoff.md` for the full task list.
   `homework-document.yaml` (course title, instructor, semester, title with
   homework number, due date, submission instructions, header/footer, logo,
   language/direction, font); manifest gains optional `due_date`.
+- **HW-D31 recorded:** `focus_notes` flow from the interview into the plan and
+  Gate 1 only; `due_date` is collected and approved before the manifest is
+  written, never added during document generation.

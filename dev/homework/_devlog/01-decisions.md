@@ -1,6 +1,6 @@
 # Homework module decisions
 
-Thirty decisions from the homework module design phase, September 2026.
+Thirty-one decisions from the homework module design phase, September 2026.
 Each has a full rationale. Numbered with the module's own prefix, `HW-D`,
 so they can never collide with the framework's `D-` sequence (HW-D11).
 
@@ -29,6 +29,7 @@ HW-D27 replaces the class mix with item counts per class.
 HW-D28 records per-item tools in the manifest, not in the item schema.
 HW-D29 drops `prerequisites` from the manifest.
 HW-D30 lays out the Word documents from a course settings file.
+HW-D31 keeps focus notes in the plan and approves due dates before writing.
 HW-D01 has one addendum for the `/write-items homework` hand-off.
 
 ## HW-D01 — Homework as a first-class content type
@@ -1154,9 +1155,11 @@ and items. Fields: `course_title`, `instructor`, `semester`, `title_format`
 `submission_instructions`, `header`, `footer`, `logo`, `language`,
 `direction`, `font`, `font_size`, `show_est_minutes`.
 
-- The manifest gains an optional `due_date`; if it is missing at step 12, the
-  agent asks and records it (covered by the Gate 2 approval).
-- If `semester` looks out of date, the agent asks before using it.
+- The manifest gains an optional `due_date`. The interview collects it before
+  planning, Gate 1 approves it, and step 9 writes it with the manifest. Step 12
+  does not introduce or overwrite manifest metadata (clarified by HW-D31).
+- If `semester` looks out of date, the agent asks before Gate 1 and records the
+  confirmed value in the plan before using it.
 - Created from its template on the first `/create-homework` (HW-D13);
   validated by its own schema; holds no answers, so it is committed.
 
@@ -1171,3 +1174,29 @@ Word; for a homework handout that is enough.
 `templates/course/homework-document.yaml`; `due_date` in
 `homework.schema.json` and the manifest template; `create-homework.md` steps 1
 and 12; the spec; `GETTING-STARTED.md`. No new validator rule; still **19**.
+
+---
+
+## HW-D31 — Focus notes are plan-only; due date is approved before writing
+**Date:** 2026-09-29 · **Status:** provisional · **Clarifies** HW-D30.
+
+**Decision.** The homework interview may return optional `focus_notes`: free
+text such as "focus on hashing" or "avoid chaining." The planner uses these
+notes to shape coverage, displays them at Gate 1, and stores them only in
+`course/assessments/homework/.plans/HW0N.md`. They never enter the manifest or
+the generated student and teacher documents. Personal student data is not
+allowed in them.
+
+The interview also collects the optional `due_date` before planning. The plan
+and Gate-1 brief show it, and step 9 writes the approved value with the
+manifest. Document generation at step 12 consumes the approved manifest and
+does not add or overwrite its metadata. A possibly stale `semester` is
+confirmed before Gate 1 and retained in the plan.
+
+**Why:** creation guidance needs a stable hand-off from the interview to the
+planner, while publication metadata must pass a teacher gate before it is
+written. Adding metadata after Gate 2 would conflict with HW-D12's overwrite
+discipline.
+
+**Consequence:** `create-homework.md`, `homework-planner.md`, and spec §4.1.
+No schema or validator change.

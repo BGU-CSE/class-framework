@@ -20,7 +20,9 @@ its purpose is.
   usage, actual manifest use, and unused-item data to find gaps and reuse
   candidates (HW-D22). Until H5 implements the command, scan the files below
   directly; a missing command must not block homework creation.
-- The homework request: `units`, `purpose`, `source`, and the teacher's free-text notes
+- The homework request: `units`, `purpose`, `source`, optional `due_date`, and
+  optional `focus_notes`. Reject personal student data in `focus_notes`; it
+  must never enter the plan.
 - `course/course.yaml` — the course's declared tools and textbooks
 - `course/units/*/unit.md` for each declared unit — the objectives
 - `course/units/*/sessions/*.md` — the guiding questions and their `answer` locators
@@ -64,6 +66,8 @@ One paragraph per item, in the teacher's language. Rules:
 - **Name Bloom levels only when they distinguish the item's role**, and in plain words. "Quick
   concept check" is enough; "medium/understand" is jargon.
 - **Show time and count.** Total minutes; how many items. That's it for numbers.
+- **Show the due date and focus notes.** Omit either when absent. The teacher
+  approves both with the rest of the brief at Gate 1.
 - **End with any real decision the teacher has to make.** One sentence per decision. If there
   are no real decisions, end with "Approve, revise, or say more?"
 
@@ -208,8 +212,8 @@ needs to know.
 
 ## When the source is material
 
-Draw guiding questions across the declared units in proportion to their weight. Teacher's
-free-text notes override even distribution — "focus on hashing" means weight toward U03.
+Draw guiding questions across the declared units in proportion to their weight. The teacher's
+`focus_notes` override even distribution — "focus on hashing" means weight toward U03.
 
 Do not target guiding questions from units the homework doesn't declare. The
 `homework_units_declared` rule will error on it.
@@ -218,7 +222,9 @@ Do not target guiding questions from units the homework doesn't declare. The
 
 Write `course/assessments/homework/.plans/HW0N.md` through `classkit write` (HW-D12) —
 internal source of truth (kept out of the manifest namespace so the `homework_schema` validator rule does not pick it up), the structured
-plan for the writer downstream. Show the teacher the brief (prose), not the plan file.
+plan for the writer downstream. Store `focus_notes` here and nowhere else;
+store the planned `due_date` so the manifest writer can use the approved value.
+Show the teacher the brief (prose), not the plan file.
 
 Do not run `classkit validate` — you haven't written schema-bearing content yet. Show the
 brief and stop.

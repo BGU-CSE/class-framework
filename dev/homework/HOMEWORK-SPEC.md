@@ -323,16 +323,22 @@ need no separate approval. This is the module's reading of the framework's
    prior homework, defaults, item-classes.
 2. **Interview via `interviewer`.** Collect the spec shape (units,
    purpose, minutes, source, item count per class, tools, collaboration,
-   open_book). Interviewer returns `{status, data, unfilled,
+   open_book, optional due date, optional `focus_notes`). The due date is
+   collected before planning rather than during document generation.
+   `focus_notes` is run-only free text: it may guide emphasis or exclusions,
+   contains no personal student data, and is saved only in the plan file.
+   Interviewer returns `{status, data, unfilled,
    defaults_used, follow_ups}`.
 3. **Handle follow-ups.** Undeclared class → STOP, direct to
    `/new-hw-type`. Undeclared tool → note for report. Other → save for
    step 14.
 4. **Plan via `homework-planner`.** Writes `course/assessments/homework/
    .plans/HW0N.md` — internal plan with coverage skeleton, per-slot intent,
-   slot metadata, reuse decisions, budget check.
+   slot metadata, reuse decisions, budget check, approved due date and
+   `focus_notes`.
 5. **GATE 1 — Teacher approves the brief.** Only the plan file exists; no
-   items, manifest or reuse edits are written before approval. With targeted
+   items, manifest or reuse edits are written before approval. The brief shows
+   the due date and any `focus_notes`. With targeted
    versions (HW-D26) the brief shows each version's targets, item coverage and
    approximate workload; on graded homework, differing versions need the
    teacher's explicit approval.
@@ -354,7 +360,8 @@ need no separate approval. This is the module's reading of the framework's
    Auto-override: `execute` on non-`code` format falls back to
    `persona_attempt`. Cap 3 iterations.
 9. **Write the manifest.** `course/assessments/homework/HW0N.md` with
-   `status: draft` frontmatter. Item references, not copies.
+   `status: draft` frontmatter. Item references, not copies. Include the
+   Gate-1-approved due date when supplied; never include `focus_notes`.
 10. **Validate.** Run `classkit validate`. Errors block; warnings note.
 11. **GATE 2 — Teacher approves final.**
     - **Approve** → strip `status: draft` from every pipeline-authored
@@ -369,7 +376,10 @@ need no separate approval. This is the module's reading of the framework's
     document (no answers) and a separate teacher answers document from the
     approved manifest and items — with targeted versions, one student document
     per version (shared items plus that version's items) and one teacher
-    document with every version labeled (HW-D26) — then runs a **leak check**: none of the
+    document with every version labeled (HW-D26). The due date already came
+    from the Gate-1-approved plan and was written with the manifest at step 9;
+    this step does not add or overwrite manifest metadata. The agent then runs
+    a **leak check**: none of the
     items' answer fields may appear in the student document. Both documents
     stay editable by teacher and agent; agent edits change the item file
     first, then both documents; manual teacher edits are synced back into
@@ -609,6 +619,7 @@ Each decision has a full entry in `_devlog/01-decisions.md`.
 | HW-D28 | Per-item tools live in the manifest (`item_tools`), not in the item schema | provisional |
 | HW-D29 | `prerequisites` dropped from the manifest | provisional |
 | HW-D30 | The Word documents are laid out from `homework-document.yaml` | provisional |
+| HW-D31 | Focus notes are plan-only; due date is approved before writing | provisional |
 
 ---
 
@@ -668,7 +679,7 @@ dev/homework/
 ├── _devlog/
 │   ├── README.md
 │   ├── 00-brief.md
-│   ├── 01-decisions.md            (HW-D01..HW-D30)
+│   ├── 01-decisions.md            (HW-D01..HW-D31)
 │   ├── 02-progress.md
 │   ├── 03-open-questions.md       (HW-Q01..HW-Q08)
 │   └── 04-handoff.md
