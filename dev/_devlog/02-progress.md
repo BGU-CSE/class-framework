@@ -1408,3 +1408,43 @@ warnings gets none of the protection).
 Recorded as "How to work — for both hats" in the root `CLAUDE.md` (loaded in every session; pointed
 to from `dev/CLAUDE.md`, not duplicated), in the handoff's working agreements, and in Claude's
 memory.
+
+---
+
+## Session 26 — 2026-09-29 — Step 2a built: validation re-classified (D-037), the course log (D-036)
+
+A fresh, context-free implementation session working from the spec, with the required gap report:
+`../reviews/impl-gaps-step-2a.md` (24 entries, 6 flagged ⚑ for Avin). Step 2 was split: **2a**
+(D-037 + D-036, this session) and **2b** (ingest, D-035).
+
+**Built** (three commits, each green):
+- **Severities.** New `alert`: printed first, never fails. `validate` exits 1 only on errors,
+  `--strict` also on alerts and warnings. `DEFAULT_SEVERITY` is now a *complete* table: an
+  unregistered rule raises, and a test pins that only integrity rules default to `error`. Ten
+  pedagogical rules demoted to `warn`; `objective_coverage` → `alert`.
+- **Splits.** `activity_without_guiding_question` and `activity_references_other_unit` (warn) split
+  from `activity_references_guiding_question` (error: exists nowhere); `item_no_correct_choice`
+  (warn) split from `item_reference`. Activity `guiding_questions` no longer schema-required.
+- **Teacher overrides.** `course.yaml` `rules:` over the methodology; `accepted: [{rule, reason}]` on
+  all five front-matter schemas, suppressing per file and counted (including entries that no longer
+  match anything); `unknown_rule` (warn) for a mistyped rule name.
+- **`outcome_reference`** (error), with objective `outcomes` added to the unit schema *optional*.
+- **Course log.** `classkit log TITLE --changed --why [--file]…`, append-only by construction;
+  `scaffold course` starts `LOG.md` with an entry listing what it created.
+
+**Found by a test, not by reading:** YAML 1.1 parses a bare `off` as `false`, so the spec's own
+`rules: {x: off}` failed the schema. It is normalised on load (G-5).
+
+**Housekeeping:** the ledger's count line was wrong before this session (said 14/1/88, table had
+16/1/112); recounted: **27 built, 3 in progress, 99 not started**. Ledger rows for steps 3/4/6 that
+still prescribed `error`/schema-`required` for rules D-037 demoted are struck through and annotated.
+§8.2's `Req` column contradicted §8.4 on `outcomes` and `answer`; fixed toward §8.4.
+
+Suite: 42 → 92 tests.
+
+### Next
+
+Avin: the ⚑ items in the gap report — the split rule names (G-1, now teacher-facing API), whether
+`accepted:` requires `reason` (G-6), `unknown_rule` at warn despite the mechanical line (G-10), who
+logs an acceptance (G-13), and two step-4/5 schema questions (G-19 `rubric`, G-20 `est_minutes`).
+Then step 2b (ingest) in a fresh session.

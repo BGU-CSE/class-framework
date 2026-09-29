@@ -19,7 +19,25 @@ Then, for history and what is still open:
 6. `02-progress.md` (last block) — where we stopped.
 7. `03-open-questions.md` — what's unresolved.
 
-## Current state — 2026-09-10
+## Current state — 2026-09-29 (after step 2a)
+
+**Steps 0, 1 and 2a are built.** Suite: 92 tests, green. Ledger: 27 built, 3 in progress, 99 not
+started (of 129).
+
+- **Step 2a — validation re-founded (D-037) and the course log (D-036).** Only integrity findings
+  are errors now; `alert` exists and is printed first; the teacher overrides any rule in
+  `course.yaml` `rules:` and accepts single exceptions with `accepted:` in front matter (counted,
+  never invisible); `outcome_reference` is built. `classkit log` appends to `LOG.md`, which
+  `scaffold course` starts. Details: Session 26 in `02-progress.md`; gap report
+  `../reviews/impl-gaps-step-2a.md` — **six ⚑ items await Avin**, most importantly the names of the
+  split rules (they are now teacher-facing API).
+- **Not built in 2a, deliberately:** agents/commands wiring (log each approved step; never add
+  `accepted:`) — lands as each agent/command is rewritten. `syllabus_missing` and the coverage
+  alerts — step 3. `guiding_question_assessed: off` — step 5.
+- **Next: step 2b — ingest (D-035, spec §8.7)**, in a fresh session, from the spec, with a gap
+  report.
+
+## Earlier state — 2026-09-10
 
 **Implementation has started.** Steps 0 and 1 of the plan in `../ROADMAP.md` are built and
 committed; the suite is 36 tests, green. `dev/ROADMAP.md`'s ledger is ticked: 13 of 90 rows built.
@@ -46,7 +64,7 @@ committed; the suite is 36 tests, green. `dev/ROADMAP.md`'s ledger is ticked: 13
   bypass the write path) is a ledger row now: each agent drops those tools in the step that touches
   it.
 
-## What is next — 2026-09-29
+## What was next — 2026-09-29 (before step 2a; kept for history)
 
 1. **Steps 0–1 were hand-tested by Avin** in a clean clone (after a two-week break) — reported fine.
 2. **Step 2 is next: ingest + the course log.** Its design is now settled (Q-028 → **D-035**, spec
