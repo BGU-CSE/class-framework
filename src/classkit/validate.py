@@ -64,6 +64,7 @@ DEFAULT_SEVERITY = {
     "syllabus_workload_missing": "warn",
     "guiding_question_assessed": "warn",
     "unknown_rule": "warn",
+    "accepted_without_reason": "warn",
 }
 
 # The order findings are printed in: alerts first (spec §8.4), then errors, then warnings.
@@ -121,7 +122,7 @@ class Validator:
             **_as_dict(course.config.get("rules")),
         }
         self.acceptances: list[Acceptance] = [
-            Acceptance(doc.path.resolve(), str(entry["rule"]), str(entry.get("reason", "")))
+            Acceptance(doc.path.resolve(), str(entry["rule"]), str(entry.get("reason") or "").strip())
             for doc in course.documents()
             for entry in doc.accepted
         ]
@@ -258,6 +259,16 @@ class Validator:
                     acceptance.path,
                     f"`accepted:` names {acceptance.rule!r}, which is not a validation rule, "
                     "so it suppresses nothing.",
+                )
+        # A silenced finding nobody can later explain is what a reason prevents — but a
+        # missing reason is the teacher's call, so it is advice, not a failure (D-038).
+        for acceptance in self.acceptances:
+            if not acceptance.reason:
+                self.report(
+                    "accepted_without_reason",
+                    acceptance.path,
+                    f"`accepted:` for {acceptance.rule!r} gives no `reason`. It still takes "
+                    "effect; a reason is what lets someone understand the exception next year.",
                 )
 
     def check_syllabus(self) -> None:

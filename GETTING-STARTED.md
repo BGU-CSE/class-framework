@@ -192,18 +192,20 @@ sees; it does not overrule you. It reports three kinds of finding:
   with no recorded answer, a class hour drifting off the home study, a week with no class meeting.
   Sometimes that is exactly what you meant.
 
-When a departure is deliberate, mark it so it stops nagging — in that file's front matter:
+When a departure is deliberate, mark it so it stops nagging — in the front matter of the file the
+finding is reported against. A week with no class meeting is reported against the unit's `unit.md`:
 
 ```yaml
 accepted:
-  - rule: session_budget_feasibility
-    reason: "long session on purpose — exam week"
+  - rule: in_class_missing
+    reason: "holiday week — no class meeting"
 ```
 
 — or change a rule for the whole course under `rules:` in `course.yaml` (e.g.
 `session_count: off`). Agents never do this on their own; only you do. The rule's name is the one
 `classkit validate` prints in brackets; a name it does not recognise gets a warning, because a
-mistyped exception silently does nothing. Accepted exceptions are still counted at the end of the
+mistyped exception silently does nothing. A missing `reason` is allowed but also gets a warning —
+the reason is what explains the exception to you, or a colleague, next year. Accepted exceptions are still counted at the end of the
 report, so they never disappear from view.
 
 Some checks only run once your unit map is complete — a half-built course is a normal state, and

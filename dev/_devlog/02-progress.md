@@ -1448,3 +1448,32 @@ Avin: the ⚑ items in the gap report — the split rule names (G-1, now teacher
 `accepted:` requires `reason` (G-6), `unknown_rule` at warn despite the mechanical line (G-10), who
 logs an acceptance (G-13), and two step-4/5 schema questions (G-19 `rubric`, G-20 `est_minutes`).
 Then step 2b (ingest) in a fresh session.
+
+---
+
+## Session 27 — 2026-09-29 — Step 2a reviewed and its outcomes applied (→ D-038)
+
+Step 2a (D-037 validation re-classification + D-036 course log) was implemented by a fresh session
+(gap report `reviews/impl-gaps-step-2a.md`, 24 entries, 6 needing a decision) and reviewed
+independently by Gemini (`reviews/impl-review-step-2a.md`; verdict "needs fixes first", one BLOCKING
+finding: G-6). Avin asked whether to review or triage gaps first; Claude advised review first — the
+flagged gaps were small, and the implementer had edited the spec in 13 places without author
+approval, which the review should see before Avin ratified them.
+
+Claude's assessment of the review, before acting on it: the BLOCKING finding verified in the schema
+and reached independently; but the review skipped test quality, touched only one invariant, reported
+no nits, mislabelled a couple of edits — and missed two defects found by reading one schema file (a
+documented example naming a rule that does not exist yet; the `rule` pattern re-creating the G-6
+inconsistency for capitalised typos).
+
+Avin accepted the consolidated recommendations; applied in this session (details in D-038): `reason`
+optional + `accepted_without_reason`; no pattern on `rule`; `write.append()` / `--append` and the log
+now writes through it; examples use `in_class_missing`; G-13 wording; G-7/9/11/14/15/16 ratified;
+G-19/G-20 recorded for steps 5/4; unit `objectives` kept required, deliberately. Spec §8.2, §8.4,
+§8.6, §8.8 updated. **99 tests green** (+7).
+
+### Next
+
+**Step 2b — ingest (D-035).** Implementation prompt and review prompt use the 2b scope block. Then
+Avin hand-tests `/ingest` on real, messy materials — the check no document or code review can do.
+

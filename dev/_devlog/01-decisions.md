@@ -1186,3 +1186,45 @@ error by the back door (e.g. `answer` and `outcomes` presence move from schema t
 **Unchanged and deliberately so:** never-overwrite (invariant 5) is not validation. It constrains
 nothing the teacher chooses; it protects the teacher's work from an agent.
 
+---
+
+## D-038 — Step 2a review outcomes: the teacher's own exceptions are advice; one write path
+**Date:** 2026-09-29 · **Status:** locked (design + implemented) · sources:
+`reviews/impl-gaps-step-2a.md` (implementer), `reviews/impl-review-step-2a.md` (Gemini review)
+
+Step 2a (D-037 re-classification, D-036 course log) was implemented in a fresh session and reviewed
+by an independent agent. Avin accepted Claude's consolidated recommendations. Claude's assessment of
+the review itself: its main finding was right and was reached independently, but it was thinner than
+it looked — it skipped the test-quality check, covered only one invariant, and reported "no nits";
+reading one schema file surfaced two things it missed (findings 1–2 below).
+
+**Decided:**
+
+- **G-6 — `reason` in `accepted:` is optional**; a missing or blank one is the new advisory rule
+  `accepted_without_reason` (warn). The implementer had made it a schema error. The reviewer and
+  Claude both flagged that this contradicts the implementer's own G-10 reasoning — a mistake in a
+  teacher's *own exception* should not fail the build — and D-037.
+- **Review miss 2 — `rule` is no longer pattern-checked.** The schema pattern made a capitalised typo
+  a schema error while a lowercase typo was only an `unknown_rule` warning — the same inconsistency
+  as G-6. Now every mistyped code is `unknown_rule`.
+- **Review miss 1 — the documented `accepted:` example used `session_budget_feasibility`**, a rule
+  that does not exist until step 4; a teacher copying it got `unknown_rule`. The example is now
+  `in_class_missing` ("holiday week"), in `unit.md` — a rule that exists and the better case anyway.
+- **G-17 — the course log appends *through* the write path.** Rather than document the log as an
+  exception to "every write goes through `classkit.write`", the write path gained an append mode
+  (`append()`, `classkit write --append`), so the rule stays literally true. The reviewer offered
+  both options; Claude preferred this one as keeping a single path.
+- **G-1** split-rule names kept; **G-10** `unknown_rule` stays warn; **G-13** wording — only an
+  acceptance an *agent* adds at the teacher's request is logged; `validate` is read-only.
+- **Ratified** the implementer's own design decisions G-7 (unit-level findings accepted in
+  `unit.md`), G-9 (what the accepted count reports), G-11 (every rule registered; an unregistered
+  code raises), G-14 (`classkit log` arguments; cost accepted: `--changed` is required even for a
+  simple CLI entry — hand-editing `LOG.md` has no such constraint), G-15, G-16.
+- **Recorded ahead of time:** G-20 — a goal's `est_minutes` is not schema-required; step 4's budget
+  rule reports a missing estimate as *unverifiable*. G-19 — an `open` item's `rubric` moves from
+  schema `required` to an advisory rule in step 5.
+- **Kept deliberately (review question):** a unit's `objectives` stays schema-required, ≥1. Without
+  objectives the coverage chain cannot even be expressed for that unit — shape, not pedagogy.
+
+99 tests (92 + 7).
+

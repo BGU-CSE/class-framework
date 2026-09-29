@@ -38,6 +38,7 @@ CREATED = "created"
 REPLACED = "replaced"
 UNCHANGED = "unchanged"
 REFUSED = "refused"
+APPENDED = "appended"
 
 
 @dataclass
@@ -45,14 +46,14 @@ class WriteOutcome:
     """What `write()` did, or refused to do."""
 
     path: Path
-    status: str  # created | replaced | unchanged | refused
+    status: str  # created | replaced | unchanged | refused | appended
     message: str = ""
     preview: str = ""
 
     @property
     def wrote(self) -> bool:
         """True when bytes were actually written."""
-        return self.status in (CREATED, REPLACED)
+        return self.status in (CREATED, REPLACED, APPENDED)
 
     @property
     def refused(self) -> bool:
@@ -139,6 +140,26 @@ def write(
         status,
         "written." if status == CREATED else "existing content replaced on request.",
     )
+
+
+def append(path: Path | str, content: str, *, dry_run: bool = False) -> WriteOutcome:
+    """Add `content` to the end of `path`. Existing bytes are never rewritten.
+
+    Appending cannot lose anything, so it needs no confirmation — but it goes through this
+    module like every other write, so "every write goes through one path" stays literally
+    true (D-038; the course log is the first user). A missing or whitespace-only file is
+    created through `write()`.
+    """
+    path = Path(path)
+    if path.is_dir():
+        return WriteOutcome(path, REFUSED, "a directory is already at this path.")
+    if not has_content(path):
+        return write(path, content, dry_run=dry_run)
+    if dry_run:
+        return WriteOutcome(path, APPENDED, "would be appended (dry run).")
+    with path.open("a", encoding="utf-8", newline="") as stream:
+        stream.write(content)
+    return WriteOutcome(path, APPENDED, "appended; existing content untouched.")
 
 
 def _atomic_write(path: Path, content: str) -> None:

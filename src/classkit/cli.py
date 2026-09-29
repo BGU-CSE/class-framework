@@ -19,7 +19,7 @@ from .scaffold import (
     scaffold_unit,
 )
 from .validate import Validator
-from .write import write
+from .write import append, write
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -84,6 +84,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--overwrite",
         action="store_true",
         help="explicit confirmation that replacing the existing content is intended",
+    )
+    put.add_argument(
+        "--append",
+        action="store_true",
+        help="add the content to the end of the file; existing content is never rewritten",
     )
     put.add_argument(
         "--dry-run",
@@ -233,9 +238,15 @@ def run_write(args) -> int:
         else sys.stdin.read()
     )
 
-    outcome = write(
-        Path(args.path), content, overwrite=args.overwrite, dry_run=args.dry_run
-    )
+    if args.append and args.overwrite:
+        print("error: --append and --overwrite are mutually exclusive", file=sys.stderr)
+        return 2
+    if args.append:
+        outcome = append(Path(args.path), content, dry_run=args.dry_run)
+    else:
+        outcome = write(
+            Path(args.path), content, overwrite=args.overwrite, dry_run=args.dry_run
+        )
 
     if outcome.refused:
         print(f"refused: {outcome.path}", file=sys.stderr)

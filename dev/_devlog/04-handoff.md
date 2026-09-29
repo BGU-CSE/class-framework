@@ -19,23 +19,30 @@ Then, for history and what is still open:
 6. `02-progress.md` (last block) — where we stopped.
 7. `03-open-questions.md` — what's unresolved.
 
-## Current state — 2026-09-29 (after step 2a)
+## Current state — 2026-09-29 (after step 2a and its review)
 
-**Steps 0, 1 and 2a are built.** Suite: 92 tests, green. Ledger: 27 built, 3 in progress, 99 not
-started (of 129).
+**Steps 0, 1 and 2a are built, and 2a has been independently reviewed.** Suite: **99 tests**, green.
+Ledger: 33 built, 3 in progress, 101 not started — `../ROADMAP.md` is authoritative.
 
 - **Step 2a — validation re-founded (D-037) and the course log (D-036).** Only integrity findings
-  are errors now; `alert` exists and is printed first; the teacher overrides any rule in
-  `course.yaml` `rules:` and accepts single exceptions with `accepted:` in front matter (counted,
-  never invisible); `outcome_reference` is built. `classkit log` appends to `LOG.md`, which
-  `scaffold course` starts. Details: Session 26 in `02-progress.md`; gap report
-  `../reviews/impl-gaps-step-2a.md` — **six ⚑ items await Avin**, most importantly the names of the
-  split rules (they are now teacher-facing API).
-- **Not built in 2a, deliberately:** agents/commands wiring (log each approved step; never add
-  `accepted:`) — lands as each agent/command is rewritten. `syllabus_missing` and the coverage
-  alerts — step 3. `guiding_question_assessed: off` — step 5.
-- **Next: step 2b — ingest (D-035, spec §8.7)**, in a fresh session, from the spec, with a gap
-  report.
+  are errors; `alert` exists and prints first; the teacher overrides any rule in `course.yaml`
+  `rules:` and accepts single exceptions with `accepted:` in front matter (counted, never
+  invisible). `classkit log` appends to `LOG.md`, which `scaffold course` starts.
+- **Its review, applied as D-038:** a missing `reason` in `accepted:` and a mistyped rule code are
+  both *advice*, never schema errors (`accepted_without_reason`, `unknown_rule`); the write path
+  gained an append mode and the log goes through it; the documented `accepted:` example uses a rule
+  that exists today (`in_class_missing`, "holiday week", in `unit.md`). Session 27 in
+  `02-progress.md`; reports in `../reviews/impl-gaps-step-2a.md` and `impl-review-step-2a.md`.
+- **Not built yet, deliberately:** agent/command wiring (log each approved step; never add
+  `accepted:`) lands as each is rewritten; `syllabus_missing` and the coverage alerts are step 3;
+  `guiding_question_assessed: off` is step 5.
+- **Pre-decided for later steps — don't re-argue:** a goal's `est_minutes` is optional and a missing
+  one makes the session budget *unverifiable* (step 4); an `open` item's rubric becomes an advisory
+  rule (step 5); a unit's `objectives` stays schema-required, deliberately.
+- **Next: step 2b — ingest (D-035, spec §8.7).** A fresh session from the spec with a gap report
+  (`../reviews/impl-gaps-step-2b.md`); then an independent review **given the same scope block as
+  the implementer** (`impl-review-step-2b.md`); then Avin hand-tests `/ingest` on real, messy
+  materials — the check no document or code review can do. Then step 3 (`/plan-units`, with D-032).
 
 ## Earlier state — 2026-09-10
 

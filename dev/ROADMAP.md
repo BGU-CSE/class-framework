@@ -139,7 +139,7 @@ below.
 
 | | Artifact | Change |
 |---|---|---|
-| ⬜ | `schemas/study-session.schema.json` | remove `paths` from goal; add optional session-level `paths`; add required `est_minutes` to each goal |
+| ⬜ | `schemas/study-session.schema.json` | remove `paths` from goal; add optional session-level `paths`; add `est_minutes` to each goal — ~~required~~ **optional** (D-038): a missing estimate makes the budget rule report the session as *unverifiable* (warn) |
 | ⬜ | `src/classkit/validate.py` | rewrite the budget rule: `sum(goal.est_minutes) + overhead ≤ session_minutes`, **with tolerance** (D-020 calls the estimate approximate, so a hard cliff misreads it) |
 | ⬜ | `src/classkit/validate.py` | **rename `session_path_feasibility`** — paths no longer enter the sum, so the name now misdescribes the rule |
 | ⬜ | `src/classkit/validate.py` | retire `_estimate_path` and `path_estimate_missing`; both exist only to derive per-path times |
@@ -327,6 +327,19 @@ All land in **step 3**, with the coverage chain.
 | ✅ | `tests/` | each demoted rule warns, not errors; alert ordering and exit code; `rules:` override; `accepted:` suppresses and is counted |
 | ✅ | `dev/VISION.md`, `FRAMEWORK-SPEC.md`, `CLAUDE.md`, `dev/CLAUDE.md`, `README.md`, `GETTING-STARTED.md` | the principle and the new model, written down (this commit) |
 
+## D-038 — Step 2a review outcomes
+
+| | Artifact | Change |
+|---|---|---|
+| ✅ | `schemas/*.schema.json` (5 with `accepted:`) | `reason` optional; `rule` not pattern-checked; examples use `in_class_missing` |
+| ✅ | `src/classkit/validate.py` | new advisory rule `accepted_without_reason` (warn); blank reason counts as missing |
+| ✅ | `src/classkit/write.py`, `cli.py` | `append()` / `classkit write --append` — the write path's append mode |
+| ✅ | `src/classkit/log.py` | the course log appends through the write path, not beside it |
+| ✅ | `tests/` | reason-less and blank-reason acceptances warn; a capitalised typo is `unknown_rule`, not a schema error; append never rewrites, creates via `write()`, dry-runs, refuses a directory; `--append` and `--overwrite` are exclusive |
+| ✅ | `dev/FRAMEWORK-SPEC.md`, `CLAUDE.md`, `dev/CLAUDE.md`, `GETTING-STARTED.md` | §8.2, §8.4, §8.6, §8.8 and the teacher docs; the `accepted:` example uses a rule that exists today |
+| ⬜ | `src/classkit/validate.py` (step 4) | the budget rule reports a session with a missing `est_minutes` as *unverifiable* (warn), instead of requiring the field |
+| ⬜ | `schemas/assessment-item.schema.json`, `validate.py` (step 5) | move `rubric`-for-`open` from schema `required` to an advisory rule |
+
 ## Cross-cutting
 
 | | Artifact | Change |
@@ -335,8 +348,8 @@ All land in **step 3**, with the coverage chain.
 | ✅ | `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block was scaffolded and documented although Exports is deferred (G-16). **Removed from the template and the settings table** — shipping configuration for a feature that does not exist confuses a teacher reading their own `course.yaml`. The optional field stays in `course.schema.json`, so a course that sets it still validates |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-09-29 (after step 2a):** 14 decisions, 129 artifact changes, **27 built, 3 in
-progress, 99 not started** — counted from the table. Steps 0 (the write path) and 1 (scaffold the
+**Count as of 2026-09-29 (after step 2a and its review):** 15 decisions, 137 artifact changes, **33 built, 3 in
+progress, 101 not started** — counted from the table. Steps 0 (the write path) and 1 (scaffold the
 syllabus) are done, though D-032 reopens step 1's artifact to complete the Bologna descriptor.
 Step 2a (D-037 validation re-classification, D-036 course log) is done except the rows that belong
 to agents and commands, which land as each is built. Step 2b (ingest, D-035) is next. (The previous

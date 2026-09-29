@@ -589,7 +589,7 @@ overview assembled from the units.
 | `title` | string | ✓ | the week's subject |
 | `summary` | string | | |
 | `prerequisites` | array\<`U<NN>`\> | | units that must precede this one |
-| `objectives` | array\<obj\> | ✓ (≥1) | see below |
+| `objectives` | array\<obj\> | ✓ (≥1) | see below. **Kept as shape, deliberately** (D-038): a unit with no objectives has nothing for guiding questions to roll up to, so the coverage chain cannot even be expressed for it — unlike an absent `outcomes` list, which is merely unfinished |
 
 Objective object:
 
@@ -624,7 +624,7 @@ Goal object (the Guiding Question):
 | `type` | enum | ✓ | `question \| task \| reading \| exercise`; question-driven-25 allows only `question` |
 | `prompt` | string | ✓ | the guiding question, phrased so a student can answer and check it |
 | `objectives` | array\<`U<NN>-O<N>`\> | ✓ (≥1) | unit objectives this goal rolls up to |
-| `est_minutes` | number ≥0 | ✓ | **(target, D-020)** teacher-approved study time; the session budget sums these |
+| `est_minutes` | number ≥0 | | **(target, D-020, D-038)** teacher-approved study time; the session budget sums these. **Not schema-required** — a missing estimate is pedagogy (the teacher has not estimated yet), not shape: the budget rule reports the session as *unverifiable* (warn) instead |
 | `answer` | array\<obj\> | advisory: ≥1 **unless** `defer_to_class` — not schema-required (D-037) | **(target, D-019)** precise locators of the correct answer; each `{ kind (enum), ref (string), note (opt) }`; `kind ∈ textbook \| slide \| video \| article \| web \| other`; never the answer in prose. **Prefer a material locator** — `ref: "M0007#slide-18"` — which the validator can check (D-035); a textbook key with a locator (`"CLRS §2.3.1"`) remains allowed for sources that are cited but not ingested |
 | `defer_to_class` | boolean | | **(target, D-023)** default `false`. If `true`: no `answer`; a pre-class thinking prompt that **must** be referenced by ≥1 in-class activity |
 
@@ -672,7 +672,7 @@ Activity object:
 | `stem` | string | ✓ | the question as presented to the student |
 | `choices` | array\<obj\> | ✓ for `multiple-choice`/`multiple-select` | each `{ label (`^[A-Za-z]$`), text, correct (bool), rationale }`; every distractor's `rationale` names the misconception it detects |
 | `model_answer` | string | | **(target: renamed from `answer`; D-031g)** the model answer, for `open`/`numeric`/`code`. Renamed because a guiding question's `answer` is a *list of locators* and an item's was a *string* — one key, two meanings |
-| `rubric` | array\<obj\> | ✓ in practice for `open` | each `{ criterion, points, notes }` |
+| `rubric` | array\<obj\> | | each `{ criterion, points, notes }`. **(target, D-038)** Presence is pedagogy, not shape: an `open` item without a rubric is readable, so the schema's current `required` for `open` moves to an advisory rule in step 5. (`choices` stays required for choice formats — an item without choices cannot be read) |
 
 #### `methodologies/*.yaml` — the methodology definition
 
@@ -746,16 +746,22 @@ at all is an advisory alert.
 
    ```yaml
    accepted:
-     - rule: session_budget_feasibility
-       reason: "long session on purpose — exam week"
+     - rule: in_class_missing
+       reason: "holiday week — no class meeting"
    ```
 
    That rule's findings for that file are then suppressed, so a known exception stops nagging — a
    warning that always fires trains the teacher to ignore every warning. `validate` still prints a
    one-line count of accepted exceptions, so they are never invisible — how many findings they
-   suppressed, and how many entries no longer match anything — and each acceptance is recorded
-   in the course log (§8.8). `accepted:` is a field on every artifact that has front matter
-   (syllabus, unit, session, in-class session, item); both `rule` and `reason` are required.
+   suppressed, and how many entries no longer match anything. Each acceptance **an agent adds, at
+   the teacher's request,** is recorded in the course log (§8.8); `validate` itself is read-only and
+   never writes to the log, and a teacher editing by hand may log it or not (D-038).
+   `accepted:` is a field on every artifact that has front matter (syllabus, unit, session,
+   in-class session, item). **Only `rule` is required** — an entry with no rule cannot be read.
+   **`reason` is optional**: a missing or blank reason is reported by the advisory rule
+   `accepted_without_reason`, never as a schema error. Likewise `rule` is **not pattern-checked**:
+   any mistyped code, whatever its case, is reported by `unknown_rule`. Both follow the same
+   principle — a mistake in the teacher's *own exception* is advice, not a failure (D-038).
    Findings about a unit as a whole — `session_count`, `in_class_missing`, `objective_coverage` —
    are reported against its `unit.md`, so that is where they are accepted. Findings reported
    against `course.yaml` (which has no front matter) are adjusted course-wide with `rules:`.
@@ -810,6 +816,7 @@ Severity is the default; **(target)** means not built yet. Every rule is also a 
 | `item_no_correct_choice` | a choice-format item has ≥1 choice marked `correct` (split from `item_reference`, D-037) | advisory | warn |
 | `syllabus_workload_missing` | the syllabus declares no `workload` | advisory | warn |
 | `unknown_rule` | a rule code in `course.yaml` `rules:`, a methodology's `rules:`, or an `accepted:` entry names no rule — a typo that would otherwise silently do nothing | advisory | warn |
+| `accepted_without_reason` | an `accepted:` entry gives no `reason` (or a blank one). The exception still takes effect (D-038) | advisory | warn |
 | `materials_not_ingested` | a source file is new or changed since the last ingest | advisory | warn **(target, D-035)** |
 | `unit_has_entry_quiz_items` | the unit has ≥1 item with `usage: in-class-quiz` | advisory | warn **(target, D-031c)** |
 | `guiding_question_assessed` | every guiding question is tested by ≥1 assessment item | advisory | **off in Core**; warn from the Assessment phase **(D-031c)** |
@@ -896,19 +903,25 @@ before taking it.
 | `replaced` | the target existed and either held no content, or `overwrite` was given | yes |
 | `unchanged` | the target already holds exactly this content | no (no-op) |
 | `refused` | the target has content and `overwrite` was not given | **no** |
+| `appended` | `append()` / `--append`: content added to the end; existing bytes untouched | yes |
 
 Two cases are deliberately *not* refusals, because nothing can be lost in either: a file holding
 only whitespace, and a file already holding exactly the content being written — so re-running a
 command is safe. Anything unreadable as text counts as content; refusing is the safe direction.
 
 ```
-classkit write PATH [--from FILE] [--overwrite] [--dry-run]
+classkit write PATH [--from FILE] [--overwrite | --append] [--dry-run]
 ```
 
 Content comes from standard input unless `--from` names a file. Exit codes: `0` written or already
 identical, `3` refused — distinct from the generic failure code `2`, so a caller can tell *"ask the
 teacher first"* apart from *"something broke"*. `--dry-run` answers "may I write here?" without
 writing, which is what a command uses to check a target before it generates anything.
+
+**Appending** — `classkit.write.append()`, `classkit write --append` — adds to the end of a file and
+never rewrites existing bytes, so it needs no confirmation; a missing file is created through
+`write()`. It exists so that *every* write, including the course log's, goes through this one path
+(D-038). `--append` and `--overwrite` are mutually exclusive.
 
 `scaffold` is this path's create-only special case: `write_new()` calls it and never passes
 `overwrite`, so scaffolding has no way to replace a teacher's file at all.
@@ -1051,9 +1064,10 @@ Append-only. One entry per non-trivial change:
   required: an entry without a *why* is what git already records. Each field is one line (runs of
   whitespace, newlines included, collapse to a space); `Files` is comma-separated. The date
   defaults to today.
-- **Append-only, structurally.** `classkit log` opens `LOG.md` for appending and never rewrites
-  it, so — like the write path (§8.6) — it cannot lose a teacher's text, including hand-written
-  entries. If `LOG.md` does not exist it is created (header, then the entry).
+- **Append-only, structurally, through the write path.** `classkit log` adds entries with the write
+  path's append mode (§8.6), which never rewrites existing bytes — so it cannot lose a teacher's
+  text, including hand-written entries. If `LOG.md` does not exist it is created (header, then the
+  entry) through `write()` (D-038).
 - **`classkit scaffold course` starts the log**, create-only like everything scaffold writes, with
   a first entry listing the files that run created. On a course that predates the log, re-running
   scaffold creates it and says that everything else already existed.

@@ -151,3 +151,41 @@ def test_cli_write_overwrite_flag_is_the_confirmation(target: Path, monkeypatch)
 
     assert main(["write", str(target), "--overwrite"]) == 0
     assert target.read_text(encoding="utf-8") == "approved replacement"
+
+
+# -- append mode (D-038): the course log's way in, through the same path -----------
+
+from classkit.write import APPENDED, append as append_to
+
+
+def test_append_adds_to_the_end_and_never_rewrites(tmp_path):
+    target = tmp_path / "LOG.md"
+    target.write_text("# Log\n\nfirst entry\n", encoding="utf-8")
+    outcome = append_to(target, "second entry\n")
+    assert outcome.status == APPENDED and outcome.wrote
+    assert target.read_text(encoding="utf-8") == "# Log\n\nfirst entry\nsecond entry\n"
+
+
+def test_append_creates_a_missing_file_through_write(tmp_path):
+    target = tmp_path / "new.md"
+    assert append_to(target, "hello\n").status == "created"
+    assert target.read_text(encoding="utf-8") == "hello\n"
+
+
+def test_append_dry_run_writes_nothing(tmp_path):
+    target = tmp_path / "LOG.md"
+    target.write_text("keep\n", encoding="utf-8")
+    assert append_to(target, "more\n", dry_run=True).status == APPENDED
+    assert target.read_text(encoding="utf-8") == "keep\n"
+
+
+def test_append_refuses_a_directory(tmp_path):
+    assert append_to(tmp_path, "x").refused
+
+
+def test_cli_rejects_append_with_overwrite(tmp_path, capsys):
+    from classkit.cli import main
+    target = tmp_path / "f.md"
+    target.write_text("keep\n", encoding="utf-8")
+    assert main(["write", str(target), "--append", "--overwrite", "--from", str(target)]) == 2
+    assert target.read_text(encoding="utf-8") == "keep\n"

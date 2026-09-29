@@ -533,13 +533,27 @@ def test_the_accepted_definition_is_identical_in_every_schema():
     assert all(d == first for d in definitions.values())
 
 
-def test_an_accepted_entry_without_a_reason_fails_the_schema(course_root: Path):
+def test_an_accepted_entry_without_a_reason_is_advice_not_a_schema_error(course_root: Path):
+    """D-038: a missing reason is the teacher's call — it warns, and the entry still works."""
     path = session(course_root, 1)
     text = path.read_text(encoding="utf-8")
     path.write_text(
         "---\naccepted:\n  - rule: goal_count\n" + text[len("---\n"):], encoding="utf-8"
     )
-    assert "schema" in codes(course_root)
+    assert "schema" not in codes(course_root)
+    assert levels(course_root, "accepted_without_reason") == {"warn"}
+
+
+def test_an_empty_reason_counts_as_missing(course_root: Path):
+    accept(session(course_root, 1), "goal_count", reason="  ")
+    assert levels(course_root, "accepted_without_reason") == {"warn"}
+
+
+def test_a_capitalised_rule_typo_is_advice_not_a_schema_error(course_root: Path):
+    """D-038: every mistyped code is caught the same way — by `unknown_rule`, at warn."""
+    accept(session(course_root, 1), "Goal_Count")
+    assert "schema" not in codes(course_root)
+    assert levels(course_root, "unknown_rule") == {"warn"}
 
 
 def test_accepting_a_rule_that_does_not_exist_warns(course_root: Path):

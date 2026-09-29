@@ -111,13 +111,16 @@ something that doesn't exist, a file that can't be read — is an error. Everyth
 about good practice: warnings, and **alerts** (high-priority advice, shown first) for coverage —
 whether the units deliver the course outcomes. You may depart from any of it.
 
-To make a deliberate exception stop nagging, add to that file's front matter:
+To make a deliberate exception stop nagging, add it to the front matter of the file the finding
+is reported against — here, the unit's `unit.md`:
 
 ```yaml
 accepted:
-  - rule: session_budget_feasibility
-    reason: "long session on purpose — exam week"
+  - rule: in_class_missing
+    reason: "holiday week — no class meeting"
 ```
+
+A `reason` is optional but worth writing: it is what explains the exception next year.
 
 or change a rule for the whole course in `course.yaml` under `rules:`. **Agents never do either on
 their own** — only when you ask — and they never "fix" something you decided.

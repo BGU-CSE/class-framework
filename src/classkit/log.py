@@ -23,7 +23,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .write import write
+from .write import append as append_to, write
 
 LOG_FILE = "LOG.md"
 
@@ -122,6 +122,5 @@ def append(course_root: Path, entry: Entry) -> Path:
 
     existing = path.read_text(encoding="utf-8")
     separator = "" if not existing else ("\n" if existing.endswith("\n") else "\n\n")
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(separator + text)
+    append_to(path, separator + text)
     return path
