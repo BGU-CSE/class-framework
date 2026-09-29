@@ -244,7 +244,12 @@ when people do this:
    doing it, and the contact hour collapses because it assumed they had.
 
 Both are *structural* failures, not motivational ones. Core's bet is that both can be made
-**mechanically detectable**, so they fail loudly at design time rather than silently in week three.
+**mechanically visible** at design time, rather than discovered in week three.
+
+*Visible*, not *fatal*: since D-037 both checks are advisory warnings the teacher may accept, because
+the teacher is the authority. That is a real weakening of the original bet ("fail loudly"), accepted
+knowingly. The residual risk is that a warning is seen and ignored; `alert`, counted exceptions and
+the course log reduce that risk but do not remove it (§9).
 
 ### 3.4 Core's central mechanism: the Guiding Question
 
@@ -1046,6 +1051,9 @@ Honest list, kept current.
   overridable per course, so a teacher can raise it to the full hour and switch the protection off
   entirely. That is deliberate (a course repo is sovereign, D-014) and it means the guarantee is a
   *default*, not something the framework can insist on.
+- **The two headline guarantees are advisory.** Since D-037 a class hour drifting into a lecture, or
+  a session over its budget, produces a warning, not a failure. The design relies on the teacher
+  reading warnings; one who ignores them gets none of the protection §3.3 promises.
 - **Some locators cannot be verified.** `material_locator_resolves` proves a slide or page exists,
   not that the answer is on it; and video timestamps and un-ingested textbook citations cannot be
   checked at all. Invariant 7 becomes *partly* mechanical — the critic still owns the rest.

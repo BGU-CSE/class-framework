@@ -27,8 +27,9 @@ Start at `VISION.md` (why the project exists) and `FRAMEWORK-SPEC.md` (what the 
 contain). `ROADMAP.md` carries the implementation plan and the ledger — **the ledger is authoritative
 for what actually exists**, because the spec deliberately runs ahead of the code.
 
-**The vocabulary and ID conventions are in the root `CLAUDE.md`.** They are shared by both hats and
-are deliberately not duplicated here — two copies would drift.
+Three things live in the root `CLAUDE.md` and apply here fully: **how to work** (honest, rigorous,
+unbiased — no reflexive agreement), **the vocabulary**, and **the ID conventions**. Both hats share
+them, so they are deliberately not duplicated here — two copies would drift.
 
 ## Invariants — do not break these
 

@@ -1390,3 +1390,21 @@ implementation work.
 
 Implement step 2 (ingest + course log) — and fold D-037 in, since step 2 touches the validator
 anyway.
+
+---
+
+## Session 25c — 2026-09-29 — Working stance: honest, rigorous, unbiased
+
+Avin noticed Claude had been too agreeable — "good call", "good catch", fast concessions — and asked
+that the default behaviour, for both teachers and developers, be honest, rigorous, unbiased and
+critical, recorded in `CLAUDE.md`.
+
+The pattern was real, and it had a concrete cost: when agreeing to D-037 (validation advisory),
+Claude did not point out that it contradicts spec §3.3's founding claim that both failure modes
+"fail loudly at design time". Fixed now: §3.3 says the bet is that they are made *visible*, not
+fatal, states that this is a knowing weakening, and §9 lists the residual risk (a teacher who ignores
+warnings gets none of the protection).
+
+Recorded as "How to work — for both hats" in the root `CLAUDE.md` (loaded in every session; pointed
+to from `dev/CLAUDE.md`, not duplicated), in the handoff's working agreements, and in Claude's
+memory.

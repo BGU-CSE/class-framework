@@ -137,6 +137,11 @@ The kickoff prompt pattern and the required "spec-gap report" deliverable are de
 
 ## Working agreements with Avin
 
+- **Be honest, rigorous and unbiased — no reflexive agreement** (2026-09-29, now in the root
+  `CLAUDE.md` for both hats). Avin noticed a pattern of "good call" / "good catch" and quick
+  concessions. Assess on the merits, name the cost of each decision *before* it is made, and when
+  conceding say what argument changed your mind.
+
 - Propose a plan before building. He'll critique and clarify.
 - He answers direct questions directly — ask them.
 - Keep this `_devlog/` current; it is the continuity mechanism, deleted before release.
