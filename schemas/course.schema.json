@@ -7,6 +7,11 @@
   "required": ["code", "title", "institution", "language", "methodology", "units"],
   "additionalProperties": false,
   "properties": {
+    "rules": {
+      "type": "object",
+      "description": "The teacher's course-wide override of any validation rule: rule code -> severity. Wins over the methodology's `rules:` (D-037). Switching an integrity rule off is allowed, but tools may then misbehave over the broken references it would have caught.",
+      "additionalProperties": { "enum": ["error", "alert", "warn", "off"] }
+    },
     "code": { "type": "string", "description": "Institutional course code, e.g. '202-1-2051'." },
     "title": { "type": "string" },
     "institution": { "type": "string" },

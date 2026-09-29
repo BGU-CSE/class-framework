@@ -7,6 +7,27 @@
   "required": ["id", "unit", "number", "title", "duration_minutes", "goals"],
   "additionalProperties": false,
   "properties": {
+    "accepted": {
+      "type": "array",
+      "description": "The teacher's deliberate exceptions for THIS file (D-037). Each entry suppresses one validation rule's findings for this file; `classkit validate` still counts them, so they are never invisible. Only the teacher adds these — an agent never does so on its own.",
+      "items": {
+        "type": "object",
+        "required": ["rule", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "rule": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "The rule code, as `classkit validate` prints it in brackets, e.g. 'session_path_feasibility'."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Why the departure is deliberate, e.g. 'long session on purpose — exam week'."
+          }
+        }
+      }
+    },
     "id": { "type": "string", "pattern": "^U\\d{2}-S\\d{2}$", "description": "e.g. 'U01-S02'." },
     "unit": { "type": "string", "pattern": "^U\\d{2}$" },
     "number": { "type": "integer", "minimum": 1, "description": "Position within the unit." },

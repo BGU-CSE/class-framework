@@ -509,6 +509,10 @@ Mechanically checked. `NN` is two digits; `N` is one or more.
 
 ### 8.2 Artifact field specifications
 
+Every artifact below that has front matter — syllabus, unit, study session, in-class session,
+assessment item — also takes an optional `accepted: [{rule, reason}]` list: the teacher's deliberate
+exceptions to validation rules for that file (§8.4). It is not repeated in each table.
+
 #### File and directory naming
 
 | Path | Rule |
@@ -539,7 +543,7 @@ Mechanically checked. `NN` is two digits; `N` is one or more.
 | `time_constants` | object | | per-course overrides of `defaults/time-constants.yaml` (any subset) |
 | `in_class` | object | | **(target, D-031e)** per-course overrides of the methodology's in-class settings. Currently one key: `max_unmapped_minutes` (integer ≥0) — the cap on in-class time spent on activities that reference no guiding question. Overrides the methodology default (10). Setting it to the full hour length disables the guardrail, which is the teacher's right (D-014) |
 | `agents` | object | | course-local agent-role → replacement name (Q-007) |
-| `rules` | object | | **(target, D-037)** rule-code → `error \| alert \| warn \| off`. The teacher's course-wide override of any validation rule; wins over the methodology (§8.4) |
+| `rules` | object | | (D-037) rule-code → `error \| alert \| warn \| off`. The teacher's course-wide override of any validation rule; wins over the methodology (§8.4). A bare `off` is read as the severity, although YAML 1.1 parses it as boolean false |
 
 Deferred: a `gem` block (Exports phase).
 
@@ -594,7 +598,7 @@ Objective object:
 | `id` | `U<NN>-O<N>` | ✓ | |
 | `statement` | string | ✓ | |
 | `bloom` | enum | | optional Bloom level |
-| `outcomes` | array\<`CO<N>`\> | ✓ (≥1) | **(target, D-021)** Course Outcomes this objective rolls up to |
+| `outcomes` | array\<`CO<N>`\> | | (D-021) Course Outcomes this objective rolls up to. **Not schema-required** (D-037): naming none is advisory (`objective_maps_to_outcome`, **target**); naming one the syllabus does not declare is an integrity error (`outcome_reference`) |
 
 #### `units/NN-slug/sessions/NN.md` — a study session
 
@@ -621,7 +625,7 @@ Goal object (the Guiding Question):
 | `prompt` | string | ✓ | the guiding question, phrased so a student can answer and check it |
 | `objectives` | array\<`U<NN>-O<N>`\> | ✓ (≥1) | unit objectives this goal rolls up to |
 | `est_minutes` | number ≥0 | ✓ | **(target, D-020)** teacher-approved study time; the session budget sums these |
-| `answer` | array\<obj\> | ✓ (≥1) **unless** `defer_to_class` | **(target, D-019)** precise locators of the correct answer; each `{ kind (enum), ref (string), note (opt) }`; `kind ∈ textbook \| slide \| video \| article \| web \| other`; never the answer in prose. **Prefer a material locator** — `ref: "M0007#slide-18"` — which the validator can check (D-035); a textbook key with a locator (`"CLRS §2.3.1"`) remains allowed for sources that are cited but not ingested |
+| `answer` | array\<obj\> | advisory: ≥1 **unless** `defer_to_class` — not schema-required (D-037) | **(target, D-019)** precise locators of the correct answer; each `{ kind (enum), ref (string), note (opt) }`; `kind ∈ textbook \| slide \| video \| article \| web \| other`; never the answer in prose. **Prefer a material locator** — `ref: "M0007#slide-18"` — which the validator can check (D-035); a textbook key with a locator (`"CLRS §2.3.1"`) remains allowed for sources that are cited but not ingested |
 | `defer_to_class` | boolean | | **(target, D-023)** default `false`. If `true`: no `answer`; a pre-class thinking prompt that **must** be referenced by ≥1 in-class activity |
 
 > A goal's `answer` is a **list of locators** — where the answer can be found. It is not the answer
@@ -748,8 +752,13 @@ at all is an advisory alert.
 
    That rule's findings for that file are then suppressed, so a known exception stops nagging — a
    warning that always fires trains the teacher to ignore every warning. `validate` still prints a
-   one-line count of accepted exceptions, so they are never invisible, and each acceptance is recorded
-   in the course log (§8.8). `accepted:` is a field on every artifact that has front matter.
+   one-line count of accepted exceptions, so they are never invisible — how many findings they
+   suppressed, and how many entries no longer match anything — and each acceptance is recorded
+   in the course log (§8.8). `accepted:` is a field on every artifact that has front matter
+   (syllabus, unit, session, in-class session, item); both `rule` and `reason` are required.
+   Findings about a unit as a whole — `session_count`, `in_class_missing`, `objective_coverage` —
+   are reported against its `unit.md`, so that is where they are accepted. Findings reported
+   against `course.yaml` (which has no front matter) are adjusted course-wide with `rules:`.
 
 **Agents fix what they caused, and never overrule the teacher.** An agent must fix or surface any
 finding its own output produced, and may **never** add an `accepted:` entry, change `rules:`, or
@@ -773,7 +782,7 @@ Severity is the default; **(target)** means not built yet. Every rule is also a 
 | `schema_unavailable` | `jsonschema` not installed → schema layer skipped | — | warn |
 | `id_consistency` | every id matches its unit/number/session/prefix rules | integrity | error |
 | `goal_maps_to_objective` | each objective a goal names is defined by its unit | integrity | error |
-| `outcome_reference` | each outcome an objective names exists in the syllabus **(target, D-037)** | integrity | error |
+| `outcome_reference` | each outcome an objective names exists in the syllabus (D-037) | integrity | error |
 | `activity_references_guiding_question` | a guiding question an activity names exists somewhere in the course | integrity | error |
 | `activity_item_reference` | every id in an activity's `items` resolves to an existing item | integrity | error **(target, D-031a)** |
 | `item_reference` | an item's `unit` and `guiding_questions` exist | integrity | error |
@@ -800,6 +809,7 @@ Severity is the default; **(target)** means not built yet. Every rule is also a 
 | `in_class_unmapped_time_cap` | total time of activities referencing no guiding question ≤ `max_unmapped_minutes` | advisory | warn **(target, D-028/D-031e/D-037)** |
 | `item_no_correct_choice` | a choice-format item has ≥1 choice marked `correct` (split from `item_reference`, D-037) | advisory | warn |
 | `syllabus_workload_missing` | the syllabus declares no `workload` | advisory | warn |
+| `unknown_rule` | a rule code in `course.yaml` `rules:`, a methodology's `rules:`, or an `accepted:` entry names no rule — a typo that would otherwise silently do nothing | advisory | warn |
 | `materials_not_ingested` | a source file is new or changed since the last ingest | advisory | warn **(target, D-035)** |
 | `unit_has_entry_quiz_items` | the unit has ≥1 item with `usage: in-class-quiz` | advisory | warn **(target, D-031c)** |
 | `guiding_question_assessed` | every guiding question is tested by ≥1 assessment item | advisory | **off in Core**; warn from the Assessment phase **(D-031c)** |

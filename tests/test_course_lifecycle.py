@@ -406,3 +406,185 @@ def test_a_rule_with_no_default_severity_is_a_programming_error(course_root: Pat
     validator = Validator(load_course(course_root, FRAMEWORK_ROOT), FRAMEWORK_ROOT)
     with pytest.raises(KeyError):
         validator.report("no_such_rule", course_root, "never registered")
+
+
+# -- the teacher's last word: course.yaml `rules:` (D-037) ------------------
+
+def set_rules(course_root: Path, rules: dict[str, str]) -> None:
+    lines = "".join(f"  {code}: {level}\n" for code, level in rules.items())
+    with (course_root / "course.yaml").open("a", encoding="utf-8") as handle:
+        handle.write(f"\nrules:\n{lines}")
+
+
+def test_course_rules_can_raise_a_warning_to_an_error(course_root: Path):
+    session(course_root, 4).unlink()
+    set_rules(course_root, {"session_count": "error"})
+    assert levels(course_root, "session_count") == {"error"}
+
+
+def test_course_rules_win_over_the_methodology(course_root: Path):
+    # question-driven-25 sets guiding_question_assessed: warn
+    set_rules(course_root, {"guiding_question_assessed": "alert"})
+    assert levels(course_root, "guiding_question_assessed") == {"alert"}
+
+
+def test_course_rules_can_switch_a_rule_off(course_root: Path):
+    set_rules(course_root, {"guiding_question_assessed": "off"})
+    assert levels(course_root, "guiding_question_assessed") == set()
+
+
+def test_course_rules_can_switch_even_an_integrity_rule_off(course_root: Path):
+    edit(in_class(course_root), "[U01-S03-G1]", "[U01-S09-G7]")
+    set_rules(course_root, {"activity_references_guiding_question": "off"})
+    assert errors(course_root) == []
+
+
+def test_course_rules_with_an_unknown_severity_fail_the_schema(course_root: Path):
+    set_rules(course_root, {"session_count": "fatal"})
+    assert "schema" in codes(course_root)
+
+
+def test_a_mistyped_rule_name_in_course_rules_warns(course_root: Path):
+    set_rules(course_root, {"sesion_count": "off"})
+    assert levels(course_root, "unknown_rule") == {"warn"}
+
+
+# -- a single deliberate exception: `accepted:` (D-037) ---------------------
+
+def accept(path: Path, rule: str, reason: str = "deliberate — the teacher's call") -> None:
+    text = path.read_text(encoding="utf-8")
+    assert text.startswith("---\n"), f"fixture drifted: {path.name} has no front matter"
+    entry = f"accepted:\n  - rule: {rule}\n    reason: \"{reason}\"\n"
+    path.write_text("---\n" + entry + text[len("---\n"):], encoding="utf-8")
+
+
+def run_validator(course_root: Path) -> Validator:
+    validator = Validator(load_course(course_root, FRAMEWORK_ROOT), FRAMEWORK_ROOT)
+    validator.run()
+    return validator
+
+
+def test_accepted_suppresses_that_rule_for_that_file(course_root: Path):
+    edit(session(course_root, 2), "est_minutes: 6", "est_minutes: 40")
+    accept(session(course_root, 2), "session_path_feasibility", "long session on purpose")
+
+    validator = run_validator(course_root)
+
+    assert not [f for f in validator.findings if f.code == "session_path_feasibility"]
+    assert [f.code for f in validator.suppressed] == ["session_path_feasibility"]
+
+
+def test_accepted_does_not_reach_other_files(course_root: Path):
+    edit(session(course_root, 2), "est_minutes: 6", "est_minutes: 40")
+    edit(session(course_root, 3), "est_minutes: 6", "est_minutes: 40")
+    accept(session(course_root, 2), "session_path_feasibility")
+
+    still_reported = [
+        f for f in findings(course_root) if f.code == "session_path_feasibility"
+    ]
+    assert [Path(f.where).name for f in still_reported] == ["03.md"]
+
+
+def test_accepted_does_not_reach_other_rules_in_the_same_file(course_root: Path):
+    edit(session(course_root, 2), "est_minutes: 6", "est_minutes: 40")
+    edit(session(course_root, 2), "type: question", "type: reading")
+    accept(session(course_root, 2), "session_path_feasibility")
+
+    assert levels(course_root, "goal_type") == {"warn"}
+
+
+def test_a_week_with_no_class_meeting_can_be_accepted_in_unit_md(course_root: Path):
+    in_class(course_root).unlink()
+    accept(next(course_root.glob("units/01-*/unit.md")), "in_class_missing", "holiday week")
+    assert levels(course_root, "in_class_missing") == set()
+
+
+def test_accepted_is_allowed_on_every_front_matter_artifact(course_root: Path):
+    scaffold_item(course_root, FRAMEWORK_ROOT, "U01")
+    for path in [
+        syllabus(course_root),
+        next(course_root.glob("units/01-*/unit.md")),
+        session(course_root, 1),
+        in_class(course_root),
+        item(course_root, 1),
+    ]:
+        accept(path, "goal_count")
+
+    assert "schema" not in codes(course_root)
+
+
+def test_the_accepted_definition_is_identical_in_every_schema():
+    """Five copies of one definition — this is what stops them drifting apart."""
+    import json
+
+    definitions = {
+        name: json.loads((FRAMEWORK_ROOT / "schemas" / name).read_text(encoding="utf-8"))[
+            "properties"
+        ]["accepted"]
+        for name in [
+            "syllabus.schema.json",
+            "unit.schema.json",
+            "study-session.schema.json",
+            "in-class-session.schema.json",
+            "assessment-item.schema.json",
+        ]
+    }
+    first = next(iter(definitions.values()))
+    assert all(d == first for d in definitions.values())
+
+
+def test_an_accepted_entry_without_a_reason_fails_the_schema(course_root: Path):
+    path = session(course_root, 1)
+    text = path.read_text(encoding="utf-8")
+    path.write_text(
+        "---\naccepted:\n  - rule: goal_count\n" + text[len("---\n"):], encoding="utf-8"
+    )
+    assert "schema" in codes(course_root)
+
+
+def test_accepting_a_rule_that_does_not_exist_warns(course_root: Path):
+    accept(session(course_root, 1), "sesion_budget")
+    assert levels(course_root, "unknown_rule") == {"warn"}
+
+
+def test_validate_counts_accepted_exceptions(course_root: Path, capsys):
+    edit(session(course_root, 2), "est_minutes: 6", "est_minutes: 40")
+    accept(session(course_root, 2), "session_path_feasibility")
+    accept(session(course_root, 3), "goal_type")  # nothing to suppress
+
+    run_cli(course_root)
+    out = capsys.readouterr().out
+
+    assert "1 findings suppressed by 2 accepted exceptions in 2 files" in out
+    assert "(1 no longer match anything)" in out
+    assert "[session_path_feasibility]" not in out
+
+
+# -- objectives roll up to outcomes that exist (outcome_reference, D-037) ----
+
+def unit_md(course_root: Path) -> Path:
+    return next(course_root.glob("units/01-*/unit.md"))
+
+
+def test_an_objective_naming_a_declared_outcome_is_fine(course_root: Path):
+    edit(unit_md(course_root), "    bloom: understand\n", "    bloom: understand\n    outcomes: [CO1]\n")
+    assert levels(course_root, "outcome_reference") == set()
+    assert errors(course_root) == []
+
+
+def test_an_objective_naming_an_undeclared_outcome_is_an_error(course_root: Path):
+    edit(unit_md(course_root), "    bloom: understand\n", "    bloom: understand\n    outcomes: [CO9]\n")
+    assert levels(course_root, "outcome_reference") == {"error"}
+
+
+def test_an_objective_naming_no_outcome_is_not_a_schema_error(course_root: Path):
+    """Presence is advisory (D-037) — `objective_maps_to_outcome` lands with step 3."""
+    assert "schema" not in codes(course_root)
+
+
+def test_a_bare_yaml_off_in_rules_means_off(course_root: Path):
+    """YAML 1.1 reads an unquoted `off` as boolean false; it must still mean severity off."""
+    with (course_root / "course.yaml").open("a", encoding="utf-8") as handle:
+        handle.write("\nrules:\n  guiding_question_assessed: off\n")
+    assert "schema" not in codes(course_root)
+    assert levels(course_root, "guiding_question_assessed") == set()

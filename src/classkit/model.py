@@ -36,6 +36,17 @@ class Doc:
     def id(self) -> str:
         return str(self.data.get("id", f"<no id: {self.path.name}>"))
 
+    @property
+    def accepted(self) -> list[dict]:
+        """The teacher's accepted exceptions for this file (D-037): ``[{rule, reason}]``.
+
+        Malformed entries are dropped here and reported by the schema layer instead.
+        """
+        entries = self.data.get("accepted") or []
+        if not isinstance(entries, list):
+            return []
+        return [e for e in entries if isinstance(e, dict) and isinstance(e.get("rule"), str)]
+
 
 @dataclass
 class Unit:
@@ -69,6 +80,17 @@ class Course:
     syllabus: Doc | None = None
     units: list[Unit] = field(default_factory=list)
     items: list[Doc] = field(default_factory=list)
+
+    def documents(self) -> list[Doc]:
+        """Every front-matter document in the course — the files that may carry `accepted:`."""
+        docs: list[Doc] = [self.syllabus] if self.syllabus is not None else []
+        for unit in self.units:
+            docs.append(unit.doc)
+            docs.extend(unit.sessions)
+            if unit.in_class is not None:
+                docs.append(unit.in_class)
+        docs.extend(self.items)
+        return docs
 
     @property
     def outcomes(self) -> list[dict]:
@@ -130,9 +152,23 @@ def load_time_constants(framework_root: Path, overrides: dict | None) -> dict:
     return constants
 
 
+def normalize_rules(block: dict) -> None:
+    """Read a bare ``off`` in a ``rules:`` block as the severity it was meant to be.
+
+    YAML 1.1 — which PyYAML implements — parses an unquoted ``off`` (and ``no``) as the
+    boolean ``False``. ``rules: {session_count: off}`` is exactly what the spec tells a
+    teacher to write, so it must mean ``"off"``, not fail the schema.
+    """
+    rules = block.get("rules")
+    if isinstance(rules, dict):
+        block["rules"] = {code: ("off" if level is False else level) for code, level in rules.items()}
+
+
 def load_course(course_root: Path, framework_root: Path) -> Course:
     config = load_yaml(course_root / "course.yaml")
     methodology = load_methodology(framework_root, config.get("methodology", "question-driven-25"))
+    normalize_rules(config)
+    normalize_rules(methodology)
     constants = load_time_constants(framework_root, config.get("time_constants"))
 
     course = Course(

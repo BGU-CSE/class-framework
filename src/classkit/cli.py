@@ -146,6 +146,19 @@ def run_validate(args, framework_root: Path) -> int:
     )
     print(f"{len(alerts)} alerts, {len(errors)} errors, {len(warnings)} warnings")
 
+    # Accepted exceptions stop nagging, but are never invisible (spec §8.4).
+    acceptances = validator.acceptances
+    if acceptances:
+        files = {a.path for a in acceptances}
+        unused = sum(1 for a in acceptances if not a.suppressed)
+        line = (
+            f"{len(validator.suppressed)} findings suppressed by {len(acceptances)} accepted "
+            f"exceptions in {len(files)} files"
+        )
+        if unused:
+            line += f" ({unused} no longer match anything)"
+        print(line)
+
     if errors:
         return 1
     return 1 if (args.strict and (alerts or warnings)) else 0

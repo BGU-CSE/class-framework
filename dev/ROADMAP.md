@@ -168,7 +168,7 @@ is calibrated rather than pure vibes.
 | | Artifact | Change |
 |---|---|---|
 | ✅ | `schemas/syllabus.schema.json` | **new** — `goal`, `outcomes[]` (`CO1…`, statement, optional bloom), `workload` (credits, credit_system, total_hours), `prerequisites`, reserved `assessment` block |
-| ⬜ | `schemas/unit.schema.json` | `outcomes: [CO1…]` on each Unit Objective |
+| ✅ | `schemas/unit.schema.json` | `outcomes: [CO1…]` on each Unit Objective — **optional**, per D-037; landed in step 2a because `outcome_reference` needs it. The template does not set it yet (step 3) |
 | ✅ | `src/classkit/model.py` | load `syllabus/syllabus.md` into the course model — `Course.syllabus` and `Course.outcomes` |
 | ✅ | `src/classkit/validate.py` | `SCHEMA_FOR` entry so the syllabus is schema-checked |
 | ⬜ | `src/classkit/validate.py` | two rules: `outcome_coverage` (no orphan Course Outcome) and `objective_maps_to_outcome` (no orphan objective) |
@@ -319,12 +319,12 @@ All land in **step 3**, with the coverage chain.
 | | Artifact | Change |
 |---|---|---|
 | ✅ | `src/classkit/validate.py` | new severity `alert`: reported first, marked `ALERT`, does not fail; exit 1 only on `error`; `--strict` counts alerts and warnings. `DEFAULT_SEVERITY` is now a **complete** table (errors included) |
-| ⬜ | `src/classkit/validate.py` | re-classify existing rules per spec §8.4 (demote pedagogical errors to warn/alert); split `activity_references_guiding_question` and `item_reference`; new `outcome_reference` |
-| ⬜ | `src/classkit/validate.py`, `model.py` | read `course.yaml` `rules:` (wins over methodology); honour `accepted:` per file; print a count of accepted exceptions |
-| ⬜ | `schemas/*.schema.json` | `accepted: [{rule, reason}]` on every front-matter artifact; `rules:` on course; move pedagogical presence out of `required` (e.g. `answer`, objective `outcomes`) |
+| ✅ | `src/classkit/validate.py` | re-classify existing rules per spec §8.4 (demote pedagogical errors to warn/alert); split `activity_references_guiding_question` and `item_reference`; new `outcome_reference`. Split codes: `activity_without_guiding_question`, `activity_references_other_unit`, `item_no_correct_choice`. Also new: `unknown_rule` (warn) — a mistyped rule name in `rules:` or `accepted:` |
+| ✅ | `src/classkit/validate.py`, `model.py` | read `course.yaml` `rules:` (wins over methodology); honour `accepted:` per file; print a count of accepted exceptions (and of entries that no longer match anything). A bare YAML `off` — parsed as `false` — is read as `"off"` |
+| ✅ | `schemas/*.schema.json` | `accepted: [{rule, reason}]` on every front-matter artifact; `rules:` on course; move pedagogical presence out of `required` (e.g. `answer`, objective `outcomes`). Built: activity `guiding_questions` relaxed; objective `outcomes` added *optional*; `answer` does not exist yet — step 4 must add it optional |
 | ✅ | `methodologies/question-driven-25.yaml` | severities consistent with §8.4 — the block now lists only departures from the defaults; `methodology.schema.json` accepts `alert` |
 | ⬜ | `.claude/agents/*.md`, `.claude/commands/*.md` | fix what you caused; never add `accepted:` / change `rules:` / raise a threshold unless asked; never overrule a teacher decision; log accepted exceptions |
-| ⬜ | `tests/` | each demoted rule warns, not errors; alert ordering and exit code; `rules:` override; `accepted:` suppresses and is counted |
+| ✅ | `tests/` | each demoted rule warns, not errors; alert ordering and exit code; `rules:` override; `accepted:` suppresses and is counted |
 | ✅ | `dev/VISION.md`, `FRAMEWORK-SPEC.md`, `CLAUDE.md`, `dev/CLAUDE.md`, `README.md`, `GETTING-STARTED.md` | the principle and the new model, written down (this commit) |
 
 ## Cross-cutting

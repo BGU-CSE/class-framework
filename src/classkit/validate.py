@@ -23,7 +23,7 @@ then suppressed, and counted rather than hidden.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .model import Course, Unit
@@ -39,6 +39,7 @@ DEFAULT_SEVERITY = {
     "schema": "error",
     "id_consistency": "error",
     "goal_maps_to_objective": "error",
+    "outcome_reference": "error",
     "activity_references_guiding_question": "error",
     "item_reference": "error",
     # -- advisory, high priority: the coverage chain -----------------------
@@ -62,6 +63,7 @@ DEFAULT_SEVERITY = {
     "item_no_correct_choice": "warn",
     "syllabus_workload_missing": "warn",
     "guiding_question_assessed": "warn",
+    "unknown_rule": "warn",
 }
 
 # The order findings are printed in: alerts first (spec §8.4), then errors, then warnings.
@@ -92,12 +94,37 @@ class Finding:
         return f"{_MARK[self.level]}  {self.where}\n       [{self.code}] {self.message}"
 
 
+@dataclass
+class Acceptance:
+    """One `accepted:` entry: a teacher's deliberate exception to one rule, in one file."""
+
+    path: Path
+    rule: str
+    reason: str
+    #: findings this entry suppressed in the last run — 0 means it no longer matches anything
+    suppressed: list[Finding] = field(default_factory=list)
+
+
+def _as_dict(value) -> dict:
+    return value if isinstance(value, dict) else {}
+
+
 class Validator:
     def __init__(self, course: Course, framework_root: Path):
         self.course = course
         self.framework_root = framework_root
         self.findings: list[Finding] = []
-        self.rules = course.methodology.get("rules") or {}
+        # Who has the last word (spec §8.4): the course's own `rules:` over the
+        # methodology's, over the framework defaults.
+        self.rules = {
+            **_as_dict(course.methodology.get("rules")),
+            **_as_dict(course.config.get("rules")),
+        }
+        self.acceptances: list[Acceptance] = [
+            Acceptance(doc.path.resolve(), str(entry["rule"]), str(entry.get("reason", "")))
+            for doc in course.documents()
+            for entry in doc.accepted
+        ]
 
     # -- reporting ---------------------------------------------------------
 
@@ -111,16 +138,30 @@ class Validator:
         level = self.severity(code)
         if level == "off":
             return
+        finding_path = Path(where).resolve()
         where_str = str(where)
         try:
             where_str = str(Path(where_str).relative_to(self.course.root.parent))
         except (ValueError, OSError):
             pass
-        self.findings.append(Finding(level, code, where_str, message))
+        finding = Finding(level, code, where_str, message)
+
+        # A teacher's accepted exception for this rule in this file suppresses it — but it
+        # is recorded against the acceptance, so `validate` can still count it.
+        for acceptance in self.acceptances:
+            if acceptance.rule == code and acceptance.path == finding_path:
+                acceptance.suppressed.append(finding)
+                return
+        self.findings.append(finding)
 
     @property
     def errors(self) -> list[Finding]:
         return [f for f in self.findings if f.level == "error"]
+
+    @property
+    def suppressed(self) -> list[Finding]:
+        """Findings a teacher's `accepted:` entry silenced — counted, never shown as noise."""
+        return [f for a in self.acceptances for f in a.suppressed]
 
     def ordered(self) -> list[Finding]:
         """Findings in report order: alerts, then errors, then warnings (stable within each)."""
@@ -136,6 +177,7 @@ class Validator:
             if isinstance(goal, dict)
         }
         self.check_schemas()
+        self.check_rule_names()
         self.check_syllabus()
         self.check_unit_count()
         for unit in self.course.units:
@@ -191,6 +233,33 @@ class Validator:
 
     # -- layer 2: semantics ------------------------------------------------
 
+    def check_rule_names(self) -> None:
+        """A rule name nothing recognises is almost certainly a typo — and a mistyped
+        override or acceptance silently does nothing, so the teacher believes a rule is
+        handled when it is not. Advisory: the unrecognised entry merely has no effect."""
+        known = set(DEFAULT_SEVERITY)
+        sources = [
+            (self.course.root / "course.yaml", "course.yaml `rules:`",
+             _as_dict(self.course.config.get("rules"))),
+            (
+                self.framework_root / "methodologies" / f"{self.course.methodology.get('id')}.yaml",
+                "the methodology's `rules:`",
+                _as_dict(self.course.methodology.get("rules")),
+            ),
+        ]
+        for where, label, rules in sources:
+            for code in sorted(set(rules) - known):
+                self.report("unknown_rule", where, f"{label} names {code!r}, which is not a "
+                            "validation rule, so the entry has no effect.")
+        for acceptance in self.acceptances:
+            if acceptance.rule not in known:
+                self.report(
+                    "unknown_rule",
+                    acceptance.path,
+                    f"`accepted:` names {acceptance.rule!r}, which is not a validation rule, "
+                    "so it suppresses nothing.",
+                )
+
     def check_syllabus(self) -> None:
         """The syllabus's own checks. The coverage chain between Course Outcomes and unit
         objectives is checked separately, once objectives carry `outcomes`.
@@ -244,6 +313,21 @@ class Validator:
 
         objective_ids = {o.get("id") for o in unit.objectives if isinstance(o, dict)}
         goal_ids: set[str] = set()
+
+        # --- objectives roll up to Course Outcomes that exist (D-021, D-037). Whether an
+        # objective names any outcome at all is advisory, and lands with the coverage chain.
+        outcome_ids = {str(o.get("id")) for o in self.course.outcomes}
+        for objective in unit.objectives:
+            if not isinstance(objective, dict):
+                continue
+            for outcome in objective.get("outcomes") or []:
+                if outcome not in outcome_ids:
+                    self.report(
+                        "outcome_reference",
+                        unit.doc.path,
+                        f"objective {objective.get('id')} rolls up to {outcome!r}, which the "
+                        "syllabus does not declare as a Course Outcome.",
+                    )
 
         # --- study sessions
         expected_sessions = home.get("sessions_per_unit")

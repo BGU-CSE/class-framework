@@ -7,6 +7,27 @@
   "required": ["id", "number", "title", "objectives"],
   "additionalProperties": false,
   "properties": {
+    "accepted": {
+      "type": "array",
+      "description": "The teacher's deliberate exceptions for THIS file (D-037). Each entry suppresses one validation rule's findings for this file; `classkit validate` still counts them, so they are never invisible. Only the teacher adds these — an agent never does so on its own.",
+      "items": {
+        "type": "object",
+        "required": ["rule", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "rule": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "The rule code, as `classkit validate` prints it in brackets, e.g. 'session_path_feasibility'."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Why the departure is deliberate, e.g. 'long session on purpose — exam week'."
+          }
+        }
+      }
+    },
     "id": { "type": "string", "pattern": "^U\\d{2}$", "description": "e.g. 'U01'." },
     "number": { "type": "integer", "minimum": 1, "maximum": 20 },
     "title": { "type": "string", "description": "The week's subject." },
@@ -30,6 +51,11 @@
           "bloom": {
             "enum": ["remember", "understand", "apply", "analyze", "evaluate", "create"],
             "description": "Optional Bloom level."
+          },
+          "outcomes": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^CO\\d+$" },
+            "description": "Course Outcomes (declared in syllabus/syllabus.md) this objective rolls up to (D-021). Not required by the schema — an objective naming none is advisory. Naming one the syllabus does not declare is an integrity error (`outcome_reference`, D-037)."
           }
         }
       }
