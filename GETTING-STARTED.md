@@ -164,8 +164,8 @@ bad unit 1 propagates.
 <!-- homework-module:start -->
 ## 6. Create homework
 
-*Homework module — specified in `dev/homework/HOMEWORK-SPEC.md`. The commands and agents exist;
-`classkit validate` does not check homework manifests yet.*
+*Homework module — the commands and agents exist; `classkit validate` does not check homework
+manifests yet.*
 
 Homework is at-home work *in addition to* the study sessions. It can span several units, it is not
 every week, and it tests what students have already learned. It references items from the same
@@ -175,13 +175,16 @@ item bank as your quizzes; it does not copy them.
 homework validates exactly as before.
 
 **The first time,** declare `tools` in `course/course.yaml` — what students may use. Your first
-`/create-homework` then creates two files you can edit afterwards:
+`/create-homework` then creates three files you can edit afterwards:
 
 - `course/assessments/item-classes.yaml` — your Item Classes. Four are provided: **DIY** (short, no
   AI), **Practicing** (longer, no AI), **Coding** and **Research** (AI allowed). Add more with
   `/new-hw-type`.
-- `course/assessments/homework-defaults.yaml` — your usual budget, class mix and policies. The
+- `course/assessments/homework-defaults.yaml` — your usual budget, number of items per class and policies. The
   pipeline proposes these, and updates them as you approve homework.
+- `course/assessments/homework-document.yaml` — how your homework Word documents look: course
+  title, instructor, semester, title with the homework number, submission instructions, language
+  and direction, font. Update `semester` each semester.
 
 **Then, for each homework, run `/create-homework`:**
 
@@ -195,9 +198,9 @@ homework validates exactly as before.
    for autograded Coding items). Disagreements it cannot settle are kept for you.
 5. **Gate 2 — you approve the result**, send named items back for revision, or reject it. Until you
    approve, every new file is marked `status: draft`.
-
-Later, `/review-homework HW02` gives a read-only second opinion — useful before reusing an old
-homework.
+6. After approval, the agent creates two Word files: the homework for students (no answers, and
+   checked for leaked answers) and a separate answers file for you. You and the agent can both edit
+   them; ask the agent to make a change and it updates the question bank too.
 
 <!-- homework-module:end -->
 

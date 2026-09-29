@@ -79,11 +79,10 @@ HW01             Homework            ← homework module
 | `/review-unit N` | An independent agent reviews what it did not write |
 | `/create-homework` | One homework across one or more units — plan, write, review, with two approval gates *(homework module)* |
 | `/new-hw-type` | Add an Item Class to this course *(homework module)* |
-| `/review-homework HW02` | A read-only second review of a finished homework *(homework module)* |
 
 <!-- homework-module:start -->
-Homework is specified in `dev/homework/HOMEWORK-SPEC.md`. `/write-items N homework` hands off to
-`/create-homework`. `classkit validate` does not check homework manifests yet.
+`/write-items N homework` hands off to `/create-homework`. `classkit validate` does not check
+homework manifests yet.
 <!-- homework-module:end -->
 
 `classkit scaffold` creates files; `classkit validate` checks that the course holds together.

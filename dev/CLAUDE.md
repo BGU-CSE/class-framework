@@ -80,6 +80,7 @@ dev/                      you are here — not part of a teacher's course
   MANUAL-TESTING.md         how to hand-test the framework as a teacher, in a clean clone
   CLAUDE.md                 this file
   _devlog/                  build log — decisions, progress, open questions (deleted before release)
+  homework/                 the homework module — see "Homework module" below
 ```
 
 ## Before changing anything structural
@@ -142,6 +143,40 @@ When editing agents:
   fabricated study path validates cleanly and fails a student mid-session.
 - **Agents write through `classkit write`**, never a raw file write (invariant 5).
 - **Agents finish by running `classkit validate`** and fixing what it reports.
+
+<!-- homework-module:start -->
+## Homework module
+
+Homework (the homework part of the Assessment phase) is a separate module. The inventory above is
+unchanged; these are additional.
+
+- **Design:** `dev/homework/HOMEWORK-SPEC.md` — the target, written as if it exists.
+- **Status:** `dev/homework/ROADMAP.md` — its ledger is authoritative for what exists. The agents,
+  commands, skills, schemas and templates are written; **the Python side (loaders, the 19 validator
+  rules, `scaffold homework`, tests) is not built yet.**
+- **History:** `dev/homework/_devlog/` — decisions `HW-Dnn`, open questions `HW-Qnn`; plain `D-` and
+  `Q-` numbers remain this framework's own.
+
+```
+.claude/agents/     interviewer, homework-planner, homework-item-writer, item-critic, item-solver
+.claude/skills/     interviewing-teachers, writing-code-items, writing-research-items
+.claude/commands/   /create-homework /new-hw-type
+```
+
+**Integration point:** `/write-items N homework` hands off to `/create-homework` (a 4-line guard in
+the framework's command).
+
+When changing homework files:
+
+- Formats belong to the framework; the module adds only the item-class axis (HW-D10). Homework work
+  must not change the framework's format rules in `assessment-item.schema.json` without a separate
+  framework decision.
+- Homework is optional (HW-D13). A pristine course has no homework findings; configuration rules run
+  whenever their file exists.
+- Every homework write goes through `classkit write`; overwrites only after a gate (HW-D12).
+- Teacher-facing homework instructions do not depend on `dev/homework/` documents.
+- New module decisions are numbered `HW-Dnn` in the module's own log.
+<!-- homework-module:end -->
 
 ## Not built yet
 
