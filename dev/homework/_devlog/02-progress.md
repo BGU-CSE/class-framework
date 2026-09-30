@@ -91,7 +91,7 @@ Mirrors the framework's own `02-progress.md`.
 
 ## Metrics
 
-- 32 decisions (HW-D01..HW-D32, plus HW-D01 addendum)
+- 33 decisions (HW-D01..HW-D33, plus HW-D01 addendum)
 - 8 open questions logged (HW-Q01..HW-Q08)
 - 21 validator rules specified (all tagged `target` pending Python
   implementation)
@@ -224,3 +224,9 @@ See `04-handoff.md` for the full task list.
   quality (warn) rules — 21 rules; `accepted:` on homework manifests; course-log
   entries after Gate 1, Gate 2 and `/new-hw-type` approvals; the future rubric
   change (D-038 G-19) noted in the handoff.
+- **HW-D33 recorded:** the quiz report is given in the session, never stored,
+  aggregated per Guiding Question, item or answer choice; the plan keeps a
+  summary of the numbers used.
+- **HW-D28 agent changes restored** in `create-homework.md`, `homework-planner.md`,
+  `homework-item-writer.md` and `item-solver.md` (they had not reached the branch).
+- **Planner review:** slot-table columns completed (format, tools, version).

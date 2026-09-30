@@ -53,8 +53,11 @@ separate approval. This is how this command applies the framework's
    - **Shape example:** a prior `HW0N.md` if one exists, otherwise
      the fields the manifest schema expects (`units`, `purpose`,
      `total_minutes`, `source`, `items` [as a count per item class, e.g.
-      "1 DIY, 1 Coding" (HW-D27), not concrete ids yet], `allowed_tools`, `collaboration`,
-      `open_book`, optional `due_date`, optional `focus_notes`); when the source is a quiz report, also whether the
+      "1 DIY, 1 Coding" (HW-D27), not concrete ids yet], `allowed_tools`, the tools each item needs
+      [`item_tools`, HW-D28: one or more per item; a programming language
+      counts], `collaboration`,
+      `open_book`, optional `due_date`, optional `focus_notes`); when the source is a quiz report, the report itself
+     (HW-D33 — see **Student data** below) and whether the
      teacher wants **targeted versions** (HW-D26); then the counts are
      asked for the shared items and for each version separately
    - **Pre-filled:** `{units: $1, purpose: $2}` if given
@@ -215,7 +218,7 @@ separate approval. This is how this command applies the framework's
     plus that version's items — and a single teacher answers document with
     every version clearly labeled):
     - a **student document** — the homework as students receive it: stems,
-      choices, starter code, tools and collaboration rules; **no answers**;
+      choices, starter code, each item's tools (`item_tools`) and collaboration rules; **no answers**;
     - a separate **teacher answers document** — model answers, rubrics,
       correct choices, reference solutions and tests, and the solver's
       teacher aids.
@@ -290,11 +293,15 @@ checks that targets are in the declared units and covered, and that each
 version item tests only its version's targets; `homework_source_quiz_exists`
 (error) checks the quiz report source (HW-D32).
 
-**Student data never enters the repository.** The quiz report you work from
-must hold aggregated Guiding Question results only. If what the teacher gives
-you contains student names, identifiers, grades or per-student answers, stop
-and ask for an aggregated version; do not copy any of it into the plan,
-manifest, items or report. Which student receives which version is the
+**Student data never enters the repository.** The quiz report comes from
+outside the framework (for example Moodle or the teacher's spreadsheet); the
+teacher gives it in the session, as a file or pasted text, and it is never
+saved to the repository (HW-D33). It may hold aggregated results only:
+percentages per Guiding Question, per item, or per answer choice ("42% chose
+B"). If it contains student names, identifiers, grades or per-student answers,
+stop and ask for an aggregated version; do not copy any of it into the plan,
+manifest, items or report. The planner writes only the aggregated numbers it
+used into the plan file. Which student receives which version is the
 teacher's record, kept outside the repository; version labels never name or
 identify students.
 

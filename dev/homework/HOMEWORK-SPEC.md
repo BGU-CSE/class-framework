@@ -182,8 +182,10 @@ A homework manifest is a Markdown file with YAML front matter at
   never also in the shared `items`; reuse across versions is allowed
 - The manifest's top-level `items` array holds the shared items; every student
   gets the shared items plus their version's items
-- The source quiz report holds aggregated Guiding Question results only. Student
-  names, identifiers, grades and assignments to versions never enter the repository
+- The source quiz report is given in the session and never stored (HW-D33). It
+  holds aggregated results only — per Guiding Question, per item, or per answer
+  choice. Student names, identifiers, grades and assignments to versions never
+  enter the repository; the plan file keeps a summary of the aggregated numbers used
 
 ### 3.2 The item-classes taxonomy
 
@@ -460,7 +462,7 @@ marker is documentary.
 | Agent | Reads | Writes |
 |---|---|---|
 | `interviewer` | Files passed as `grounding_files` | None (returns data) |
-| `homework-planner` | course.yaml, syllabus, units, sessions, item bank, prior homework, defaults, item-classes; if source is quiz_report, the referenced quiz and its aggregated report | `.plans/HW0N.md` (internal) |
+| `homework-planner` | course.yaml, syllabus, units, sessions, item bank, prior homework, defaults, item-classes; if source is quiz_report, the referenced quiz and the aggregated report given in the session (HW-D33) | `.plans/HW0N.md` (internal) |
 | `homework-item-writer` | Plan slot, unit sessions, item bank, item-classes, homework-defaults, `assessment-writer.md` (craft sections) | `items/U0N-I0M.md` (fresh, or edits to existing on reuse) |
 | `item-critic` | Item file, plan slot, guiding questions, item-classes, class-specific skill; for material fit, the Guiding Questions' `answer` locators and the session's study paths with the resources they reference | None (returns feedback) |
 | `item-solver` | Item file, plan slot, item-classes, class-specific skill; for teacher aids, course materials, `textbooks`, Guiding Question `answer` locators | None (returns findings and teacher aids); may execute Bash for `execute` strategy |
@@ -511,9 +513,10 @@ The module maintains these invariants; validators enforce them.
   other Guiding Question; every target is covered; the source is a resolvable
   `quiz_report` (validators: `homework_version_reference`,
   `homework_versions_targeted`, `homework_source_quiz_exists`; HW-D26, HW-D32)
-- No student data in the repository: quiz reports are aggregated per Guiding
-  Question; names, identifiers, grades and version assignments stay outside
-  (process rule enforced by `/create-homework` and `homework-planner`, HW-D26)
+- No student data in the repository: quiz reports are given in the session,
+  never stored, and aggregated (per Guiding Question, item or answer choice);
+  names, identifiers, grades and version assignments stay outside (process rule
+  enforced by `/create-homework` and `homework-planner`, HW-D26, HW-D33)
 - Sum of item minutes fits `total_minutes` within tolerance; missing per-
   item `est_minutes` on `time_variance: high` classes falls back to
   class range midpoint (validator: `homework_budget_fits`)
@@ -636,6 +639,7 @@ Each decision has a full entry in `_devlog/01-decisions.md`.
 | HW-D30 | The Word documents are laid out from `homework-document.yaml` | provisional |
 | HW-D31 | Focus notes are plan-only; due date is approved before writing | provisional |
 | HW-D32 | Rule severities follow the framework's D-037; two rules split (21 rules); `accepted:` on manifests; course-log entries at approvals | provisional |
+| HW-D33 | The quiz report is given in the session, aggregated, never stored; the plan keeps the numbers used | provisional |
 
 ---
 
@@ -695,7 +699,7 @@ dev/homework/
 ├── _devlog/
 │   ├── README.md
 │   ├── 00-brief.md
-│   ├── 01-decisions.md            (HW-D01..HW-D32)
+│   ├── 01-decisions.md            (HW-D01..HW-D33)
 │   ├── 02-progress.md
 │   ├── 03-open-questions.md       (HW-Q01..HW-Q08)
 │   └── 04-handoff.md

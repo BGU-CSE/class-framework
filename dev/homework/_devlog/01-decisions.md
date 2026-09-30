@@ -1,6 +1,6 @@
 # Homework module decisions
 
-Thirty-two decisions from the homework module design phase, September 2026.
+Thirty-three decisions from the homework module design phase, September 2026.
 Each has a full rationale. Numbered with the module's own prefix, `HW-D`,
 so they can never collide with the framework's `D-` sequence (HW-D11).
 
@@ -31,6 +31,7 @@ HW-D29 drops `prerequisites` from the manifest.
 HW-D30 lays out the Word documents from a course settings file.
 HW-D31 keeps focus notes in the plan and approves due dates before writing.
 HW-D32 aligns the module with the framework's D-036, D-037 and D-038.
+HW-D33 defines the quiz report: session input, aggregated, never stored.
 HW-D01 has one addendum for the `/write-items homework` hand-off.
 
 ## HW-D01 — Homework as a first-class content type
@@ -1250,3 +1251,27 @@ name ids and files, never student data or focus notes.
 `rubric` from schema-required to an advisory rule in its step 5. The module's
 wording ("the schema requires `rubric` for `open`") changes then; the schema is
 not touched ahead of the framework. Recorded in the handoff.
+
+## HW-D33 — The quiz report is session input, aggregated, never stored
+**Date:** 2026-09-30 · **Status:** provisional · **Amends** HW-D26 (what
+"aggregated" means).
+
+**Decision.** For a homework with `source.kind: quiz_report`, the teacher gives
+the quiz results in the session, as a file or pasted text. The report is never
+saved to the repository. It may hold aggregated results only: percentages per
+Guiding Question, per item, or per answer choice ("42% chose B"). The planner
+writes a short summary of only the aggregated numbers it used into the plan
+file (`.plans/HW0N.md`), so a revision at Gate 1 can be reproduced.
+`source.ref` names the quiz, not the report.
+
+**Why:** the framework has no quiz report. It designs a course and does not
+run one; submissions and grades are explicitly not planned (framework
+`ROADMAP.md`, "Not planned"). Results come from outside (Moodle, the teacher's
+spreadsheet), and the framework's hook for reading them is the distractor
+`rationale`, which names the misconception each wrong choice detects.
+Per-item and per-choice percentages identify no student, so they fit HW-D26's
+privacy rule; the rule's wording is widened to say so.
+
+**Consequence:** `create-homework.md` (interview asks for the report; privacy
+paragraph), `homework-planner.md` (report section; summary in the plan), the
+spec and the manifest template. No schema or rule change.

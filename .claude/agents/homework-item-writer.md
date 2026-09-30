@@ -116,6 +116,10 @@ so; the pipeline raises it with the teacher at Gate 2.
 
 ## Items that need an external tool
 
+The slot names the tools the item needs (HW-D28), for example `python`, or a simulator
+plus `wireshark`. Write the item for exactly those tools; they are recorded in the
+manifest's `item_tools`, not in the item file.
+
 If answering the item needs a tool or data the pipeline cannot run —
 Wireshark, lab-only software, a teacher-provided dataset — set
 `evaluation_strategy: skip` on the item and say in its body which tool and

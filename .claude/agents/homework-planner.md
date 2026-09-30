@@ -32,10 +32,12 @@ its purpose is.
   count per class (from `default_class_counts` unless the teacher gave other counts, HW-D27)
   is the number of slots per class
 - `course/assessments/item-classes.yaml` — the teacher's pedagogical class taxonomy
-- If `source.kind == quiz_report`: read the report and the items that were on that quiz.
-  The report must hold aggregated Guiding Question results only. If it contains student
-  names, identifiers, grades or per-student answers, stop and ask the teacher for an
-  aggregated version; never copy student data into the plan (HW-D26).
+- If `source.kind == quiz_report`: the report the teacher gave in this session, and the
+  items that were on that quiz (`source.ref`). The report is never a file in the repository
+  (HW-D33). It may hold aggregated results only — percentages per Guiding Question, per
+  item, or per answer choice. If it contains student names, identifiers, grades or
+  per-student answers, stop and ask the teacher for an aggregated version; never copy
+  student data into the plan (HW-D26, HW-D33).
 
 Treat declared and actual use as different facts. An item with `homework` in
 `usage` is eligible for homework; only a homework manifest proves that it was
@@ -79,8 +81,10 @@ Kept internally. Shown only when:
 - The teacher is editing individual slots by number ("slot 2 harder") — show the row being edited
 - `classkit validate` reports a rule failure that references a slot — surface the offending row
 
-When shown, the table has these columns: `#`, `class`, `difficulty`, `bloom`, `min`, `decision`.
-Show `format` per slot — homework items may be any format (`open`, `code`, `numeric`, `multiple-choice`, etc.) depending on the answer shape the item needs.
+When shown, the table has these columns: `#`, `class`, `format`, `difficulty`, `bloom`, `min`,
+`tools`, `decision` — plus `version` (shared or a version label) when the homework has targeted
+versions. Homework items may be any format (`open`, `code`, `numeric`, `multiple-choice`, etc.)
+depending on the answer shape the item needs.
 
 ### Guiding questions in the brief and table
 
@@ -110,7 +114,9 @@ Not shown to the teacher by default, but the source of truth for the writer down
 1. **Coverage skeleton** — the Guiding Questions this homework will exercise, as ids.
 2. **Per-slot intent** — one line: "remediate the O(1) vs. worst-case misconception from the
    U03 quiz", not "assess understanding of hashing".
-3. **Slot metadata** — format, item class, difficulty, Bloom, `est_minutes`, allowed tools.
+3. **Slot metadata** — format, item class, difficulty, Bloom, `est_minutes`, and the tools
+   the item needs (HW-D28): one or more, a programming language counts, all declared in
+   `course.yaml`. They go into the manifest's `item_tools`, not into the item file.
 4. **Reuse decisions** — `reuse <id>` / `adapt <id>` / `fresh` per slot.
 5. **Budget check** — sum of slot minutes vs. declared `total_minutes`. Per-slot minutes come
    from:
@@ -189,6 +195,14 @@ wants a semester-scoped search and the course uses an archive directory, scope t
 the mismatch if the teacher's expectation looks different.
 
 ## When the source is a quiz report
+
+Map each result to what it means: a Guiding Question's percentage directly; an answer
+choice through that choice's `rationale`, which names the misconception it detects.
+
+Write a short **quiz report summary** into the plan file: the quiz id and only the
+aggregated numbers you actually used ("U03-S02-G2: 38% correct"; "U03-I04, choice B: 42% —
+confuses average with worst case"). Nothing else from the report enters the repository
+(HW-D33).
 
 Identify misconceptions above threshold (default >25% of respondents on a distractor). Each
 above-threshold misconception → one plan slot with the intent line naming the misconception

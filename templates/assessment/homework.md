@@ -17,7 +17,7 @@ total_minutes: 90                    # time budget for the whole homework
 source:
   kind: material                     # material | quiz_report — 'material' = grounded in course materials, no specific quiz
   # ref: EQ-U03                      # required if kind is quiz_report (id of the source quiz)
-                                     # the report itself holds aggregated Guiding Question results only
+                                     # the report is given in the session, never stored here (HW-D33)
 
 # Items in this homework. References only — items live in course/assessments/items/.
 # Every referenced item file must have `homework` in its `usage` array.

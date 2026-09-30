@@ -13,7 +13,7 @@ Status: ✅ done · 🔨 in progress · ⬜ not started
 Homework is the **homework part of the framework's Assessment phase** (`FRAMEWORK-SPEC.md`
 phase table; exams and the grading scheme stay deferred), developed as a separate module.
 
-- ✅ **Design** — `HOMEWORK-SPEC.md`, HW-D01…HW-D32, HW-Q01…HW-Q08. The agents, commands,
+- ✅ **Design** — `HOMEWORK-SPEC.md`, HW-D01…HW-D33, HW-Q01…HW-Q08. The agents, commands,
   skills, schemas and templates are written.
 - ⬜ **Implementation** — the Python side: loaders, the 21 validator rules, scaffolding, tests.
   The plan below.
@@ -328,6 +328,13 @@ rows live.
 | ⬜ | `src/classkit/validate.py` | register all 21 rules in `DEFAULT_SEVERITY`; `homework_version_reference`, `homework_defaults_class_reference` |
 | ⬜ | module wording on `open` rubrics | update when the framework's D-038 G-19 lands (schema untouched until then) |
 
+## HW-D33 — Quiz report as session input
+
+| | Artifact | Change |
+|---|---|---|
+| ✅ | `create-homework.md`, `homework-planner.md`, spec, manifest template | report given in the session, never stored; aggregated per Guiding Question, item or answer choice; the numbers used are summarized in the plan file |
+
+## Cross-cutting
 
 | | Artifact | Change |
 |---|---|---|

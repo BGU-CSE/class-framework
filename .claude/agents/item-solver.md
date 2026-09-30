@@ -66,8 +66,8 @@ safety net for items that lack the field.
   automated attempts would fabricate signal.
 
 **Tool check before `persona_attempt`.** Even when the resolved strategy
-is `persona_attempt`, if answering the item actually needs a tool or data
-you cannot run, do not attempt it: return `not_applicable` with the reason
+is `persona_attempt`, if the slot's tools (HW-D28) or the item itself show
+that answering it needs a tool or data you cannot run, do not attempt it: return `not_applicable` with the reason
 ("needs Wireshark"), write its `teacher_aid`, and add a `should-fix`
 finding for the writer to set `evaluation_strategy: skip` on the item.
 
