@@ -30,7 +30,7 @@ from the shared item bank; it does not copy them.
 - The `/create-homework` pipeline (planning, writing, review, gates)
 - One complementary command (`/new-hw-type`)
 - One command hand-off (`/write-items homework` → `/create-homework`)
-- 19 validator rules
+- 21 validator rules
 - Templates for the new content types and files
 
 ### 1.3 What this module does NOT cover
@@ -164,6 +164,7 @@ A homework manifest is a Markdown file with YAML front matter at
 | Field | Type | Notes |
 |---|---|---|
 | `source` | object | `{kind: material \| quiz_report, ref?: string}` |
+| `accepted` | array<object> | teacher's exceptions for this manifest, `{rule, reason?}` — framework D-037; agents never add them (HW-D32) |
 | `due_date` | date | YYYY-MM-DD; printed on the student document (HW-D30) |
 | `allowed_tools` | array<string> | tools declared in `course.yaml`; policy for the whole homework |
 | `item_tools` | map item id → array<string> | tools a specific item needs (HW-D28); several allowed; a programming language counts |
@@ -394,6 +395,11 @@ need no separate approval. This is the module's reading of the framework's
     stop condition, not something ignore rules can repair.
 13. **Update defaults.** Compare accepted spec to `homework-defaults.yaml`;
     write changed fields.
+**Course log (HW-D32).** On each approval — Gate 1, Gate 2, and the change
+set of `/new-hw-type` — the pipeline appends one entry to `course/LOG.md` with
+`classkit log` (framework D-036). Revisions, rejections and briefs that were
+only shown are not logged. Entries name ids and files, never student data.
+
 14. **Report.** Prose summary of guiding questions touched, reuse decisions,
     time vs budget, unresolved follow-ups.
 
@@ -503,7 +509,8 @@ The module maintains these invariants; validators enforce them.
 - Targeted versions have unique labels and ≥1 target each; targets are in the
   declared units; each version item tests one of its version's targets and no
   other Guiding Question; every target is covered; the source is a resolvable
-  `quiz_report` (validator: `homework_versions_targeted`, HW-D26)
+  `quiz_report` (validators: `homework_version_reference`,
+  `homework_versions_targeted`, `homework_source_quiz_exists`; HW-D26, HW-D32)
 - No student data in the repository: quiz reports are aggregated per Guiding
   Question; names, identifiers, grades and version assignments stay outside
   (process rule enforced by `/create-homework` and `homework-planner`, HW-D26)
@@ -539,9 +546,15 @@ The module maintains these invariants; validators enforce them.
   `item-open.md`, `item-true-false.md`
 - Course: `homework-defaults.yaml`, `homework-document.yaml`, `item-classes.yaml`
 
-### 7.2 Validator rules — 19 total
+### 7.2 Validator rules — 21 total
 
-The module adds 19 rules to the framework's validator. Every rule is
+The module adds 21 rules to the framework's validator. Severities follow the
+framework's D-037 line (HW-D32): a rule that finds something that does not exist
+or cannot be used is an **error**; a missing piece or a departure from good
+practice is a **warn**, or an **alert** when it is important enough to show first.
+Only errors fail `classkit validate`. Every rule can be overridden course-wide in
+`course.yaml` `rules:`, and a homework manifest can silence a rule for itself with
+`accepted:`. Every rule is
 tagged `target` pending Python implementation (build work, not design);
 [`ROADMAP.md`](ROADMAP.md)'s ledger is authoritative for which exist.
 
@@ -550,21 +563,23 @@ tagged `target` pending Python implementation (build work, not design);
 | `homework_schema` | error | consistency | Each `HW*.md` (excluding `.plans/`) matches `homework.schema.json` |
 | `homework_id_consistency` | error | consistency | Filename stem matches id |
 | `homework_item_reference` | error | consistency | Every item id resolves; every `item_tools` key is an item of this homework (HW-D28) |
-| `homework_item_usage` | error | consistency | Referenced items have `homework` in `usage` |
-| `homework_units_declared` | error | consistency | Every item's unit is in homework's units |
-| `homework_coverage` | error | consistency | Every declared unit has ≥1 item |
+| `homework_item_usage` | warn | consistency | Referenced items have `homework` in `usage` |
+| `homework_units_declared` | warn | consistency | Every item's unit is in homework's units |
+| `homework_coverage` | **alert** | consistency | Every declared unit has ≥1 item |
 | `homework_budget_fits` | warn | consistency | Sum of item minutes within tolerance of `total_minutes` (see HW-D06 for high-variance handling) |
-| `homework_versions_targeted` | error | consistency | Only if `versions` exist: unique labels; ≥1 target per version, all in declared units; each version item tests ≥1 of its targets and no other Guiding Question, appears once per version and not in the shared items; every target covered; `source` is a `quiz_report` whose `ref` resolves (HW-D26) |
-| `homework_source_quiz_exists` | warn | consistency | `quiz_report` source resolves to a real assessment |
-| `graded_requires_rubric` | error | consistency | Only when `purpose: graded`: every rubric-requiring format has one |
-| `homework_tools_declared` | warn | consistency | `allowed_tools` and `item_tools` all in `course.yaml` |
-| `class_tools_declared` | warn | consistency | Class `default_tools` all in `course.yaml` |
-| `item_class_declared` | warn | consistency | Item's `item_class` is defined in taxonomy |
+| `homework_version_reference` | error | consistency | Only if `versions` exist: version labels are unique; every target is an existing Guiding Question (HW-D26, HW-D32). The `quiz_report` source itself is checked by `homework_source_quiz_exists` |
+| `homework_versions_targeted` | warn | consistency | Only if `versions` exist: every target is in the declared units and covered by at least one of its version's items; each version item tests ≥1 of its version's targets and no other Guiding Question, and is not also a shared item (HW-D26, HW-D32) |
+| `homework_source_quiz_exists` | error | consistency | `quiz_report` source resolves to a real assessment |
+| `graded_requires_rubric` | warn | consistency | Only when `purpose: graded`: every rubric-requiring format has one |
+| `homework_tools_declared` | error | consistency | `allowed_tools` and `item_tools` all in `course.yaml` |
+| `class_tools_declared` | error | consistency | Class `default_tools` all in `course.yaml` |
+| `item_class_declared` | error | consistency | Item's `item_class` is defined in taxonomy |
 | `item_class_bundle_drift` | warn | consistency | Item's bloom/minutes within class range (range-aware per HW-D06) |
 | `item_class_evaluation_declared` | warn | consistency | Class has `evaluation.strategy` (HW-D05) |
-| `item_source_resolvable` | warn | consistency | An adapted item's `source_ref` resolves to an existing item |
+| `item_source_resolvable` | error | consistency | An adapted item's `source_ref` resolves to an existing item |
 | `code_execution_reference_present` | error | consistency | A `format: code` item resolved to `execute` has both `expected_solution` and `tests` |
-| `homework_defaults_consistent` | warn | consistency | Only if `homework-defaults.yaml` exists: `default_class_counts` has at least one positive count, every class in it exists in `item-classes.yaml`, and the estimated work (count × class `typical_minutes` midpoint) is within `budget_tolerance_minutes` of `total_minutes` (HW-D16, HW-D27) |
+| `homework_defaults_class_reference` | error | consistency | Only if `homework-defaults.yaml` exists: every class in `default_class_counts` exists in `item-classes.yaml` (HW-D16, HW-D32) |
+| `homework_defaults_consistent` | warn | consistency | Only if `homework-defaults.yaml` exists: `default_class_counts` has at least one positive count, and the estimated work (count × class `typical_minutes` midpoint) is within `budget_tolerance_minutes` of `total_minutes` (HW-D16, HW-D27, HW-D32) |
 | `assessment_scheme_complete` | warn | **completeness** | Course has the homework count its syllabus declares. Runs only when the course is complete (D-033) **and** the syllabus declares homework; silent otherwise. Inactive until the framework designs the syllabus `assessment` block (reserved in Core) |
 
 **Homework is optional** (HW-D13). A course may never have a homework, so
@@ -620,6 +635,7 @@ Each decision has a full entry in `_devlog/01-decisions.md`.
 | HW-D29 | `prerequisites` dropped from the manifest | provisional |
 | HW-D30 | The Word documents are laid out from `homework-document.yaml` | provisional |
 | HW-D31 | Focus notes are plan-only; due date is approved before writing | provisional |
+| HW-D32 | Rule severities follow the framework's D-037; two rules split (21 rules); `accepted:` on manifests; course-log entries at approvals | provisional |
 
 ---
 
@@ -644,7 +660,7 @@ Each question has a full entry in `_devlog/03-open-questions.md`.
 
 - **The Python runtime does not implement any of this yet.** The design is
   coherent enough to build against, but until `classkit` loads homework
-  manifests and item classes and the 19 rules are implemented, homework is
+  manifests and item classes and the 21 rules are implemented, homework is
   a specification only. See `ROADMAP.md`.
 - **Draft-aware validation is unimplemented.** The `status: draft`
   convention is documentary today; the validator does not exclude drafts
@@ -679,7 +695,7 @@ dev/homework/
 ├── _devlog/
 │   ├── README.md
 │   ├── 00-brief.md
-│   ├── 01-decisions.md            (HW-D01..HW-D31)
+│   ├── 01-decisions.md            (HW-D01..HW-D32)
 │   ├── 02-progress.md
 │   ├── 03-open-questions.md       (HW-Q01..HW-Q08)
 │   └── 04-handoff.md

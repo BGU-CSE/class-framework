@@ -101,8 +101,8 @@ reference answer that `item-solver` can compare against:
 - A Coding item graded by execution (`format: code`, strategy `execute`) → `expected_solution`
   and `tests`, plus a `rubric` for the approach. `expected_solution` is the runnable reference;
   `model_answer` is not used. The `code_execution_reference_present` rule checks this.
-- In a `graded` homework, every item whose format carries a rubric must have one
-  (`graded_requires_rubric`).
+- In a `graded` homework, every item whose format carries a rubric should have one
+  (`graded_requires_rubric`, a warning — but you caused it, so fix it).
 
 `usage` must contain `homework`; this is what `homework_item_usage` checks.
 

@@ -17,7 +17,7 @@ the framework's conventions.
 - A general-purpose interview agent, tools as course-declared strings, and
   a hand-off from `/write-items homework` to the pipeline
 
-Thirty-one decisions (HW-D01 through HW-D31) and eight open questions (HW-Q01 through
+Thirty-two decisions (HW-D01 through HW-D32) and eight open questions (HW-Q01 through
 HW-Q08) capture the design; the module's own devlog holds them.
 
 ## Module structure
@@ -33,7 +33,7 @@ dev/homework/                  Module documents
 ├── _devlog/                   Module's design history
 │   ├── README.md              Devlog index (and old → new number mapping)
 │   ├── 00-brief.md            One-page brief of what this module is
-│   ├── 01-decisions.md        HW-D01 through HW-D31
+│   ├── 01-decisions.md        HW-D01 through HW-D32
 │   ├── 02-progress.md         Development log
 │   ├── 03-open-questions.md   HW-Q01 through HW-Q08
 │   └── 04-handoff.md          Implementation notes (the plan is in ROADMAP.md)
@@ -88,11 +88,11 @@ ledger are in `ROADMAP.md`, the implementer's notes in `_devlog/04-handoff.md`.
 
 ## Current status
 
-- Design: **complete and reviewed**. Thirty-one decisions recorded, eight open
+- Design: **complete and reviewed**. Thirty-two decisions recorded, eight open
   questions logged as future work.
 - Implementation: **not started**. The Python runtime (`classkit`) does
   not yet load homework manifests, item classes, or the new templates.
-  Scaffolding does not create the homework files. The 19 validator rules
+  Scaffolding does not create the homework files. The 21 validator rules
   are specified but unimplemented.
 - Tests: **not started**. No homework-specific tests exist.
 

@@ -70,7 +70,13 @@ a class is a per-course operation; no framework change needed.
    - Append to `default_class_counts` in `homework-defaults.yaml`
    - Create `.claude/skills/writing-<slug>-items/SKILL.md` if drafted
 
-6. **Validate.** Run `classkit validate` and confirm no rules broke.
+6. **Log and validate.** Append one entry to `course/LOG.md` with
+   `classkit log` naming the new class and the files changed (HW-D32; framework
+   D-036), passing `--course course` and course-relative paths to `--file`.
+   `--why` is required: use the teacher's reason, or "teacher approved the
+   item-class change set" when no separate reason was given. Log only after
+   the approval in step 4, never for a rejected change set.
+   Then run `classkit validate` and confirm no rules broke.
 
 7. **Report** to the teacher: the class name, files updated, and — if a
    skill was created — a note to read it once and edit as needed. The

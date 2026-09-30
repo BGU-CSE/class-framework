@@ -13,9 +13,9 @@ Status: ✅ done · 🔨 in progress · ⬜ not started
 Homework is the **homework part of the framework's Assessment phase** (`FRAMEWORK-SPEC.md`
 phase table; exams and the grading scheme stay deferred), developed as a separate module.
 
-- ✅ **Design** — `HOMEWORK-SPEC.md`, HW-D01…HW-D31, HW-Q01…HW-Q08. The agents, commands,
+- ✅ **Design** — `HOMEWORK-SPEC.md`, HW-D01…HW-D32, HW-Q01…HW-Q08. The agents, commands,
   skills, schemas and templates are written.
-- ⬜ **Implementation** — the Python side: loaders, the 19 validator rules, scaffolding, tests.
+- ⬜ **Implementation** — the Python side: loaders, the 21 validator rules, scaffolding, tests.
   The plan below.
 - ⬜ **First real homework** — run `/create-homework` on a real course. As with the framework's
   Phase 2, this is where assumptions break: no homework agent has run against real material yet.
@@ -318,7 +318,16 @@ rows live.
 |---|---|---|
 | ✅ | `create-homework.md`, `homework-planner.md`, spec | collect `focus_notes` and `due_date` before planning; show both at Gate 1; keep focus notes only in the plan; never add manifest metadata during document generation |
 
-## Cross-cutting
+## HW-D32 — Aligned with framework D-036, D-037, D-038
+
+| | Artifact | Change |
+|---|---|---|
+| ✅ | `schemas/homework.schema.json` | `accepted: [{rule, reason?}]` (same definition as the framework) |
+| ✅ | spec §7.2, `create-homework.md`, `homework-item-writer.md` | severities per D-037; version and defaults rules split (21 rules); step 10 wording |
+| ✅ | `create-homework.md`, `new-hw-type.md` | `classkit log` entry after each approval |
+| ⬜ | `src/classkit/validate.py` | register all 21 rules in `DEFAULT_SEVERITY`; `homework_version_reference`, `homework_defaults_class_reference` |
+| ⬜ | module wording on `open` rubrics | update when the framework's D-038 G-19 lands (schema untouched until then) |
+
 
 | | Artifact | Change |
 |---|---|---|

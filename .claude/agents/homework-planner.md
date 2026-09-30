@@ -216,7 +216,8 @@ Draw guiding questions across the declared units in proportion to their weight. 
 `focus_notes` override even distribution — "focus on hashing" means weight toward U03.
 
 Do not target guiding questions from units the homework doesn't declare. The
-`homework_units_declared` rule will error on it.
+`homework_units_declared` rule will warn on it; because the pipeline caused
+the warning, revise the plan rather than asking the teacher to accept it.
 
 ## Output
 

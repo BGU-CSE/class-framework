@@ -1,6 +1,6 @@
 # Homework module decisions
 
-Thirty-one decisions from the homework module design phase, September 2026.
+Thirty-two decisions from the homework module design phase, September 2026.
 Each has a full rationale. Numbered with the module's own prefix, `HW-D`,
 so they can never collide with the framework's `D-` sequence (HW-D11).
 
@@ -30,6 +30,7 @@ HW-D28 records per-item tools in the manifest, not in the item schema.
 HW-D29 drops `prerequisites` from the manifest.
 HW-D30 lays out the Word documents from a course settings file.
 HW-D31 keeps focus notes in the plan and approves due dates before writing.
+HW-D32 aligns the module with the framework's D-036, D-037 and D-038.
 HW-D01 has one addendum for the `/write-items homework` hand-off.
 
 ## HW-D01 — Homework as a first-class content type
@@ -1200,3 +1201,52 @@ discipline.
 
 **Consequence:** `create-homework.md`, `homework-planner.md`, and spec §4.1.
 No schema or validator change.
+
+## HW-D32 — Aligned with the framework's D-036, D-037 and D-038
+**Date:** 2026-09-30 · **Status:** provisional · **Amends** HW-D01, HW-D16,
+HW-D26, HW-D27 (rule severities and splits) and HW-D15 (logging at gates).
+
+After main was merged into the module branch, three framework decisions
+changed what the module must do.
+
+**Severities (D-037).** An error is broken data: something named that does
+not exist or cannot be used. Missing pieces and departures from good practice
+are warnings, or alerts when they must be seen first. Only errors fail
+`classkit validate`.
+
+| Severity | Rules |
+|---|---|
+| error | `homework_schema`, `homework_id_consistency`, `homework_item_reference`, `homework_source_quiz_exists`, `homework_tools_declared`, `class_tools_declared`, `item_class_declared`, `item_source_resolvable`, `code_execution_reference_present`, `homework_version_reference`, `homework_defaults_class_reference` |
+| alert | `homework_coverage` |
+| warn | `homework_item_usage`, `homework_units_declared`, `graded_requires_rubric`, `homework_budget_fits`, `item_class_bundle_drift`, `item_class_evaluation_declared`, `assessment_scheme_complete`, `homework_versions_targeted`, `homework_defaults_consistent` |
+
+`code_execution_reference_present` stays an error: an item set to `execute`
+without a reference solution or tests cannot be evaluated at all — broken
+operational data, not advice. `homework_coverage` is an alert: important
+enough to show first, but it never blocks the teacher.
+
+**Two rules split** (as D-037 split its own mixed rules):
+- `homework_version_reference` (error): duplicate version labels; a target
+  that is not an existing Guiding Question. `homework_versions_targeted`
+  (warn): targets outside the declared units, uncovered targets, version items
+  testing unrelated Guiding Questions or duplicating a shared item.
+- `homework_defaults_class_reference` (error): an unknown Item Class in
+  `default_class_counts`. `homework_defaults_consistent` (warn): all-zero
+  counts, estimated time outside the budget.
+
+**21 validator rules** (20 consistency, 1 completeness).
+
+**`accepted:` (D-037, D-038).** `homework.schema.json` accepts the framework's
+`accepted: [{rule, reason?}]`; only `rule` is required. Only the teacher adds
+entries; agents never do. The YAML configuration files take no `accepted:`; a
+course-wide override in `course.yaml` `rules:` covers them.
+
+**Course log (D-036).** `/create-homework` appends a `classkit log` entry
+after Gate 1 and after Gate 2 approval; `/new-hw-type` after its change-set
+approval. Revisions, rejections and briefs only shown are not logged. Entries
+name ids and files, never student data or focus notes.
+
+**Not changed yet (D-038, G-19).** The framework will move the `open` item's
+`rubric` from schema-required to an advisory rule in its step 5. The module's
+wording ("the schema requires `rubric` for `open`") changes then; the schema is
+not touched ahead of the framework. Recorded in the handoff.

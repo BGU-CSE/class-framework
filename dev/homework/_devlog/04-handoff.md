@@ -10,7 +10,7 @@ what is built) with the how.
 - Python runtime: unchanged. `classkit` does not load homework manifests,
   item classes, or the new templates. Scaffolding creates the homework
   directory but no files in it.
-- Validator: unchanged. None of the 19 rules exist in `validate.py`.
+- Validator: unchanged. None of the 21 rules exist in `validate.py`.
 - Tests: no homework-specific tests exist.
 - All content files (agents, commands, skills, schemas, templates) ship
   in the module and are ready to drop into their target paths.
@@ -46,20 +46,23 @@ loader, error cases for malformed files.
 
 ### H2–H4 — `src/classkit/validate.py`
 
-**Rule states (D-033, HW-D13).** 18 of the 19 rules are *consistency*
+**Rule states (D-033, HW-D13).** 20 of the 21 rules are *consistency*
 rules: they judge only homework manifests, item classes and defaults that exist, and
 must produce nothing on a course with no homework. `assessment_scheme_complete`
 is the one *completeness* rule: report it as skipped until the course is
-complete, and silent unless the syllabus declares homework. Severity is
-fixed per rule (`DEFAULT_SEVERITY`); `graded_requires_rubric` is an error
-that only applies when `purpose: graded`. Each rule needs a test in both
+complete, and silent unless the syllabus declares homework. Severity per
+rule follows HOMEWORK-SPEC §7.2 (HW-D32, framework D-037): register every
+rule in `DEFAULT_SEVERITY` (an unregistered code raises, D-038 G-11), so a
+course can override it in `course.yaml` `rules:` and a manifest can silence it
+with `accepted:`. `graded_requires_rubric` is a warning that only applies when
+`purpose: graded`. Each rule needs a test in both
 directions, including its silent case. A pristine course with no homework
 artifacts produces no homework findings; manifest-dependent rules are silent
 without manifests; configuration rules run whenever their file exists (for
 example after an abandoned first run) and still report malformed
 configuration.
 
-Implement all 19 rules from HOMEWORK-SPEC §7.2. Each rule as a Python
+Implement all 21 rules from HOMEWORK-SPEC §7.2. Each rule as a Python
 function returning `List[Diagnostic]` (or the framework's existing
 diagnostic type). Function names should match rule names.
 
@@ -67,15 +70,16 @@ Grouping (proposed):
 
 - `validate_homework_structure()` — schema, id_consistency, item_reference,
   item_usage, units_declared, coverage
-- `validate_homework_budgets_and_versions()` — budget_fits, versions_targeted,
-  source_quiz_exists
+- `validate_homework_budgets_and_versions()` — budget_fits, version_reference,
+  versions_targeted, source_quiz_exists
 - `validate_graded_homework()` — requires_rubric
 - `validate_tools()` — homework_tools_declared (`allowed_tools` and
   `item_tools`, HW-D28), class_tools_declared
 - `validate_item_classes()` — item_class_declared, item_class_bundle_drift,
   item_class_evaluation_declared, item_source_resolvable,
   code_execution_reference_present
-- `validate_homework_defaults()` — homework_defaults_consistent
+- `validate_homework_defaults()` — homework_defaults_class_reference,
+  homework_defaults_consistent
 - `validate_assessment_scheme()` — assessment_scheme_complete
 
 Tests: `tests/test_validate_homework.py` — one test per rule, positive
@@ -220,3 +224,16 @@ Total: **18-24 hours** of focused work. Plus review time and iteration.
   rules
 - Update `_devlog/02-progress.md` with a new "Implementation phase" entry
 - Send a PR with the implementation for review
+
+### Framework changes to track (HW-D32)
+
+- **Rubric for `open` items (framework D-038, G-19).** In its step 5 the
+  framework moves `rubric` for `format: open` from schema-required to an
+  advisory rule. When that lands, update the module's wording that says the
+  schema requires it (`homework-item-writer.md`, HOMEWORK-SPEC §3.3). Do not
+  change `assessment-item.schema.json` ahead of the framework.
+- **Course log (D-036).** `/create-homework` and `/new-hw-type` call
+  `classkit log` at their approvals; nothing in the module writes `LOG.md`
+  directly.
+- **`accepted:` (D-037).** `homework.schema.json` reuses the framework's
+  `accepted` definition from `assessment-item.schema.json`; keep them identical.

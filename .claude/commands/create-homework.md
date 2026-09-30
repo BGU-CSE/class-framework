@@ -96,7 +96,7 @@ separate approval. This is how this command applies the framework's
    teacher's explicit approval of that difference; a plain "approve" of the
    brief is not enough. Four outcomes:
 
-   - **Approve** → continue to step 6.
+   - **Approve** → log it (see **Course log** below), then continue to step 6.
    - **Revise** → the teacher says what to change; `homework-planner`
      re-plans (rewriting its plan file) and shows a new brief. Return to
      Gate 1.
@@ -136,10 +136,13 @@ separate approval. This is how this command applies the framework's
    references, not copies. Include the Gate-1-approved `due_date` when one was
    supplied. Never copy `focus_notes` into the manifest.
 
-10. **Validate.** Run `classkit validate`. On `graded` homework,
-    `graded_requires_rubric` is an error that blocks the pipeline until
-    resolved. On `practice` homework, it does not trigger. Fix every error
-    before proceeding.
+10. **Validate.** Run `classkit validate`. Errors are broken data — a
+    reference to something that does not exist, or a Coding item set to
+    `execute` without its reference solution or tests — and must be fixed
+    before Gate 2. Warnings and alerts are advice (framework D-037): fix the
+    ones this pipeline caused (for example `graded_requires_rubric` on a
+    graded homework), and show the rest to the teacher at Gate 2. Never add
+    `accepted:` or change `rules:` yourself (HW-D32).
 
 11. **Gate 2 — the teacher approves the result.** All items and the
     manifest are on disk with `status: draft` frontmatter (written in
@@ -167,7 +170,7 @@ separate approval. This is how this command applies the framework's
 
     Three outcomes:
 
-    - **Approve** → the pipeline promotes every draft file to shipped:
+    - **Approve** → log it (see **Course log** below), then the pipeline promotes every draft file to shipped:
       for each fresh item file, each adapted new-id item file, and the
       homework manifest itself, strip the `status: draft` line from the
       frontmatter (or set `status: shipped` explicitly — either is valid
@@ -281,10 +284,11 @@ students is the teacher's decision outside this pipeline (HW-D25).
 **Targeted versions** (HW-D26). A homework built from a quiz report may have
 versions, each aimed at the Guiding Questions a group of students struggled
 with. Every student gets the shared items plus their version's items. The
-rule `homework_versions_targeted` (error) checks that labels are unique, every
-version has targets from the declared units, each version item tests one of
-its version's targets and nothing else, every target is covered, and the
-source is a resolvable `quiz_report`.
+rule `homework_version_reference` (error) checks that labels are unique and
+every target is a real Guiding Question; `homework_versions_targeted` (warn)
+checks that targets are in the declared units and covered, and that each
+version item tests only its version's targets; `homework_source_quiz_exists`
+(error) checks the quiz report source (HW-D32).
 
 **Student data never enters the repository.** The quiz report you work from
 must hold aggregated Guiding Question results only. If what the teacher gives
@@ -295,3 +299,16 @@ teacher's record, kept outside the repository; version labels never name or
 identify students.
 
 **One homework per invocation.**
+
+**Course log** (HW-D32; framework D-036). After each approval — Gate 1 and
+Gate 2 — append one entry to `course/LOG.md` with `classkit log`, for example:
+
+```
+classkit log "HW03 plan approved" --changed "HW03 plan: 5 slots, U03-U04" --why "<the teacher's reason, or: teacher approved the plan>" --file assessments/homework/.plans/HW03.md --course course
+classkit log "HW03 approved" --changed "HW03 manifest, items U03-I12, U04-I07" --why "<the teacher's reason, or: teacher approved the homework>" --file assessments/homework/HW03.md --course course
+```
+
+Log only approvals. Revisions, rejections and briefs that were only shown are
+not logged. `--why` is required: use the teacher's stated reason, or the
+approval itself when no separate reason was given. Name ids and course-relative
+files, never student data or focus notes.

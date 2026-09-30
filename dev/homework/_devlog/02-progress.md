@@ -91,9 +91,9 @@ Mirrors the framework's own `02-progress.md`.
 
 ## Metrics
 
-- 31 decisions (HW-D01..HW-D31, plus HW-D01 addendum)
+- 32 decisions (HW-D01..HW-D32, plus HW-D01 addendum)
 - 8 open questions logged (HW-Q01..HW-Q08)
-- 19 validator rules specified (all tagged `target` pending Python
+- 21 validator rules specified (all tagged `target` pending Python
   implementation)
 - 5 audit rounds, all specific issues addressed
 - Estimated ~2000 lines of documentation across SPEC, devlog, and README
@@ -217,3 +217,10 @@ See `04-handoff.md` for the full task list.
 - **HW-D31 recorded:** `focus_notes` flow from the interview into the plan and
   Gate 1 only; `due_date` is collected and approved before the manifest is
   written, never added during document generation.
+- **Main merged into the module branch** (merge `53ea8ea`); 99 framework tests pass.
+- **HW-D32 recorded:** severities follow the framework's D-037 (error = broken
+  data; `homework_coverage` an alert; `code_execution_reference_present` stays
+  an error); version and defaults rules split into reference (error) and
+  quality (warn) rules — 21 rules; `accepted:` on homework manifests; course-log
+  entries after Gate 1, Gate 2 and `/new-hw-type` approvals; the future rubric
+  change (D-038 G-19) noted in the handoff.
