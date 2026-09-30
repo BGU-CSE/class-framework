@@ -204,13 +204,34 @@ aggregated numbers you actually used ("U03-S02-G2: 38% correct"; "U03-I04, choic
 confuses average with worst case"). Nothing else from the report enters the repository
 (HW-D33).
 
-Identify misconceptions above threshold (default >25% of respondents on a distractor). Each
-above-threshold misconception → one plan slot with the intent line naming the misconception
-directly.
+### Choosing what to cover (HW-D34)
+
+The threshold finds candidates; the teacher decides.
+
+1. Read `misconception_candidate_threshold_pct` from `homework-defaults.yaml`. Never assume a
+   number; if it is missing, ask the teacher.
+2. List every misconception and Guiding Question at or above that percentage, highest first,
+   in plain words:
+
+   > At least <threshold>% of students struggled with these:
+   > 1. Collision handling — 42%
+   > 2. Average versus worst-case complexity — 36%
+   > 3. Hash-function selection — 28%
+   >
+   > Which should the homework include? You can pick all, some, or add another.
+
+3. Wait for the teacher's selection. They may pick all, some, or add a subject below the
+   threshold.
+4. Plan only from the selection: each selected item gets at least one slot whose intent line
+   names it directly. Record the selection in the plan file.
+5. Show the complete brief at Gate 1 as usual.
+
+This question is part of planning, not a gate: nothing is written before it except what the
+command already wrote, and it is not logged.
 
 ### Targeted versions
 
-When the teacher wants versions, group the struggling Guiding Questions from the report into
+When the teacher wants versions, group the Guiding Questions the teacher selected into
 versions. Every version has a unique label (never a student name), at least one target, and
 at least one slot per target. A version slot tests only its version's targets; anything
 everyone should practise goes in the shared slots. The same slot may serve several versions.

@@ -13,7 +13,7 @@ Status: ✅ done · 🔨 in progress · ⬜ not started
 Homework is the **homework part of the framework's Assessment phase** (`FRAMEWORK-SPEC.md`
 phase table; exams and the grading scheme stay deferred), developed as a separate module.
 
-- ✅ **Design** — `HOMEWORK-SPEC.md`, HW-D01…HW-D33, HW-Q01…HW-Q08. The agents, commands,
+- ✅ **Design** — `HOMEWORK-SPEC.md`, HW-D01…HW-D34, HW-Q01…HW-Q08. The agents, commands,
   skills, schemas and templates are written.
 - ⬜ **Implementation** — the Python side: loaders, the 21 validator rules, scaffolding, tests.
   The plan below.
@@ -333,6 +333,13 @@ rows live.
 | | Artifact | Change |
 |---|---|---|
 | ✅ | `create-homework.md`, `homework-planner.md`, spec, manifest template | report given in the session, never stored; aggregated per Guiding Question, item or answer choice; the numbers used are summarized in the plan file |
+
+## HW-D34 — Misconception candidates chosen by the teacher
+
+| | Artifact | Change |
+|---|---|---|
+| ✅ | `schemas/homework-defaults.schema.json`, `templates/course/homework-defaults.yaml` | `misconception_candidate_threshold_pct` |
+| ✅ | `homework-planner.md`, `create-homework.md`, spec | list candidates, ask the teacher, plan from the selection |
 
 ## Cross-cutting
 

@@ -269,7 +269,8 @@ values); the cross-file checks are the rule `homework_defaults_consistent` (HW-D
 
 Keys: `total_minutes`, `default_class_counts` (items per class for an
 ordinary homework, HW-D27), `allowed_tools`, `collaboration`,
-`open_book`, `reuse_policy`, `budget_tolerance_minutes`.
+`open_book`, `reuse_policy`, `budget_tolerance_minutes`,
+`misconception_candidate_threshold_pct` (HW-D34).
 
 ### 3.5a Homework document settings
 
@@ -335,7 +336,10 @@ need no separate approval. This is the module's reading of the framework's
 3. **Handle follow-ups.** Undeclared class → STOP, direct to
    `/new-hw-type`. Undeclared tool → note for report. Other → save for
    step 14.
-4. **Plan via `homework-planner`.** Writes `course/assessments/homework/
+4. **Plan via `homework-planner`.** For a quiz-report homework, first lists
+   the misconceptions at or above `misconception_candidate_threshold_pct` and
+   asks the teacher which to include; plans only from the selection (HW-D34).
+   Writes `course/assessments/homework/
    .plans/HW0N.md` — internal plan with coverage skeleton, per-slot intent,
    slot metadata, reuse decisions, budget check, approved due date and
    `focus_notes`.
@@ -640,6 +644,7 @@ Each decision has a full entry in `_devlog/01-decisions.md`.
 | HW-D31 | Focus notes are plan-only; due date is approved before writing | provisional |
 | HW-D32 | Rule severities follow the framework's D-037; two rules split (21 rules); `accepted:` on manifests; course-log entries at approvals | provisional |
 | HW-D33 | The quiz report is given in the session, aggregated, never stored; the plan keeps the numbers used | provisional |
+| HW-D34 | A configurable threshold lists quiz-report misconceptions; the teacher chooses which to cover | provisional |
 
 ---
 
@@ -699,7 +704,7 @@ dev/homework/
 ├── _devlog/
 │   ├── README.md
 │   ├── 00-brief.md
-│   ├── 01-decisions.md            (HW-D01..HW-D33)
+│   ├── 01-decisions.md            (HW-D01..HW-D34)
 │   ├── 02-progress.md
 │   ├── 03-open-questions.md       (HW-Q01..HW-Q08)
 │   └── 04-handoff.md

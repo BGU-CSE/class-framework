@@ -91,7 +91,7 @@ Mirrors the framework's own `02-progress.md`.
 
 ## Metrics
 
-- 33 decisions (HW-D01..HW-D33, plus HW-D01 addendum)
+- 34 decisions (HW-D01..HW-D34, plus HW-D01 addendum)
 - 8 open questions logged (HW-Q01..HW-Q08)
 - 21 validator rules specified (all tagged `target` pending Python
   implementation)
@@ -230,3 +230,5 @@ See `04-handoff.md` for the full task list.
 - **HW-D28 agent changes restored** in `create-homework.md`, `homework-planner.md`,
   `homework-item-writer.md` and `item-solver.md` (they had not reached the branch).
 - **Planner review:** slot-table columns completed (format, tools, version).
+- **HW-D34 recorded:** `misconception_candidate_threshold_pct` in the defaults
+  lists quiz-report candidates; the teacher selects what the homework covers.

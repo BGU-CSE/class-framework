@@ -43,3 +43,8 @@ reuse_policy: practice
 # Budget check tolerance (minutes). homework_budget_fits warns when the sum of
 # item minutes falls outside total_minutes by more than this.
 budget_tolerance_minutes: 15
+
+# Quiz-report homework (HW-D34): misconceptions chosen by at least this
+# percentage of students are listed for you to pick from. It only finds
+# candidates; you decide which ones the homework covers.
+misconception_candidate_threshold_pct: 25

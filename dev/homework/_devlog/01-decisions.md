@@ -1,6 +1,6 @@
 # Homework module decisions
 
-Thirty-three decisions from the homework module design phase, September 2026.
+Thirty-four decisions from the homework module design phase, September 2026.
 Each has a full rationale. Numbered with the module's own prefix, `HW-D`,
 so they can never collide with the framework's `D-` sequence (HW-D11).
 
@@ -32,6 +32,7 @@ HW-D30 lays out the Word documents from a course settings file.
 HW-D31 keeps focus notes in the plan and approves due dates before writing.
 HW-D32 aligns the module with the framework's D-036, D-037 and D-038.
 HW-D33 defines the quiz report: session input, aggregated, never stored.
+HW-D34 lets a threshold find misconception candidates and the teacher choose.
 HW-D01 has one addendum for the `/write-items homework` hand-off.
 
 ## HW-D01 — Homework as a first-class content type
@@ -1275,3 +1276,31 @@ privacy rule; the rule's wording is widened to say so.
 **Consequence:** `create-homework.md` (interview asks for the report; privacy
 paragraph), `homework-planner.md` (report section; summary in the plan), the
 spec and the manifest template. No schema or rule change.
+
+## HW-D34 — The threshold finds candidates; the teacher chooses
+**Date:** 2026-09-30 · **Status:** provisional · **Replaces** the planner's
+hardcoded ">25% → one slot each" rule.
+
+**Decision.** `homework-defaults.yaml` gains
+`misconception_candidate_threshold_pct` (default 25 in the template). For a
+homework from a quiz report the planner:
+
+1. reads the threshold from the defaults (never a number of its own);
+2. lists the misconceptions and Guiding Questions at or above it, highest
+   first, in plain words;
+3. asks the teacher which to include — all, some, or another subject below
+   the threshold;
+4. plans only from the teacher's selection, recorded in the plan file;
+5. shows the complete brief at Gate 1 as usual.
+
+The threshold only decides what is shown; it never creates items by itself.
+The selection question is part of planning, not a gate, and is not logged.
+
+**Why:** a fixed number inside an agent breaks the framework's rule that
+methodology numbers live in configuration, and an automatic "one slot per
+misconception" takes the choice away from the teacher (framework D-037: the
+teacher decides).
+
+**Consequence:** `homework-defaults.schema.json` (0–100), the defaults
+template, `homework-planner.md`, `create-homework.md` step 4 and the spec. No
+rule change; still 21.

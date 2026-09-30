@@ -32,6 +32,12 @@
       "type": "number",
       "minimum": 0,
       "description": "How far the sum of item minutes may drift from `total_minutes` before `homework_budget_fits` warns."
+    },
+    "misconception_candidate_threshold_pct": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "For a homework from a quiz report: misconceptions at or above this percentage of students are listed for the teacher to choose from (HW-D34). It only selects candidates; it never creates homework items by itself."
     }
   }
 }

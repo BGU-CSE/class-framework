@@ -9,7 +9,7 @@ first if you're new to the module.
 | File | What it holds |
 |---|---|
 | `00-brief.md` | One-page brief — what the module is, why it exists, its scope |
-| `01-decisions.md` | Every design decision (HW-D01..HW-D33) with rationale |
+| `01-decisions.md` | Every design decision (HW-D01..HW-D34) with rationale |
 | `02-progress.md` | Development log — what was done when, in what order |
 | `03-open-questions.md` | Open questions (HW-Q01..HW-Q08) with framing and options |
 | `04-handoff.md` | Implementation notes (plan and ledger: `../ROADMAP.md`) |

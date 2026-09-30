@@ -84,7 +84,10 @@ separate approval. This is how this command applies the framework's
    - If it's something else (a stylistic note, a scheduling comment),
      record for the report at step 14.
 
-4. **Plan.** Invoke `homework-planner` with the spec. It writes its internal
+4. **Plan.** Invoke `homework-planner` with the spec. For a quiz-report
+   homework, the planner first lists the misconceptions at or above
+   `misconception_candidate_threshold_pct` and asks the teacher which to
+   include; it plans only from that selection (HW-D34). It writes its internal
    plan to `course/assessments/homework/.plans/HW0N.md` and shows the
    teacher a prose brief. The plan retains `focus_notes`; the brief shows them
    explicitly together with `due_date`.
