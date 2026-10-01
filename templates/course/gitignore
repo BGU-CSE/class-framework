@@ -6,3 +6,6 @@
 # materials/ingested/. `classkit doctor` checks that these two rules are in effect.
 materials/source/private/
 materials/private-text/
+
+# macOS Finder litter.
+.DS_Store

@@ -33,7 +33,6 @@ from .ingest.manifest import (
     is_private,
     load,
     private_text_file,
-    sha256_bytes,
 )
 
 OK = "ok"
@@ -211,6 +210,19 @@ def check_private_material(course_root: Path) -> list[Line]:
                 f"for good, `classkit material remove {mid}`",
             ))
             continue
+        here_hash = (record.get("source_hashes") or {}).get(canonical)
+        if here_hash and record.get("source_hash") and here_hash != record["source_hash"]:
+            # Two machines, two copies (D-041): from inside a checkout "I updated the book" and
+            # "my copy is older" look the same, so this is information, not an instruction.
+            lines.append(Line(
+                NOTE,
+                f"{name}: this machine's copy of the source differs from the one the committed "
+                "index was built from (another printing or version?). Ingesting here rebuilds the "
+                "committed index from this copy — the last machine to ingest wins",
+                "if this copy is the current one, `classkit ingest`; if not, replace it with the "
+                "current one first",
+            ))
+            continue
         if mid in pending:
             lines.append(Line(ACTION, f"{name}: {pending[mid]}", "classkit ingest"))
             continue
@@ -228,7 +240,7 @@ def check_private_material(course_root: Path) -> list[Line]:
             ))
             continue
         full = private_text_file(course_root, mid)
-        if full is not None and sha256_bytes(full.read_bytes()) != record.get("private_text_hash"):
+        if full is not None and not core.full_text_unedited(full, record):
             lines.append(Line(NOTE, f"{name}: source and full text here; the full text was edited "
                                     "by hand — ingest keeps the edit and asks before replacing it"))
         else:

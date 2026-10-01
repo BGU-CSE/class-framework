@@ -151,10 +151,28 @@ def test_a_stale_full_text_needs_ingest(course: Path):
     assert find(course, doctor.ACTION, "M0001", "full text is missing or stale")
 
 
-def test_a_changed_private_source_needs_ingest(course: Path):
+def test_a_differing_private_copy_is_a_note_not_an_instruction(course: Path):
+    """D-041: a changed private source may be the teacher's newer printing or a TA's older copy —
+    from inside a checkout the two look the same. Doctor says what ingesting here would do (the
+    last machine to ingest rebuilds the committed index) and leaves the call to the person."""
     with_book(course)
     make_book(private(course) / "clrs.pdf", ["Heaps body", "Heapsort, revised"])
-    assert find(course, doctor.ACTION, "M0001", "source changed")
+    (found,) = find(course, doctor.NOTE, "M0001", "differs from the one the committed index was built from")
+    assert "last machine to ingest wins" in found.what
+    assert not find(course, doctor.ACTION, "M0001")
+    assert exit_code(course) == 0
+
+
+def test_a_full_text_from_another_library_version_is_not_an_edit(course: Path):
+    """D-041: another machine's extraction differs, but certifies itself — so it is not an edit."""
+    with_book(course)
+    full = private_text_file(course, "M0001")
+    other = full.read_text(encoding="utf-8").split("\nbody_hash: ")[0]
+    rest = full.read_text(encoding="utf-8").split("\n---\n", 1)[1]
+    full.write_text(ingest.core.certify(other + "\n---\n" + rest.replace("Heaps body", "Heaps  body")),
+                    encoding="utf-8")
+    assert not find(course, doctor.NOTE, "M0001", "edited by hand")
+    assert find(course, doctor.OK, "M0001", "current full text")
 
 
 def test_a_new_private_file_needs_ingest(course: Path):

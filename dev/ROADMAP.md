@@ -372,7 +372,7 @@ Tags: **[2c-1]** privacy and `doctor` · **[2c-2]** the rest of the hand test's 
 | ✅ | `.claude/agents/material-classifier.md`, `.claude/commands/ingest.md` | **[2c-1]** propose `audience` with a reason; flag a published book outside `private/`; `/ingest` runs `doctor` first; agents told when a material is index-only here — done; other agents are told through the root `CLAUDE.md` until their own prompts are rewritten (steps 3, 4) |
 | ⬜ | exporters (Exports phase) | **[Exports]** refuse, in code, to bundle or publish `audience: instructor` or private material |
 | ⬜ | `.claude/commands/ingest.md`, `material-classifier` | **[2c-2]** the coverage report states its scope ("no material yet" ≠ "thin"); `/ingest` writes it to `materials/coverage.md` after the teacher has read it, through the write path |
-| ⬜ | `src/classkit/write.py`, `cli.py` | **[2c-2]** `classkit write --diff`: a unified diff of what `--overwrite` would change, writing nothing (invariant 5's scope already written into the spec and `dev/CLAUDE.md`) |
+| ✅ | `src/classkit/write.py`, `cli.py` | **[2c-2]** `classkit write --diff`: a unified diff of what `--overwrite` would change, writing nothing (invariant 5's scope already written into the spec and `dev/CLAUDE.md`) |
 | ⬜ | `src/classkit/validate.py`, `CLAUDE.md`, agents | **[2c-2]** `material_locator_in_text` (warn) over Markdown bodies (not `LOG.md`, `ingested/`); locators always fully qualified |
 | ⬜ | `src/classkit/ingest/core.py`, `report.py` | **[2c-2]** a hand-edit refusal shows the diff between the current file and a fresh extraction, grouped by anchor |
 | ⬜ | `schemas/study-session.schema.json` | **[2c-2; the rest step 4]** path kinds gain `slides` and `notes` (now); step 4: one resource-kind vocabulary for paths and `answer`, `kind` optional when `ref` is a material locator |
@@ -390,13 +390,13 @@ Tags: **[2c-1]** privacy and `doctor` · **[2c-2]** the rest of the hand test's 
 
 | | Artifact | Change |
 |---|---|---|
-| ⬜ | `src/classkit/ingest/`, `schemas/manifest.schema.json` | **[2c-2]** the full text certifies itself (`body_hash` in its front matter); a stale unedited full text is refreshed, not refused; `private_text_hash` retired (kept in the schema for old manifests) |
-| ⬜ | `src/classkit/doctor.py` | **[2c-2]** a note when this machine's private copy differs from the one the committed index was built from |
-| ⬜ | `src/classkit/validate.py` | **[2c-2]** `course_gitignore_missing` (warn, consistency) |
-| ⬜ | `src/classkit/write.py`, `ingest/` | **[2c-2]** `write.remove(path, expected_hash)`; ingest's one deletion goes through it; replacing a file keeps its permissions, new files get the umask default (not `0600`) |
-| ⬜ | `src/classkit/mode.py` | **[2c-2]** `classkit mode developer` also verifies `.gitignore` itself is tracked |
-| ⬜ | `.gitignore`, `templates/course/` (course `.gitignore`) | **[2c-2]** add `.DS_Store` |
-| ⬜ | `tests/` | **[2c-2]** a full text from another library version is not an edit; a stale unedited one is refreshed; an edited one refused; the differing-copy note; `course_gitignore_missing` at warn; `remove()` refuses a changed file; permissions kept; mode check refuses an untracked `.gitignore` |
+| ✅ | `src/classkit/ingest/`, `schemas/manifest.schema.json` | **[2c-2]** the full text certifies itself (`body_hash` in its front matter); a stale unedited full text is refreshed, not refused; `private_text_hash` retired (kept in the schema for old manifests) — done; `body_hash` covers the whole file but its own line, so a front-matter edit counts too; a pre-D-041 full text is judged by the old hash once |
+| ✅ | `src/classkit/doctor.py` | **[2c-2]** a note when this machine's private copy differs from the one the committed index was built from — done; it replaces the earlier ACTION "source changed" for private material |
+| ✅ | `src/classkit/validate.py` | **[2c-2]** `course_gitignore_missing` (warn, consistency) |
+| ✅ | `src/classkit/write.py`, `ingest/` | **[2c-2]** `write.remove(path, expected_hash)`; ingest's one deletion goes through it; replacing a file keeps its permissions, new files get the umask default (not `0600`) |
+| ✅ | `src/classkit/mode.py` | **[2c-2]** `classkit mode developer` also verifies `.gitignore` itself is tracked |
+| ✅ | `.gitignore`, `templates/course/` (course `.gitignore`) | **[2c-2]** add `.DS_Store` |
+| ✅ | `tests/` | **[2c-2]** a full text from another library version is not an edit; a stale unedited one is refreshed; an edited one refused; the differing-copy note; `course_gitignore_missing` at warn; `remove()` refuses a changed file; permissions kept; mode check refuses an untracked `.gitignore` |
 
 ## Cross-cutting
 

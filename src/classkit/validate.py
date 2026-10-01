@@ -75,6 +75,8 @@ DEFAULT_SEVERITY = {
     "materials_not_ingested": "warn",
     # D-040, consistency: git tracks private material — it is in the repo's history.
     "private_material_committed": "warn",
+    # D-041, consistency: course/.gitignore is absent or does not keep private material out of git.
+    "course_gitignore_missing": "warn",
 }
 
 # The order findings are printed in: alerts first (spec §8.4), then errors, then warnings.
@@ -114,6 +116,10 @@ STUDENT_FACING_FIELDS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("goals", "*", "paths", "*", "ref"),  # a study path's resource
     ),
 }
+
+# What `course/.gitignore` must list (D-041, `course_gitignore_missing`) — the same two paths
+# `classkit doctor` asks git about.
+GITIGNORE_REQUIRED = ("materials/source/private/", "materials/private-text/")
 
 # What `private_material_committed` asks git about (D-040). `:(icase)` because macOS git ignores
 # `Private/` too, and ingest treats any case of it as private.
@@ -726,6 +732,7 @@ class Validator:
         return self._manifest_cache
 
     def check_materials(self) -> None:
+        self.check_course_gitignore()
         self.check_material_locators()
         self.check_instructor_material()
         self.check_materials_ingested()
@@ -818,6 +825,36 @@ class Validator:
                 "for instructors only (audience: instructor) — students would be pointed at it. "
                 "Cite it from the in-class plan instead; or, if students may see it, "
                 f"`classkit material set {material_id} --audience student`.",
+            )
+
+    def check_course_gitignore(self) -> None:
+        """`course/.gitignore` is absent, or does not list `materials/source/private/` and
+        `materials/private-text/` (D-041). Committed state, the same on every clone — so it
+        catches the clone that never received the file. It reads the file, so it cannot see one
+        present here but never committed; `classkit doctor`, which asks git, catches that. A
+        consistency rule."""
+        path = self.course.root / ".gitignore"
+        try:
+            text = path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            self.report(
+                "course_gitignore_missing", path,
+                "the course has no .gitignore, so nothing keeps private material "
+                "(materials/source/private/, materials/private-text/) out of git. Re-run "
+                "`classkit scaffold course --code CODE --title TITLE` — it only creates what is missing.",
+            )
+            return
+        except (OSError, UnicodeDecodeError):
+            text = ""
+        listed = {line.strip().lstrip("/").rstrip("/") for line in text.splitlines()
+                  if line.strip() and not line.lstrip().startswith("#")}
+        missing = [p for p in GITIGNORE_REQUIRED if p.rstrip("/") not in listed]
+        if missing:
+            self.report(
+                "course_gitignore_missing", path,
+                f"course/.gitignore does not list {' or '.join(missing)}, so private material "
+                f"there would be committed. Add the line{'s' if len(missing) > 1 else ''} "
+                f"{', '.join(f'`{m}`' for m in missing)}.",
             )
 
     def check_private_material_committed(self) -> None:

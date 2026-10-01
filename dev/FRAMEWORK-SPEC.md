@@ -873,7 +873,7 @@ Severity is the default; **(target)** means not built yet. Every rule is also a 
 | `accepted_without_reason` | an `accepted:` entry gives no `reason` (or a blank one). The exception still takes effect (D-038) | advisory | warn |
 | `material_locator_in_text` | a `M<NNNN>#anchor` in the Markdown body of a course file (not `LOG.md`, not `ingested/`) names a real material and anchor (§8.7) | integrity, reported as advisory (prose) | warn **(target, D-040)** |
 | `materials_not_ingested` | a source (file or `links.md` line) is new, changed, moved or gone since the last ingest — one finding, reported against `materials/manifest.yaml` (D-035). **Ignores `source/private/`** (D-040): its files are not looked at and private materials are not judged — what is there differs per machine, and `classkit doctor` reports it. For a material whose hand-edit refusal awaits the teacher, the message says so and names `classkit ingest --keep ID` / `--overwrite ID`, not "run /ingest" (target, F-25) | advisory | warn |
-| `course_gitignore_missing` | `course/.gitignore` is absent or does not list `materials/source/private/` and `materials/private-text/` (§8.7). Consistency rule | advisory | warn **(target, D-041)** |
+| `course_gitignore_missing` | `course/.gitignore` is absent or does not list `materials/source/private/` and `materials/private-text/` (§8.7). Reported against `course/.gitignore`. Consistency rule | advisory | warn |
 | `instructor_material_cited` | a student-facing locator (today a study path's `ref`; step 4 adds `answer`, D-019) names a material with `audience: instructor` (D-040). Consistency rule | advisory | **alert** |
 | `private_material_committed` | git tracks a file under `materials/source/private/` or `materials/private-text/` (any case) — it is in the repo's history; removing it from history is the teacher's decision. One finding, reported against `materials/manifest.yaml`; skipped silently outside git (D-040). Consistency rule | advisory | warn |
 | `unit_has_entry_quiz_items` | the unit has ≥1 item with `usage: in-class-quiz` | advisory | warn **(target, D-031c)** |
@@ -974,8 +974,8 @@ classkit write PATH [--from FILE] [--overwrite | --append] [--dry-run] [--diff]
 Content comes from standard input unless `--from` names a file. Exit codes: `0` written or already
 identical, `3` refused — distinct from the generic failure code `2`, so a caller can tell *"ask the
 teacher first"* apart from *"something broke"*. `--dry-run` answers "may I write here?" without
-writing, which is what a command uses to check a target before it generates anything. **`--diff`
-(target, D-040)** prints a unified diff of exactly what `--overwrite` would change, without writing:
+writing, which is what a command uses to check a target before it generates anything. **`--diff`**
+(D-040) prints a unified diff of exactly what `--overwrite` would change, without writing:
 a command that must change part of a file (one key in `course.yaml`) shows the teacher that diff,
 and writes with `--overwrite` only once it is approved. No key-level editor: preserving the comments
 in a teacher's YAML would need a new dependency and a path syntax, for a rare operation.
@@ -985,13 +985,13 @@ never rewrites existing bytes, so it needs no confirmation; a missing file is cr
 `write()`. It exists so that *every* write, including the course log's, goes through this one path
 (D-038). `--append` and `--overwrite` are mutually exclusive.
 
-**Removing (target, D-041)** — `classkit.write.remove(path, expected_hash)` deletes a file only if
+**Removing (D-041)** — `classkit.write.remove(path, expected_hash)` deletes a file only if
 its content still hashes to what the caller says it wrote, and refuses otherwise — the same
 argument that lets ingest replace its own unedited output. It exists so that the one deletion
 ingest needs (a local full text no longer wanted) also goes through this path. No CLI verb: nothing
 a teacher runs deletes files.
 
-**Permissions (target, D-041).** Replacing a file keeps its permission bits; a new file gets the
+**Permissions (D-041).** Replacing a file keeps its permission bits; a new file gets the
 usual default (the user's umask), not the temporary file's private `0600`.
 
 `scaffold` is this path's create-only special case: `write_new()` calls it and never passes
@@ -1091,7 +1091,7 @@ its line goes.
 | `removed_at` | date | | the source disappeared. The record and its `.md` are kept, so locators to it fail visibly |
 | `merged_into` | `M<NNNN>` | | the teacher confirmed this is the same material as another; its sources moved there and this id is retired |
 | `private` | boolean | | (D-040) `true` when the canonical source **as last converted** was under `source/private/` (like `source_hash`, it records the last conversion: a file just moved in or out differs from it until the next ingest converts it). Set by ingest from the path, never by hand; written only when `true`; recorded so that a clone without the file still knows |
-| `private_text_hash` | string | | **retired (target, D-041)** — was the hash of the full text in `private-text/`; a committed field cannot describe a machine-local file (extraction differs across library versions). The full text now certifies itself (below). Kept in the schema only so an older manifest validates |
+| `private_text_hash` | string | | **retired (D-041)** — was the hash of the full text in `private-text/`; a committed field cannot describe a machine-local file (extraction differs across library versions). The full text now certifies itself (below). Kept in the schema only so an older manifest validates |
 | `audience` | enum | | (D-040) `student \| instructor`; absent means `student`. Who may be *pointed at* this material. Proposed by the classifying agent, confirmed by the teacher at gate 3. Independent of `private` (a published book is private but `student`) |
 
 Schema: `schemas/manifest.schema.json`, checked by `classkit validate` (`schema`; an unreadable
@@ -1170,7 +1170,7 @@ is itself committed — a global excludes file that lists `.gitignore` defeats t
   output (`ingested_hash`, hand-edit protection as for any ingested file).
 - **The full text is written to `materials/private-text/M<NNNN>-slug.md`** — gitignored, this
   machine only, the same anchors, its front matter carrying the `source_hash` it was made from
-  **and `body_hash`, the hash of its body as ingest wrote it (target, D-041)**. The full text
+  **and `body_hash`, the hash of the file as ingest wrote it, without that line (D-041)**. The full text
   *certifies itself*: a body that still matches `body_hash` is ingest's own output and may be
   replaced freely — including a **stale** one, made from another version of the source, which is
   simply refreshed; a body that does not match is the teacher's edit and is protected like any hand
@@ -1179,7 +1179,9 @@ is itself committed — a global excludes file that lists `.gitignore` defeats t
   deterministic only for one library version, so a TA's ingest rewrote it and made the teacher's
   own unedited text look edited — and a stale text could not be told from an edited one.) Editing
   the front matter itself breaks the self-check, and the file then counts as edited — the safe
-  direction. Both files are checked before either is written, so a refusal of one leaves both as
+  direction. A full text written before D-041 has no `body_hash`: it counts as unedited if it
+  matches the retired `private_text_hash` its manifest record still carries, else as edited; ingest
+  drops that field whenever it next converts the material. Both files are checked before either is written, so a refusal of one leaves both as
   they were — an index and a full text from different versions would disagree about their anchors.
   Agents read the full text when it is there. Where it is not, the material is *index only here*:
   an agent says so and must not present recall as a reading of it.
@@ -1200,13 +1202,13 @@ is itself committed — a global excludes file that lists `.gitignore` defeats t
 - **Moving a file into or out of `private/`** is a move (same id) that changes `private`: the next
   ingest rewrites the committed `.md` as an index (or as the full text) and adds or drops the local
   copy — dropping it only if it is exactly what ingest wrote (its `body_hash` proves no edit is
-  lost), through the write path's guarded `remove()` (target, D-041); a hand-edited one stays, and `doctor` lists it as a leftover. Moving a file into `private/` **does not remove it from git history**; `validate` reports it
+  lost), through the write path's guarded `remove()` (D-041); a hand-edited one stays, and `doctor` lists it as a leftover. Moving a file into `private/` **does not remove it from git history**; `validate` reports it
   (`private_material_committed`), and cleaning history stays the teacher's decision.
 - **Two machines with different copies of the same private source** (a corrected printing on the
   teacher's machine, the old PDF on a TA's): each sees the other's as *changed*, and **the last
   machine to ingest rebuilds the committed index** from its copy (D-041, accepted while one person
   usually ingests). `doctor` reports, as a note, when this machine's copy differs from the one the
-  committed index was built from (target, D-041). If several people ingest one course, revisit:
+  committed index was built from (D-041) — a note, not an action, because from inside a checkout "I updated the book" and "my copy is older" look the same. If several people ingest one course, revisit:
   an explicit `ingest --reindex ID` was the rejected alternative.
 - **An identical copy across the boundary** (`source/clrs.pdf` *and* `source/private/clrs.pdf`) is
   one material whose canonical source is the public path — so it is **not** private, and the
@@ -1242,7 +1244,8 @@ material is student-facing, and gate 3 follows conversion directly.
 `private/` and `private-text/` (asked of git in a repository, read from the file outside one), and
 itself committed — not ignored by a global excludes file; a `Private/` in another case; per private
 material, whether its source and its full text are here, whether the full text is stale against the
-source or hand-edited (a note), whether the source changed, and whether its committed copy is
+source or hand-edited (a note), whether this machine's copy of the source differs from the one the
+committed index was built from (a note), and whether its committed copy is
 really an index; new or moved private files; leftover full texts whose material is gone, merged, no
 longer private or unknown; the framework's dependencies (classkit's own requirements) importable;
 the optional converters available (pandoc, LibreOffice), with how many materials wait for each; the
@@ -1252,7 +1255,7 @@ without the book is normal. Exit `0` when nothing needs action, `1` when somethi
 script can gate on it; `--course DIR` as elsewhere. `/ingest` runs it first, and an agent runs it before relying on a
 private material's full text. The pre-flight refers to it rather than repeating it.
 
-**`course_gitignore_missing` (warn, target, D-041)** — `validate`'s side of the same protection:
+**`course_gitignore_missing` (warn, D-041)** — `validate`'s side of the same protection:
 the course has no `course/.gitignore`, or it does not list `materials/source/private/` and
 `materials/private-text/`. Committed state, the same on every clone, so it catches the clone that
 never received the file. It reads the disk, so it cannot see a `.gitignore` present but never

@@ -13,6 +13,7 @@ test_doctor.py.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -26,7 +27,7 @@ from classkit import ingest, log
 from classkit.cli import main
 from classkit.frontmatter import parse as parse_front_matter
 from classkit.ingest import extract
-from classkit.ingest.manifest import load, private_text_file
+from classkit.ingest.manifest import load, private_text_file, save, sha256_bytes
 from classkit.model import load_course
 from classkit.scaffold import scaffold_course, scaffold_unit
 from classkit.validate import validate
@@ -208,7 +209,10 @@ def test_the_full_text_is_written_only_to_private_text(course: Path):
     front, body = parse_front_matter(full.read_text(encoding="utf-8"))
     assert front["source_hash"] == record(course)["source_hash"]
     assert all(sentence in body for sentence in BODY)
-    assert record(course)["private_text_hash"].startswith("sha256:")
+    # It certifies itself (D-041): nothing about this machine's copy reaches the manifest.
+    assert front["body_hash"].startswith("sha256:")
+    assert ingest.core.self_certified(full)
+    assert "private_text_hash" not in record(course)
     # Nowhere committed holds the text.
     committed = [p for p in course.rglob("*") if p.is_file() and "private-text" not in p.parts
                  and "private" not in p.relative_to(course).parts]
@@ -293,7 +297,9 @@ def test_a_private_source_appearing_gets_its_full_text_and_changes_nothing_commi
     assert (ta / "LOG.md").read_text(encoding="utf-8") == log_before  # not a change to the course
 
 
-def test_a_stale_full_text_is_refused_not_silently_replaced(course: Path, tmp_path: Path, capsys):
+def test_a_stale_unedited_full_text_is_refreshed_not_refused(course: Path, tmp_path: Path, capsys):
+    """D-041: a full text made from another version of the source, but never edited, certifies
+    itself — so it is simply refreshed."""
     book(course)
     run(course)
     stale = full_text_of(course)
@@ -304,10 +310,74 @@ def test_a_stale_full_text_is_refused_not_silently_replaced(course: Path, tmp_pa
 
     code = main(["ingest", "--no-fetch", "--course", str(course)])
 
+    assert code == 0
+    assert "second printing" in full_text_of(course)
+    assert "this machine only" in capsys.readouterr().out
+
+
+def test_a_stale_edited_full_text_is_refused(course: Path, capsys):
+    book(course)
+    run(course)
+    stale = full_text_of(course)
+    book(course, pages=[*BODY[:3], "Heapsort, second printing"])
+    run(course)
+    full = private_text_file(course, "M0001")
+    full.write_text(stale + "\nFixed by the teacher.\n", encoding="utf-8")
+
+    code = main(["ingest", "--no-fetch", "--course", str(course)])
+
     assert code == 3
-    assert "another version of the source" in capsys.readouterr().out
+    assert "edited by hand, and was made from another version" in capsys.readouterr().out
+    assert "Fixed by the teacher." in full_text_of(course)
     run(course, overwrite=["M0001"])
     assert "second printing" in full_text_of(course)
+
+
+def test_a_full_text_from_another_library_version_is_not_an_edit(course: Path):
+    """D-041: the reason the committed `private_text_hash` was retired. A TA's pypdf extracts the
+    same page a little differently; that full text certifies itself, so when the source changes it
+    is replaced without asking — and no machine's extraction ever reaches the manifest."""
+    book(course)
+    run(course)
+    full = private_text_file(course, "M0001")
+    text = full.read_text(encoding="utf-8")
+    head, rest = text.split("\nbody_hash: ")[0], text.split("\n---\n", 1)[1]
+    full.write_text(ingest.core.certify(head + "\n---\n" + rest.replace("max-heap", "max - heap")),
+                    encoding="utf-8")
+    manifest = (course / "materials" / "manifest.yaml").read_text(encoding="utf-8")
+    book(course, pages=[*BODY[:3], "Heapsort, revised"])
+
+    assert run(course).refused == []
+    assert "Heapsort, revised" in full_text_of(course)
+    assert "private_text_hash" not in manifest
+
+
+def test_editing_the_full_texts_front_matter_counts_as_an_edit(course: Path):
+    book(course)
+    run(course)
+    full = private_text_file(course, "M0001")
+    full.write_text(full.read_text(encoding="utf-8").replace("title: clrs", "title: CLRS 4e"), encoding="utf-8")
+    assert not ingest.core.self_certified(full)
+
+
+def test_a_full_text_written_before_d041_is_judged_by_the_retired_hash(course: Path):
+    """An older manifest still carries `private_text_hash`, and its full text has no `body_hash`.
+    Matching the old hash proves it unedited; the field is dropped on the next conversion."""
+    book(course)
+    run(course)
+    full = private_text_file(course, "M0001")
+    legacy = re.sub(r"\nbody_hash: \S+", "", full.read_text(encoding="utf-8"))
+    full.write_text(legacy, encoding="utf-8")
+    records = load(course)
+    records[0]["private_text_hash"] = sha256_bytes(full.read_bytes())
+    save(course, records)
+    schema = json.loads((FRAMEWORK_ROOT / "schemas" / "manifest.schema.json").read_text(encoding="utf-8"))
+    jsonschema.validate(load(course), schema)  # retired, still accepted
+
+    book(course, pages=[*BODY[:3], "Heapsort, revised"])
+    assert run(course).refused == []
+    assert "private_text_hash" not in record(course)
+    assert ingest.core.self_certified(full)
 
 
 # -- moving into and out of private/ -------------------------------------------------------
@@ -338,6 +408,31 @@ def test_moving_a_file_out_of_private_commits_its_full_text_and_drops_the_local_
     assert "text" not in parse_front_matter(index_of(course))[0]
     assert private_text_file(course, "M0001") is None
     assert "private" not in record(course) and "private_text_hash" not in record(course)
+
+
+def test_dropping_the_local_copy_goes_through_the_write_path(course: Path, monkeypatch):
+    """D-041: ingest's one deletion is `classkit.write.remove()`, guarded by the hash of what it
+    wrote — invariant 5 now covers it too."""
+    import classkit.ingest.core as core
+
+    calls = []
+    real = core.remove_file
+    monkeypatch.setattr(core, "remove_file", lambda path, expected: calls.append(path) or real(path, expected))
+    book(course)
+    run(course)
+    (private(course) / "clrs.pdf").rename(source(course) / "clrs.pdf")
+    run(course)
+    assert [p.name for p in calls] == ["M0001-clrs.md"]
+
+
+def test_moving_out_of_private_keeps_a_hand_edited_local_copy(course: Path):
+    book(course)
+    run(course)
+    full = private_text_file(course, "M0001")
+    full.write_text(full.read_text(encoding="utf-8") + "\nFixed by the teacher.\n", encoding="utf-8")
+    (private(course) / "clrs.pdf").rename(source(course) / "clrs.pdf")
+    run(course)
+    assert "Fixed by the teacher." in full.read_text(encoding="utf-8")
 
 
 def test_a_private_folder_in_another_case_is_still_private(course: Path):

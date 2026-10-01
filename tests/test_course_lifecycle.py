@@ -883,3 +883,30 @@ def test_private_material_committed_is_skipped_outside_git(course_root: Path):
 
     make_pdf(course_root / "materials" / "source" / "private" / "clrs.pdf", ["Heaps"])
     assert levels(course_root, "private_material_committed") == set()
+
+
+# -- course_gitignore_missing (D-041) ------------------------------------------------
+
+def test_a_fresh_scaffold_has_a_complete_course_gitignore(course_root: Path):
+    assert levels(course_root, "course_gitignore_missing") == set()
+    assert ".DS_Store" in (course_root / ".gitignore").read_text(encoding="utf-8").splitlines()
+
+
+def test_course_gitignore_missing_warns_when_the_file_is_absent(course_root: Path):
+    (course_root / ".gitignore").unlink()
+    assert levels(course_root, "course_gitignore_missing") == {"warn"}
+    assert DEFAULT_SEVERITY["course_gitignore_missing"] == "warn"
+
+
+def test_course_gitignore_missing_warns_when_a_rule_is_missing(course_root: Path):
+    path = course_root / ".gitignore"
+    path.write_text("materials/source/private/\n# materials/private-text/\n", encoding="utf-8")
+    (found,) = [f for f in findings(course_root) if f.code == "course_gitignore_missing"]
+    assert found.level == "warn" and "materials/private-text/" in found.message
+    assert "materials/source/private/ or" not in found.message
+
+
+def test_course_gitignore_accepts_rules_without_slashes(course_root: Path):
+    (course_root / ".gitignore").write_text("/materials/source/private\nmaterials/private-text\n",
+                                            encoding="utf-8")
+    assert levels(course_root, "course_gitignore_missing") == set()

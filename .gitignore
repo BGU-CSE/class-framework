@@ -7,3 +7,6 @@ __pycache__/
 # The framework-developer marker. Gitignored on purpose: it must never reach a
 # teacher's clone, so its presence is a reliable signal of a developer checkout.
 dev/.developer
+
+# macOS Finder litter.
+.DS_Store

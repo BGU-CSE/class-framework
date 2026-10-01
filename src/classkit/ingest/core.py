@@ -20,6 +20,12 @@ one-line labels, no body text — and the full text goes to the gitignored `priv
 machine only. A private source that is missing is "not on this machine", never "removed": a TA's
 clone that never had the book and a teacher's machine that lost it look the same from inside a
 checkout. Removing one is explicit (`remove`).
+
+The full text **certifies itself** (D-041): its front matter carries `body_hash`, the hash of the
+file as ingest wrote it (everything but that line). A file that still matches is ingest's own
+output and may be replaced freely — even a stale one, made from another version of the source, or
+by another library version; one that does not match is the teacher's edit, protected like any
+hand edit. Nothing machine-specific reaches the committed manifest.
 """
 
 from __future__ import annotations
@@ -35,7 +41,7 @@ import yaml
 
 from ..frontmatter import FrontMatterError, parse as parse_front_matter
 from ..scaffold import slugify
-from ..write import write
+from ..write import content_hash, remove as remove_file, write
 from . import extract as ex
 from . import links as linkfile
 from .manifest import (
@@ -636,9 +642,6 @@ def _adopt_orphan(course_root: Path, records: list[dict], group: NewMaterial) ->
                 "source_hash": "", "source_hashes": {},
                 "ingested_hash": sha256_bytes(path.read_bytes()),
             }
-            full = private_text_file(course_root, record["id"])
-            if full is not None and front_matter_of(full).get("source_hash") == group.hash:
-                record["private_text_hash"] = sha256_bytes(full.read_bytes())
             return record
     return None
 
@@ -696,6 +699,48 @@ def render_ingested(record: dict, body: str, *, form: str = "text") -> str:
     return "---\n" + yaml.safe_dump(front, sort_keys=False, allow_unicode=True, width=100) + "---\n\n" + note + "\n\n" + body
 
 
+BODY_HASH = "body_hash"
+_CLOSE = "\n---\n"
+
+
+def certify(content: str) -> str:
+    """Add `body_hash` to a rendered file's front matter: the hash of the file as it is without
+    that line. The file then certifies itself — any later edit, to the body or the front matter,
+    breaks the match (D-041)."""
+    head, sep, rest = content.partition(_CLOSE)
+    return f"{head}\n{BODY_HASH}: {content_hash(content.encode('utf-8'))}{sep}{rest}"
+
+
+def self_certified(path: Path) -> bool:
+    """True when `path` still holds exactly what ingest wrote: its `body_hash` matches the hash of
+    the file without that line. False for an edited file, one without a `body_hash`, or one that
+    cannot be read — refusing is the safe direction."""
+    try:
+        text = path.read_bytes().decode("utf-8")
+    except (OSError, UnicodeDecodeError):
+        return False
+    if not text.startswith("---\n"):
+        return False
+    end = text.find(_CLOSE)
+    if end < 0:
+        return False
+    match = re.search(rf"\n{BODY_HASH}: (\S+)(?=\n)", text[: end + 1])
+    if match is None:
+        return False
+    original = text[: match.start()] + text[match.end():]
+    return content_hash(original.encode("utf-8")) == match.group(1)
+
+
+def full_text_unedited(path: Path, record: dict) -> bool:
+    """Is this machine's full text ingest's own, unedited output? It certifies itself; a full
+    text written before D-041 has no `body_hash`, and is unedited if it matches the retired
+    `private_text_hash` the manifest may still carry."""
+    if self_certified(path):
+        return True
+    legacy = record.get("private_text_hash")
+    return bool(legacy) and legacy == sha256_bytes(path.read_bytes())
+
+
 def _convert(course_root: Path, record: dict, source: SourceFile, date: str, report: RunReport,
              *, overwrite: bool, keep: bool, new: bool = False) -> Converted | None:
     result = ex.extract(source.path)
@@ -722,21 +767,26 @@ def _convert(course_root: Path, record: dict, source: SourceFile, date: str, rep
         target = ingested_file(course_root, record["id"]) or (
             course_root / INGESTED_DIR / f"{record['id']}-{slugify(record['title'])[:60].strip('-') or 'material'}.md"
         )
-        # (file, content, the manifest field holding the hash of what ingest last wrote there)
+        # (file, content, the manifest field holding the hash of what ingest last wrote there —
+        # None for the full text, which certifies itself instead: D-041)
         if private:
             full = private_text_file(course_root, record["id"]) or course_root / PRIVATE_TEXT_DIR / target.name
             writes = [
                 (target, render_ingested(record, ex.index_body(result.body, result.labels), form="index"),
                  "ingested_hash"),
-                (full, render_ingested(record, result.body, form="full"), "private_text_hash"),
+                (full, certify(render_ingested(record, result.body, form="full")), None),
             ]
         else:
             writes = [(target, render_ingested(record, result.body), "ingested_hash")]
 
         edited = []
         for path, _content, field_name in writes:
-            on_disk = sha256_bytes(path.read_bytes()) if path.is_file() else None
-            edited.append(on_disk is not None and on_disk != record.get(field_name))
+            if not path.is_file():
+                edited.append(False)
+            elif field_name is None:
+                edited.append(not full_text_unedited(path, record))
+            else:
+                edited.append(sha256_bytes(path.read_bytes()) != record.get(field_name))
 
         if any(edited) and keep:
             # The teacher keeps their edit; the changed source counts as seen.
@@ -757,8 +807,8 @@ def _convert(course_root: Path, record: dict, source: SourceFile, date: str, rep
             return None
         for (path, content, field_name), was_edited in zip(writes, edited):
             outcome = write(path, content, overwrite=overwrite or not was_edited)
-            record[field_name] = sha256_bytes(path.read_bytes())
             if field_name == "ingested_hash":
+                record[field_name] = sha256_bytes(path.read_bytes())
                 committed = committed or outcome.wrote
                 ingested_rel = path.relative_to(course_root).as_posix()
             else:
@@ -769,8 +819,9 @@ def _convert(course_root: Path, record: dict, source: SourceFile, date: str, rep
     else:
         record.pop("private", None)
         _drop_full_text(course_root, record)
-    if result.status not in HAS_FILE:
-        record.pop("private_text_hash", None)
+    # Retired by D-041 (the full text certifies itself): dropped whenever a material is converted,
+    # so an older manifest sheds it as its materials are re-ingested.
+    record.pop("private_text_hash", None)
 
     record["source_hash"] = current_hash
     if committed:
@@ -781,25 +832,26 @@ def _convert(course_root: Path, record: dict, source: SourceFile, date: str, rep
                      result.reason, new, full_text=full_text_rel, local=not committed)
 
 
-def _refusal_reason(record: dict, path: Path, field_name: str) -> str:
-    if field_name == "private_text_hash" and front_matter_of(path).get("source_hash") != record.get("source_hash"):
-        # Typically a full text another version of the source left on this machine. Only the
-        # hash of the latest full text is recorded, so ingest cannot tell an old extraction from
-        # an edited one — and refusing is the safe direction.
-        return ("this machine's full text was made from another version of the source; it may "
-                "hold your edits, and ingest cannot tell")
+def _refusal_reason(record: dict, path: Path, field_name: str | None) -> str:
+    if field_name is None:
+        # The full text certifies itself, so this one really was edited (D-041). An unedited
+        # stale one — another version of the source, another library — is simply refreshed.
+        if front_matter_of(path).get("source_hash") != record.get("source_hash"):
+            return ("this machine's full text was edited by hand, and was made from another "
+                    "version of the source")
+        return "this machine's full text was edited by hand, and its source has changed"
     return "edited by hand, and its source has changed"
 
 
 def _drop_full_text(course_root: Path, record: dict) -> None:
     """A material moved out of `private/` no longer needs this machine's full text: its full
     text is now the committed file. The local copy is deleted only if it is exactly what ingest
-    wrote (its hash proves no teacher's edit is lost); a hand-edited one is left in place, and
-    `classkit doctor` lists it."""
+    wrote — it certifies itself, so no teacher's edit is lost — and through the write path's
+    guarded `remove()` (D-041). A hand-edited one is left in place, and `classkit doctor` lists
+    it."""
     path = private_text_file(course_root, record["id"])
-    if path is not None and record.get("private_text_hash") == sha256_bytes(path.read_bytes()):
-        path.unlink()
-    record.pop("private_text_hash", None)
+    if path is not None and full_text_unedited(path, record):
+        remove_file(path, content_hash(path.read_bytes()))
 
 
 def _add_link(course_root: Path, records: list[dict], url: str, *, note: str = "",

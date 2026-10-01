@@ -32,6 +32,7 @@ def repo(tmp_path):
     git("init", "-q", cwd=tmp_path)
     (tmp_path / "dev").mkdir()
     (tmp_path / ".gitignore").write_text("dev/.developer\n", encoding="utf-8")
+    git("add", ".gitignore", cwd=tmp_path)
     return tmp_path
 
 
@@ -73,6 +74,28 @@ def test_refuses_when_the_marker_would_not_be_ignored(repo):
     # and nothing was left behind
     assert not (repo / MARKER).exists()
     assert current_mode(repo) == TEACHER
+
+
+def test_refuses_when_gitignore_itself_is_not_tracked(tmp_path):
+    """D-041: the ignore rule protects other checkouts only if .gitignore is committed. A global
+    excludes file that ignores `.gitignore` leaves the rule on this machine alone."""
+    git("init", "-q", cwd=tmp_path)
+    (tmp_path / "dev").mkdir()
+    (tmp_path / ".gitignore").write_text("dev/.developer\n", encoding="utf-8")  # never added
+
+    with pytest.raises(UnsafeMarker, match="not tracked"):
+        set_mode(tmp_path, DEVELOPER)
+    assert not (tmp_path / MARKER).exists()
+
+    git("add", ".gitignore", cwd=tmp_path)
+    assert set_mode(tmp_path, DEVELOPER).mode == DEVELOPER
+
+
+def test_the_framework_gitignore_ignores_finder_litter():
+    from classkit.model import find_framework_root
+
+    root = find_framework_root()
+    assert ".DS_Store" in (root / ".gitignore").read_text(encoding="utf-8").splitlines()
 
 
 def test_ignore_check_reports_unknown_outside_a_git_repo(tmp_path):

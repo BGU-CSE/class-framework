@@ -97,7 +97,7 @@
       },
       "private_text_hash": {
         "type": "string",
-        "description": "For a private material: hash of the full text ingest last wrote to materials/private-text/. Extraction is deterministic, so it is the same on every machine; a different hash on disk means the teacher edited the full text, and re-ingest refuses to replace it without asking."
+        "description": "RETIRED (D-041) — was the hash of a private material's full text in materials/private-text/. A committed field cannot describe a machine-local file (extraction differs across library versions); the full text now certifies itself with `body_hash` in its own front matter. Accepted here only so a manifest written before D-041 still validates; ingest drops it when it next converts the material."
       },
       "audience": {
         "enum": ["student", "instructor"],
