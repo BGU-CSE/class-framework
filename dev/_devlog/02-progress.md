@@ -1706,3 +1706,10 @@ the low-yield thresholds; the classifier prompt's new behaviour.
 **One independent review of 2c-1 and 2c-2 together.** Then Avin decides the ⚑ entries of this
 report and re-tests (`MANUAL-TESTING.md`, "Step 2c-1" and "Step 2c-2"; a fresh course shows the
 extraction fixes), then step 3.
+
+## Session 34 — 2026-10-01 — Step 2c-2 checked; its ⚑ entries accepted; review prepared
+
+Pulled 2c-2, 289 tests green. Avin accepted G-1/G-2/G-3 as built (D-041 addendum). G-6 showed a
+second unverified claim of Claude's in the spec (hyperlinks "readable" in the ingested text) — now
+a working rule: verify before writing a claim about the code. Next: one review of 2c-1 + 2c-2.
+

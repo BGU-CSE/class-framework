@@ -1445,3 +1445,14 @@ the same on every machine", true only for one library version. The review is def
   path; G-22 — replacing a file keeps its permissions (the write path was leaving `0600`).
 - Ratified as built: G-7 … G-15, G-17 (recorded in the spec by the implementer).
 
+**Added to D-041 — step 2c-2's ⚑ items, accepted as built** (`reviews/impl-gaps-step-2c-2.md`):
+G-1 — links harvested by an earlier version are marked removed on the next ingest unless
+`links.md` lists them; `add-url` restores one under its old id (cost: eleven materials disappear
+from the test course; the Gem must be re-added). G-2 — a changed private source is a `doctor`
+**note**, not an ACTION (follows from D-041; cost: a teacher who really updated the book gets exit
+0). G-3 — re-ingest never replaces a title, including ingest's own bad ones (cost: the re-test uses a
+fresh course). Also recorded: the spec's claim that hyperlinks were readable in the ingested text was
+false — Claude's error, the second unverified claim about the code in two rounds (after "extraction
+is the same on every machine"); the implementer fixed the extraction. Claude now verifies a claim
+about the code before writing it into the spec.
+

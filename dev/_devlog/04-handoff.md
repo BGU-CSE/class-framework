@@ -37,9 +37,10 @@ re-derived).
     the refusal diff by anchor.
   - **Extraction:** DOCX text boxes, Office Math, empty/low-yield reporting, captured reader noise,
     ligatures, fonttools, and file-name titles rejected.
+- **Avin accepted 2c-2's three ⚑ entries as built** (G-1, G-2, G-3; recorded under D-041).
 - **Next: ONE independent review of 2c-1 and 2c-2 together** — both gap reports
-  (`impl-gaps-step-2c-1.md`, `impl-gaps-step-2c-2.md`) and the code since `d0c9080`. Then Avin
-  decides this round's ⚑ entries and re-tests (`../MANUAL-TESTING.md`, "Step 2c-1" and
+  (`impl-gaps-step-2c-1.md`, `impl-gaps-step-2c-2.md`) and the code from `fb9eb29` to now; review
+  written to `../reviews/impl-review-step-2c.md`. Then Avin re-tests (`../MANUAL-TESTING.md`, "Step 2c-1" and
   "Step 2c-2"): the real-textbook check of fontTools (F-09) is his — no test here can do it. Then
   step 3.
 
