@@ -13,7 +13,8 @@ Claude Code does the design work; the validator catches what went wrong.
 You need [Claude Code](https://claude.com/claude-code) and Python 3.10+.
 
 > **The framework is still being built.** The workflow below is the design; not all of it exists
-> yet. `classkit scaffold` and `classkit validate` work today. The `/` commands in step 5 are
+> yet. `classkit scaffold`, `classkit validate`, `classkit log` and the materials tools
+> (`/ingest`, `classkit ingest`, `classkit add-url`) work today. The `/` commands in step 5 are
 > being implemented one at a time — `dev/ROADMAP.md`'s ledger is the authoritative list of what is
 > actually built. Expect this document to change as they land.
 
@@ -79,14 +80,39 @@ generic version of it.
 
 It doesn't need to be organized — one folder of everything is fine, and duplicates (a deck and its
 PDF export) are detected. For videos and web pages, list them in
-`course/materials/source/links.md`, one per line with an optional note, or run
-`classkit add-url URL --note "…"` *(not built yet)*.
+`course/materials/source/links.md`, one per line with an optional note, or run:
 
-`/ingest` then turns all of it into a readable, citable copy in `course/materials/ingested/` —
-one file per source, with every slide and page marked — so that an answer can point at
-`M0007#slide-18` and the validator can check that slide exists. Your originals are never touched,
-and you can correct a badly extracted file by hand; a later ingest won't overwrite your fix without
-asking. Add material any time and run `/ingest` again — only what's new or changed is processed.
+```bash
+classkit add-url "https://www.youtube.com/watch?v=…" --note "heaps explained, 12 min"
+```
+
+PowerPoint, PDF, Word, Markdown and plain text are read out of the box. OpenDocument, RTF, HTML
+and EPUB need [pandoc](https://pandoc.org) installed; old `.ppt`/`.doc` need LibreOffice. Anything
+else — and a scanned PDF with no text, or a video file — is recorded and listed, never silently
+dropped; export it to PDF if you want it read.
+
+Then run **`/ingest`** in Claude Code. It first shows you a **pre-flight report** — how many files of
+each kind, slides and pages, duplicates, links, what it can't read, roughly how long it will take —
+and waits for your go-ahead. It then turns everything into a readable, citable copy in
+`course/materials/ingested/`, one file per source with every slide and page marked, and lists them in
+`course/materials/manifest.yaml` under a stable id (`M0007`). An agent then classifies each one
+(slides, exam, textbook, …, and which units it serves), **asks you** before merging anything it
+thinks is the same material twice (a deck and its PDF export), and reports what your course actually
+covers and where it is thin. Each step you approve is recorded in the course log.
+
+What that buys you: an answer reference can point at **`M0007#slide-18`**, and `classkit validate`
+reports an error if that slide does not exist — a made-up "slide 18" of a 12-slide deck is caught
+before it reaches a student. (It cannot tell whether the answer is *on* slide 18; that is still a
+human's or the reviewing agent's call.)
+
+- **Your originals are never touched.** Nothing in `materials/source/` is modified, moved or deleted.
+- **Reorganize freely.** A renamed or moved file keeps its id, so nothing that cites it breaks.
+- **Fix a bad extraction by hand** in `ingested/`. A later ingest notices your edit and asks before
+  replacing it — you choose to keep your edit or take a fresh extraction.
+- **Add material any time** and run `/ingest` again — only what's new or changed is processed, and
+  an interrupted run picks up where it stopped. Until you do, `classkit validate` warns that some
+  material is not ingested yet.
+- **A deleted file** stays in the manifest, marked removed, so anything still citing it is reported.
 
 If your textbook isn't a file, record it in `course/course.yaml` under `textbooks:` — study
 paths and answer references cite it by key.
@@ -127,7 +153,7 @@ Open Claude Code in your course repo and run these in order:
 
 | Command | What it does |
 |---|---|
-| `/ingest` | Reads `materials/source/`, reports what your course covers |
+| `/ingest` | Reads `materials/source/` and `links.md` — pre-flight, convert, classify — and reports what your course covers |
 | `/plan-units` | Writes the syllabus — goal, Course Outcomes — then the unit map, each unit's objectives rolling up to those outcomes |
 | `/design-unit 3` | The main event: the week's study sessions with their guiding questions, the entry quiz, then the in-class hour built on both |
 | `/review-unit 3` | An adversarial critic — checks the hour genuinely depends on the prework |
@@ -183,8 +209,8 @@ bad unit 1 propagates.
 sees; it does not overrule you. It reports three kinds of finding:
 
 - **Errors — broken data.** A reference to something that doesn't exist: a guiding question an
-  activity names but nobody wrote, a quiz item that isn't there, an answer pointing at slide 18 of a
-  12-slide deck. These are almost never intentional, and the agents can't work correctly over them.
+  activity names but nobody wrote, a quiz item that isn't there, a study path pointing at
+  `M0007#slide-18` of a 12-slide deck. These are almost never intentional, and the agents can't work correctly over them.
 - **Alerts — high priority, shown first.** Coverage: a Course Outcome no unit delivers, an objective
   no guiding question addresses, an objective that rolls up to no outcome, a missing syllabus. Often
   a temporary state while you build — but worth looking at.

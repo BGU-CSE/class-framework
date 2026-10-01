@@ -122,6 +122,46 @@ test proves the mechanism, not yet the enforcement.
 
 ---
 
+## Step 2b — ingest (`/ingest`)
+
+The test no code review can do: **your real, messy materials.** Copy (do not move) a real course's
+slides, PDFs, Word files, past exams and a few odd files into `course/materials/source/` — unsorted,
+with at least one deck *and* its PDF export, and one file in a format nothing reads. Then:
+
+```bash
+.venv/bin/pip install -e .                       # new dependencies: python-pptx, python-docx, pypdf
+.venv/bin/classkit add-url "https://www.youtube.com/watch?v=…" --note "a real video"
+.venv/bin/classkit add-url "not a url"           # rejected, exit 2
+.venv/bin/classkit ingest --preflight            # counts, duplicates, unsupported, time — writes nothing
+```
+
+Then run **`/ingest`** in Claude Code and follow it through its four gates. Afterwards, by hand:
+
+```bash
+find course/materials/source -type f -exec shasum {} + | sort > /tmp/before   # snapshot source/
+mv course/materials/source/<a deck>.pptx course/materials/source/renamed.pptx
+.venv/bin/classkit ingest                        # "moved … (same id)", nothing re-converted
+# edit one file in course/materials/ingested/, then change its source and re-run:
+.venv/bin/classkit ingest                        # REFUSED, exit 3, your edit intact
+.venv/bin/classkit validate                      # materials_not_ingested until you answer
+```
+
+Point one study path's `ref` at a real anchor (`"M0001#slide-2"`) and one at a made-up one
+(`"M0001#slide-999"`): `validate` passes the first and errors on the second.
+
+### What is worth your judgement here
+
+- **Is the extraction readable?** Open a few `ingested/` files. Slides that are mostly pictures will
+  be thin — is it thin enough to mislead the classifier?
+- **Are the titles sensible?** They come from the first slide title or heading, else metadata, else
+  the file name.
+- **Did the duplicate detection catch your deck/PDF pairs — and nothing else?**
+- **Is the coverage report true of your course?** That is the whole point of step 2b.
+- **Did anything in `source/` change?** It must not: re-run the `find … | sort` line into
+  `/tmp/after` (adjusting for the file you renamed) and `diff` the two.
+
+---
+
 ## Expected noise — do not report these as bugs
 
 | What you will see | Why | Tracked as |
@@ -130,6 +170,8 @@ test proves the mechanism, not yet the enforcement.
 | `syllabus_workload_missing` | `workload` is optional by design so a syllabus validates before credits are settled | D-031d |
 | `unit_count`: "N of 13 units exist so far" | Informational while the course is being built | — |
 | No `outcomes:` on unit objectives; no coverage checking | The coverage chain is step 3 | D-021, D-033 |
+| A material's `kind` is `other` right after `classkit ingest` | Kind is only guessed from the format; the classifier sets it in `/ingest` step 3 | D-035 |
+| Link titles are their URL or note | Metadata fetching is best-effort; offline, or a site that blocks it, gives no title | D-035 |
 
 Anything **else**, especially any **error** on a freshly scaffolded course, is a real finding.
 

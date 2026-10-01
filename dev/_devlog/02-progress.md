@@ -1477,3 +1477,53 @@ G-19/G-20 recorded for steps 5/4; unit `objectives` kept required, deliberately.
 **Step 2b — ingest (D-035).** Implementation prompt and review prompt use the 2b scope block. Then
 Avin hand-tests `/ingest` on real, messy materials — the check no document or code review can do.
 
+
+## Session 28 — 2026-10-01 — Step 2b built: ingest (D-035)
+
+A fresh session implemented step 2b from the spec, with the 2b scope block as its brief. Gap report:
+`reviews/impl-gaps-step-2b.md` — 30 entries, **8 needing a decision (⚑)**. Suite: **163 tests,
+green** (+64: 51 in the new `tests/test_ingest.py`, 13 rule tests in `test_course_lifecycle.py`).
+
+Built, layer by layer:
+
+- **Schema** — `schemas/manifest.schema.json`. The spec's table plus `source_hashes`, `removed_at`,
+  `merged_into`, `note`, `duration` (⚑ G-2: each closes a hole the spec's own text opens).
+- **Templates and scaffold** — `materials/source/links.md` (instructions in an HTML comment, so it
+  parses to no links) and `materials/ingested/`. The materials README is rewritten for both layers.
+- **Tooling** — `src/classkit/ingest/`:
+  - `extract.py`: a registry keyed by extension. md, txt, pptx, pdf and docx are built in; pandoc
+    and LibreOffice are used if installed. Statuses `unsupported` / `no-text` / `media`, always with
+    a hint.
+  - `links.py`: parse links.md, `add-url`, best-effort metadata.
+  - `manifest.py`: load, save, never-reused ids.
+  - `core.py`: scan, then **one `reconcile()` shared by pre-flight, the run and the validator**.
+    It handles moves, exact duplicates, detached copies, removals and restores. The manifest is saved
+    after each material, and an orphaned `.md` is adopted on resume.
+  - Hand edits are refused through the write path. `--overwrite ID` and `--keep ID` are the
+    teacher's answers, and the run exits 3.
+- **CLI** — `classkit ingest [--preflight]`, `classkit add-url`, and `classkit material
+  set|merge|duplicates` (⚑ G-1: how the classifier records anything without Write/Edit).
+- **Validator** — `material_locator_resolves` (error, integrity) over the fields in `LOCATOR_FIELDS`:
+  study-path `ref` and activity `materials`. Step 4 adds `answer` as one line. Also
+  `materials_not_ingested` (warn, one finding), and the manifest is schema-checked.
+- **Agent layer** — `/ingest` rewritten as four gated steps, each logged with `classkit log`. New
+  agent `material-classifier` (Read, Grep, Glob, Bash): it sets kind and units through `classkit
+  material set` and *proposes* merges. The command merges only what the teacher confirms.
+- **Docs** — spec §8.7 carries every mechanic decided (listed in the gap report, ⚑ ones marked as
+  provisional). Also updated: `CLAUDE.md`, `GETTING-STARTED.md`, `README.md`, `dev/CLAUDE.md`, and
+  `dev/MANUAL-TESTING.md`, which has a new 2b section for Avin's hand test.
+
+Self-review caught three defects before commit (gap report, last section): a module-level hack for
+found links, a retry loop on corrupt files, and a test passing for the wrong reason. Commits were
+reordered before pushing so each is green on its own, checked in a scratch worktree.
+
+**Untested:** pandoc and LibreOffice when *installed* (neither is on this machine), real-site
+metadata fetching, PDFs from real tools, and scale. **The classifier prompt has never run.**
+
+### Next
+
+1. **Independent review of 2b**, given the same scope block (`reviews/impl-review-step-2b.md`).
+2. **Avin decides the ⚑ entries** G-1 … G-8. The spec edits that write them in are provisional.
+3. **Avin hand-tests `/ingest` on real, messy materials** (`dev/MANUAL-TESTING.md`, "Step 2b").
+4. Then **step 3** (`/plan-units`, folding in D-032). It must also point `curriculum-architect` at
+   `materials/ingested/` rather than `source/` (gap G-30).

@@ -110,6 +110,7 @@ wrong.
 
 | Agent | Responsible for |
 |---|---|
+| `material-classifier` | What your existing materials are, which units they serve, which are duplicates, and what the course covers |
 | `syllabus-designer` | The syllabus: course goal, Course Outcomes, workload |
 | `curriculum-architect` | The semester map — units, objectives, sequencing |
 | `study-session-designer` | Home study: guiding questions, their answers and study times |
@@ -140,6 +141,9 @@ designer, the critic and the assessment writer apply the same standard.
 | `classkit validate` | Check the course against its methodology and schemas |
 | `classkit write` | The write path agents use — refuses to replace existing content without explicit confirmation |
 | `classkit log` | Append an entry to the course log, `LOG.md` — what changed and why |
+| `classkit ingest` | Convert new or changed materials into citable Markdown (`--preflight`: report only) |
+| `classkit add-url URL` | Add a link to `materials/source/links.md` |
+| `classkit material` | Record a material's kind and units; merge a duplicate the teacher confirmed |
 
 Scaffolding **never overwrites**. Re-run it any time — you get whatever is missing and keep
 everything you wrote. Skipped files are reported.
@@ -156,7 +160,7 @@ methodologies/      pluggable study-session designs; question-driven-25 is the d
 defaults/           advisory time constants, used to propose study-time estimates
 templates/          what scaffold copies into a course repo
 src/classkit/       the tooling
-tests/              scaffold → validate round-trip, and the write path
+tests/              scaffold → validate round-trip, the write path, ingest
 dev/                framework-development docs (vision, spec, roadmap, build log);
                     not a teacher's concern
 ```

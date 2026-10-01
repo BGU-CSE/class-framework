@@ -83,7 +83,7 @@ Each step should end in something runnable and inspectable, not just green tests
 |---|---|---|
 | **0. Foundation** ✅ | The overwrite-safe write path. Nothing else — this is deliberately thin. | D-031b |
 | **1. Initialize** ✅ | `classkit scaffold course` produces a complete, valid course skeleton *including* `syllabus/syllabus.md`. The teacher's first contact with the framework. | D-021 (schema, template, model, scaffold rows), D-031d |
-| **2. Ingest + course log** — **2a ✅** validation re-classification (D-037) + course log (D-036); **2b** ingest | `/ingest` end to end: pre-flight report, `classkit ingest` (extractors, anchors, manifest, incremental, hand-edit detection), classification and duplicate confirmation, `classkit add-url`, `material_locator_resolves`. Plus the course log — `classkit log` — since ingest is its first user. **Designed** (Q-028 → D-035, D-036). D-037 folded in as 2a, since it reworks the validator ingest's rule lands in. | D-035, D-036, D-037 |
+| **2. Ingest + course log** ✅ — **2a ✅** validation re-classification (D-037) + course log (D-036); **2b ✅** ingest (awaiting independent review and Avin's hand test on real materials) | `/ingest` end to end: pre-flight report, `classkit ingest` (extractors, anchors, manifest, incremental, hand-edit detection), classification and duplicate confirmation, `classkit add-url`, `material_locator_resolves`. Plus the course log — `classkit log` — since ingest is its first user. **Designed** (Q-028 → D-035, D-036). D-037 folded in as 2a, since it reworks the validator ingest's rule lands in. | D-035, D-036, D-037 |
 | **3. Syllabus and units** | `/plan-units` end to end: syllabus schema and rules, `outcomes` on objectives, `syllabus-designer` + `curriculum-architect`, the file-based handoff. | D-021, D-029, D-031d, D-031i |
 | **4. Study sessions** | `answer`, `est_minutes`, `defer_to_class`, session-level `paths`, the budget rule, `study-session-designer`, the rewritten `estimating-study-time` skill. | D-019, D-020, D-023, D-025 |
 | **5. Entry quiz** | `model_answer` rename, `usage` scoping, `unit_has_entry_quiz_items`, `assessment-writer` scoped to the entry quiz. | D-031c, D-031g |
@@ -290,19 +290,20 @@ All land in **step 3**, with the coverage chain.
 
 | | Artifact | Change |
 |---|---|---|
-| ⬜ | `src/classkit/ingest/` (new) | scan `materials/source/` recursively; hash; detect exact duplicates; pre-flight report (counts, pages/slides, duplicates, links, unsupported, time estimate) |
-| ⬜ | `src/classkit/ingest/` extractors | built-in `md`, `txt`, `pptx`, `pdf`, `docx` → `.md` with anchor headings (`## Slide N`, `## Page N`, own headings); optional pandoc / LibreOffice; registry keyed by extension; `unsupported` / `no-text` / `media` statuses |
-| ⬜ | `src/classkit/ingest/` manifest | `materials/manifest.yaml`: stable `M<NNNN>` ids, re-match renamed files by hash, merged duplicates, `ingested_hash` for hand-edit detection, removed sources marked not deleted; resumable |
-| ⬜ | `src/classkit/cli.py` | `classkit ingest [--preflight]`, `classkit add-url URL [--note]` |
-| ⬜ | `schemas/manifest.schema.json` (new) | the manifest's fields (spec §8.7) |
-| ⬜ | `src/classkit/validate.py` | `material_locator_resolves` (error, consistency) and `materials_not_ingested` (warn) |
-| ⬜ | `src/classkit/scaffold.py`, `templates/course/` | scaffold `materials/source/links.md` and `materials/ingested/`; update `materials-source-README.md` |
-| ⬜ | `pyproject.toml` | extraction dependencies (pptx, pdf, docx readers) |
-| ⬜ | `.claude/commands/ingest.md` | pre-flight → gate → convert → classify → confirm duplicates → report; log each approved step |
-| ⬜ | `.claude/agents/` (ingest classification) | set `kind` and `units`; propose same-material duplicates for confirmation; never modify `source/` |
+| ✅ | `src/classkit/ingest/` (new) | scan `materials/source/` recursively; hash; detect exact duplicates; pre-flight report (counts, pages/slides, duplicates, links, unsupported, time estimate) |
+| ✅ | `src/classkit/ingest/` extractors | built-in `md`, `txt`, `pptx`, `pdf`, `docx` → `.md` with anchor headings (`## Slide N`, `## Page N`, own headings); optional pandoc / LibreOffice; registry keyed by extension; `unsupported` / `no-text` / `media` statuses. *Caveat:* the pandoc / LibreOffice **installed** path is written but not exercised — neither tool is on the build machine; the missing-tool path is tested |
+| ✅ | `src/classkit/ingest/` manifest | `materials/manifest.yaml`: stable `M<NNNN>` ids, re-match renamed files by hash, merged duplicates, `ingested_hash` for hand-edit detection, removed sources marked not deleted; resumable |
+| ✅ | `src/classkit/cli.py` | `classkit ingest [--preflight]`, `classkit add-url URL [--note]`. Also `--overwrite ID` / `--keep ID` (the teacher's answer to a refused hand edit) and `classkit material set\|merge\|duplicates` (how the classifier records without Write/Edit) |
+| ✅ | `schemas/manifest.schema.json` (new) | the manifest's fields (spec §8.7), plus `source_hashes`, `removed_at`, `merged_into`, `note`, `duration` (gap report 2b) |
+| ✅ | `src/classkit/validate.py` | `material_locator_resolves` (error, consistency) and `materials_not_ingested` (warn). Locators read from `LOCATOR_FIELDS`: study-path `ref`, activity `materials`; the manifest is schema-checked |
+| ⬜ | `src/classkit/validate.py` (step 4) | add the goal's `answer[].ref` (and the session-level `paths[].ref`) to `LOCATOR_FIELDS` — one line each, no rule change |
+| ✅ | `src/classkit/scaffold.py`, `templates/course/` | scaffold `materials/source/links.md` and `materials/ingested/`; update `materials-source-README.md` |
+| ✅ | `pyproject.toml` | extraction dependencies (pptx, pdf, docx readers) — `python-pptx`, `python-docx`, `pypdf` |
+| ✅ | `.claude/commands/ingest.md` | pre-flight → gate → convert → classify → confirm duplicates → report; log each approved step |
+| ✅ | `.claude/agents/` (ingest classification) | set `kind` and `units`; propose same-material duplicates for confirmation; never modify `source/`. **`material-classifier`**, no Write/Edit — records through `classkit material set` |
 | ⬜ | `.claude/agents/*` that cite material | prefer `M<NNNN>#anchor` locators (study-session-designer, assessment-writer, topic-researcher, course-critic) — land with each agent's own step |
-| ⬜ | `GETTING-STARTED.md`, `CLAUDE.md` | materials, `links.md`, `add-url`, locators |
-| ⬜ | `tests/` | extraction anchors per format; incremental re-run; rename keeps id; hand edit refused; duplicate merge; locator rule fires on a missing anchor |
+| ✅ | `GETTING-STARTED.md`, `CLAUDE.md` | materials, `links.md`, `add-url`, locators (also `README.md`, `dev/MANUAL-TESTING.md`) |
+| ✅ | `tests/` | extraction anchors per format; incremental re-run; rename keeps id; hand edit refused; duplicate merge; locator rule fires on a missing anchor — `tests/test_ingest.py`, rule tests in `test_course_lifecycle.py` |
 
 ## D-036 — The course log
 
@@ -310,8 +311,8 @@ All land in **step 3**, with the coverage chain.
 |---|---|---|
 | ✅ | `src/classkit/log.py` (new), `cli.py` | `classkit log` — append a structured entry (date, actor, changed IDs, why, files) to `LOG.md`. The actor is part of the title, as in the spec's example heading |
 | ✅ | `src/classkit/scaffold.py` | create `LOG.md` with a first entry when a course is scaffolded |
-| ⬜ | `.claude/commands/*.md` (all) | log each approved step (with the D-030 gates) |
-| ⬜ | `.claude/agents/*.md` (writers) | read recent log entries before starting work |
+| 🔨 | `.claude/commands/*.md` (all) | log each approved step (with the D-030 gates). Done: `/ingest`. The other five land with their steps |
+| 🔨 | `.claude/agents/*.md` (writers) | read recent log entries before starting work. Done: `material-classifier` |
 | ✅ | `tests/` | append-only; format parseable — `tests/test_course_log.py` |
 
 ## D-037 — Teacher authority: integrity vs advisory
@@ -348,13 +349,14 @@ All land in **step 3**, with the coverage chain.
 | ✅ | `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block was scaffolded and documented although Exports is deferred (G-16). **Removed from the template and the settings table** — shipping configuration for a feature that does not exist confuses a teacher reading their own `course.yaml`. The optional field stays in `course.schema.json`, so a course that sets it still validates |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-09-29 (after step 2a and its review):** 15 decisions, 137 artifact changes, **33 built, 3 in
-progress, 101 not started** — counted from the table. Steps 0 (the write path) and 1 (scaffold the
-syllabus) are done, though D-032 reopens step 1's artifact to complete the Bologna descriptor.
-Step 2a (D-037 validation re-classification, D-036 course log) is done except the rows that belong
-to agents and commands, which land as each is built. Step 2b (ingest, D-035) is next. (The previous
-count line, "14 built, 1 in progress, 88 not started", did not match its own table — 16/1/112 — and
-is superseded. D-025 refines D-020 rows and D-031 amends several — no double-counting intended;
+**Count as of 2026-10-01 (after step 2b):** 15 decisions, 138 artifact changes, **45 built, 5 in
+progress, 88 not started** — counted from the table. Steps 0, 1, 2a and 2b are done (D-032 reopens
+step 1's syllabus; that lands in step 3), except the rows
+that belong to agents and commands of later steps (logging in the other five commands; agents that
+cite material prefer `M<NNNN>#anchor`). Step 2b added one row: step 4 extends `LOCATOR_FIELDS` with
+`answer`. Next: the independent review of 2b, Avin's hand test of `/ingest`, then step 3. (Previous
+count, after step 2a: 33 / 3 / 101 of 137. The count before that, "14 built, 1 in progress, 88 not
+started", did not match its own table — 16/1/112 — and is superseded. D-025 refines D-020 rows and D-031 amends several — no double-counting intended;
 D-026/D-027 are documentation decisions, already executed. D-031 rows supersede the "(consider)"
 overwrite-helper row under D-030. Rows struck through ~~like this~~ were amended by D-037.)
 

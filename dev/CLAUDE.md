@@ -71,10 +71,15 @@ src/classkit/
   scaffold.py             create-only content generation
   write.py                the overwrite-safe write path — every agent and command writes here
   log.py                  the course log, LOG.md — `classkit log`, append-only through write.append (D-036, D-038)
+  ingest/                 materials (D-035, spec §8.7): `classkit ingest`, `add-url`, `material`
+    extract.py              extractors registered by extension; anchors
+    links.py                links.md — parse, `add-url`, best-effort metadata
+    manifest.py             materials/manifest.yaml — load, save, ids
+    core.py                 scan → reconcile (shared with the validator) → convert
   mode.py                 teacher / framework-developer hat: `classkit mode` (D-034)
   validate.py             schema layer + semantic rules
   cli.py                  argparse entry point
-tests/                    scaffold → validate round-trip
+tests/                    scaffold → validate round-trip; ingest (fixtures generated in tmp_path)
 dev/                      you are here — not part of a teacher's course
   VISION.md                 why the project exists, what it produces, how it is developed
   FRAMEWORK-SPEC.md         the spec — what the framework must contain
@@ -137,7 +142,8 @@ reaches every course on the next `git merge framework/main`.
 
 ```
 .claude/agents/     curriculum-architect, study-session-designer, lesson-planner,
-                    assessment-writer, topic-researcher, gem-builder, course-critic
+                    assessment-writer, topic-researcher, gem-builder, course-critic,
+                    material-classifier
 .claude/skills/     writing-guiding-questions, estimating-study-time
 .claude/commands/   /ingest /plan-units /design-unit /write-items /review-unit /build-gem
 ```

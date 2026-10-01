@@ -79,6 +79,8 @@ U01-S02-G1       Guiding Question   ← referenced by everything else
 U01-IC           In-Class Session
 U01-A1           Activity
 U01-I01          Assessment Item
+M0007            Material — one ingested source file or link
+M0007#slide-18   a place inside it: slide-N, page-N, or a heading's slug
 ```
 
 ## The commands
@@ -92,6 +94,24 @@ U01-I01          Assessment Item
 
 `classkit scaffold` creates files; `classkit validate` checks that the course holds together.
 Scaffolding **never overwrites**, so it is safe to re-run at any time.
+
+## Materials
+
+- **`course/materials/source/`** is the teacher's: any files, any structure, duplicates included.
+  **Nothing modifies, moves or deletes anything in it** — no agent, no tool.
+- **`source/links.md`** lists the course's links, one per line with an optional ` — note`. Add one
+  with `classkit add-url URL --note "…"`.
+- **`course/materials/ingested/`** is derived: `classkit ingest` (run by `/ingest`) writes one
+  Markdown copy per material, `M0007-heaps.md`, with an anchor per slide (`## Slide 18`), per page
+  (`## Page 34`), or the document's own headings. **`materials/manifest.yaml`** lists every
+  material. A renamed or moved source keeps its id; a removed one is marked, never forgotten.
+- **Cite material by locator** — `M0007#slide-18`. `classkit validate` checks that the material and
+  the anchor exist (`material_locator_resolves`, an error), though not that the answer is there.
+  A textbook key (`"CLRS ch.6"`) is still allowed for what is not ingested, but cannot be checked.
+- The teacher may correct a bad extraction in `ingested/` by hand. A later ingest asks before
+  replacing the edit (it exits 3); agents never answer that question for the teacher.
+- Agents record a material's kind and units with `classkit material set`, never by editing the
+  manifest; only the teacher confirms a merge (`classkit material merge`).
 
 ## How the commands should behave
 
@@ -128,7 +148,8 @@ their own** — only when you ask — and they never "fix" something you decided
 ## Rules the agents follow
 
 - **No invented resources.** No made-up URLs, page numbers, slide numbers or video titles. A
-  fabricated reference validates cleanly and fails a student mid-session.
+  fabricated reference fails a student mid-session. Prefer a material locator (`M0007#slide-18`):
+  the validator catches a slide that does not exist — though not one that exists but is wrong.
 - **Fix what you caused; never overrule the teacher.** Resolve or report any finding your own output
   produced. Never add `accepted:`, change `rules:`, or raise a threshold unless the teacher asks.
 - **Every activity in the class hour builds on the home study.** An activity that references no
