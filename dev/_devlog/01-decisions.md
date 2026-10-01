@@ -1275,3 +1275,49 @@ without engaging the reasons against; Claude disagreed with both, and Avin sided
 
 173 tests (163 + 10).
 
+## D-040 — Private and instructor-only material; `validate` judges the course, `doctor` the machine
+**Date:** 2026-10-01 · **Status:** locked (design) · sources: `reviews/manual-test-step-0-2b.md`
+(Avin's hand test of steps 0–2b: F-04, F-05, F-16, F-22, P-4, F-09)
+
+The hand test ingested CLRS 4e (1312 pp.), its instructor's manual and its selected solutions.
+Two problems surfaced, and a third neither the test nor earlier sessions had flagged: **nothing in a
+course repo is gitignored**, so the first `git push` puts every book PDF *and its full extracted
+text* on GitHub, permanently in history. Avin's question — does a famous book need an ingested
+`.md` at all, given Claude cites CLRS well from memory? Claude's answer: memory is good for content
+and section numbers of famous books, unreliable for pages and editions (the test itself found a
+3rd/4th-edition mix), and useless for less famous material; the test's best classifier results (the
++22 page offset checked on 40 sections, the manual→deck derivation, the "posted publicly" markers)
+needed the text. But citing and checking need only an **index**, and reading needs the text only
+locally. Decided (Avin, one at a time):
+
+1. **Storage — `source/private/`, gitignored.** Its materials get a committed **index** in
+   `ingested/` (every anchor, printed page label, sections from the PDF outline — no body text) and
+   their **full text in `materials/private-text/`**, gitignored, this machine only. Locators
+   validate against the index everywhere. Cost accepted: on another clone agents can cite and
+   validate a private book but not read it.
+2. **Audience — `audience: student | instructor`** in the manifest, default `student`, proposed by
+   the classifier and confirmed at gate 3. Independent of `private` (CLRS is private but `student`).
+   Citing an instructor material from a **student-facing** place (study path, `answer`, later the
+   Gem) is an **alert**, `instructor_material_cited` — not the in-class plan or a model answer.
+   **The hard guarantee is at publication:** every exporter refuses, in code, to bundle instructor
+   or private material. Claude first suggested an alert in `validate` alone, then argued for the
+   export gate: a study path in the repo reaches no student until it is published, so that is where
+   the guarantee belongs; an `error` in `validate` would add little (the teacher may accept it,
+   G-12) and fail every run over something that is not yet a leak.
+3. **A missing private source is "not on this machine", never "removed"** — a TA's clone and a
+   deleted file are indistinguishable from inside a checkout. Removal is explicit:
+   `classkit material remove ID`. Cost: a book deleted on the teacher's own machine keeps its record
+   until removed.
+4. **Scaffold writes `course/.gitignore`** (in `course/`, so it never conflicts with a framework
+   update) covering `private/` and `private-text/`; and `private_material_committed` (warn) reports
+   anything git already tracks there. Detecting is the framework's; cleaning history is the
+   teacher's.
+5. **`classkit doctor`** (Avin's proposal: a local-consistency check), with the principle it made
+   explicit: **`validate` judges the course** — committed state, the same answer on every clone —
+   **and `doctor` judges this machine**: private sources and full texts present or stale, the
+   `.gitignore`, dependencies importable (would have caught F-09's missing fontTools), optional
+   converters, the mode. Read-only; `/ingest` runs it first. So `materials_not_ingested` now ignores
+   `private/`.
+
+Meanwhile `GETTING-STARTED.md` warns teachers not to commit book PDFs until this is built.
+

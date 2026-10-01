@@ -107,6 +107,11 @@ before it reaches a student. (It cannot tell whether the answer is *on* slide 18
 human's or the reviewing agent's call.)
 
 - **Your originals are never touched.** Nothing in `materials/source/` is modified, moved or deleted.
+- **⚠ Before you commit: everything in `materials/` goes into git** — the source files *and* their
+  full extracted text in `ingested/`. A published book's PDF or a solutions manual pushed to GitHub
+  stays in the repository's history even if deleted later. A `source/private/` folder that is kept
+  out of git is designed but not built yet (D-040); until then, keep such files out of the course
+  repo, or do not commit `materials/`.
 - **Reorganize freely.** A renamed or moved file keeps its id, so nothing that cites it breaks.
 - **Fix a bad extraction by hand** in `ingested/`. A later ingest notices your edit and asks before
   replacing it — you choose to keep your edit or take a fresh extraction.

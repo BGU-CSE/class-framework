@@ -19,7 +19,30 @@ Then, for history and what is still open:
 6. `02-progress.md` (last block) — where we stopped.
 7. `03-open-questions.md` — what's unresolved.
 
-## Current state — 2026-10-01 (after step 2b and its review, D-039)
+## Current state — 2026-10-01 (after Avin's hand test of steps 0–2b)
+
+**Avin hand-tested steps 0–2b on real material** (CLRS 4e, its instructor's manual and solutions,
+syllabus docx, three decks): `../reviews/manual-test-step-0-2b.md`, findings F-01 … F-27 and P-1 … P-4.
+Mechanics held; the classifier was the strongest part. **We are going through the report with Avin
+one item at a time.**
+
+- **Decided — D-040 (design, not built):** `source/private/` (gitignored; committed index only, full
+  text in gitignored `materials/private-text/`); `audience: student | instructor` with an
+  `instructor_material_cited` **alert** and a hard refusal at export; a missing private source is
+  "not on this machine", removal explicit; scaffold writes `course/.gitignore`;
+  `private_material_committed` (warn); **`classkit doctor`** — `validate` judges the course (same on
+  every clone), `doctor` this machine. Written into spec §2.2, §3.1, §8.4, §8.7, §9, §1.1 (Exports).
+  Interim warning in `GETTING-STARTED.md`: don't commit book PDFs yet.
+- **Still to go through with Avin.** Proposed as plain fixes, unless he objects: F-01, F-02,
+  F-03/F-09/F-10 (pypdf noise; fontTools — verify), F-06 (docx text boxes + a low-yield warning),
+  F-07 (OMML equations), F-12, F-14, F-20, F-23, F-25. To discuss: F-11/F-15 (duplicate detection;
+  dismissing a pair), F-13 (links harvested from books), F-17 (course-wide `units`), F-19 (persist the
+  coverage report), F-21 (path kind `slide`), F-24 (show the edit on refusal), F-26 (locators in
+  Markdown bodies), P-2 (editing one YAML key through the write path).
+- **Then:** build D-040 and the report's fixes as one step ("2c", fresh session + review as before),
+  then step 3.
+
+## State after step 2b's review — 2026-10-01 (kept for history)
 
 **Steps 0, 1, 2a and 2b are built and independently reviewed.** Suite: **173 tests**, green.
 Ledger: 51 built, 5 in progress, 91 not started — `../ROADMAP.md` is authoritative.

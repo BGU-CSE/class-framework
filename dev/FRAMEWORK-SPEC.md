@@ -22,7 +22,7 @@ tested on a real course, and corrected before the next phase is specified (D-022
 |---|---|---|
 | **Core** | Course initiation, syllabus, course outcomes, units, at-home study sessions, the in-class hour **including the entry quiz** | **Specified below** |
 | Assessment | Homework, programming assignments, exams, the grading scheme | Deferred |
-| Exports | The class Gem builder, PPTX, **the rendered syllabus** (one human-readable document — e.g. PDF — combining `syllabus.md`, the identity fields from `course.yaml`, and a unit overview derived from the units) | Deferred |
+| Exports | The class Gem builder, PPTX, **the rendered syllabus** (one human-readable document — e.g. PDF — combining `syllabus.md`, the identity fields from `course.yaml`, and a unit overview derived from the units). Every exporter **refuses, in code, to bundle or publish instructor-only or private material** (§8.7, D-040) | Deferred |
 | Metrics | Measures for improving a course or its activities | Deferred |
 | Lifecycle | Semester arc, revision, re-offering | Deferred |
 
@@ -103,6 +103,12 @@ do not exist — are errors; everything pedagogical is advice, which a teacher m
 deliberate exception (§8.4). What the framework enforces without exception is different in kind:
 **never overwriting the teacher's work** (invariant 5) protects the teacher; it does not constrain
 them.
+
+**`validate` judges the course; `doctor` judges this machine** (D-040). What is committed is the
+same on every clone, so `classkit validate` must give the teacher and a TA **the same answer** — it
+reads only committed state (and what git tracks). What legitimately differs per machine — private
+files present or not, a local full text present or stale, tools installed — is reported by
+`classkit doctor`, which is read-only like `validate` and says, per line, what to run to fix it.
 
 **Agents do what code cannot attempt:** is this guiding question a topic label in disguise? Would
 this activity still work if nobody did the prework? Is eight minutes honest for eight pages of
@@ -193,8 +199,9 @@ roles of `assessment-writer` and `/write-items` (Assessment).
 **Tooling commands used across Core:** `classkit ingest` (the deterministic half of `/ingest`,
 §8.7), `classkit add-url` (add a link to the course's materials, §8.7), `classkit material` (record
 a batch of classifications, or one material's kind, units or title; merge a confirmed duplicate,
-§8.7), and `classkit log` (append
-to the course log, §8.8).
+§8.7), `classkit log` (append
+to the course log, §8.8), and `classkit doctor` (check this machine's copy of the course, §8.7)
+**(target, D-040)**.
 
 ### 3.2 The shape of a flipped course
 
@@ -464,7 +471,7 @@ sessions 1, 2 and 4 — and it is how a course is maintained year to year.
 | `sessions/NN.md` | study-session-designer | planner, assessment-writer, validator | Core |
 | `in-class.md` | lesson-planner | critic, validator | Core |
 | `assessments/items/*.md` | assessment-writer | validator, (later) exporters | Core (entry quiz); Assessment (rest) |
-| `exports/gems/**` | gem-builder | students, via Gemini | Exports (deferred) |
+| `exports/gems/**` | gem-builder | students, via Gemini | Exports (deferred); never bundles instructor-only or private material (D-040) |
 
 Nothing downstream reads a methodology's *identity* — only the `goals[]` a session declares (§8.5).
 
@@ -826,7 +833,9 @@ Severity is the default; **(target)** means not built yet. Every rule is also a 
 | `syllabus_workload_missing` | the syllabus declares no `workload` | advisory | warn |
 | `unknown_rule` | a rule code in `course.yaml` `rules:`, a methodology's `rules:`, or an `accepted:` entry names no rule — a typo that would otherwise silently do nothing | advisory | warn |
 | `accepted_without_reason` | an `accepted:` entry gives no `reason` (or a blank one). The exception still takes effect (D-038) | advisory | warn |
-| `materials_not_ingested` | a source (file or `links.md` line) is new, changed, moved or gone since the last ingest — one finding, reported against `materials/manifest.yaml` (D-035) | advisory | warn |
+| `materials_not_ingested` | a source (file or `links.md` line) is new, changed, moved or gone since the last ingest — one finding, reported against `materials/manifest.yaml` (D-035). **Ignores `source/private/`** (target, D-040): what is there differs per machine, and `classkit doctor` reports it | advisory | warn |
+| `instructor_material_cited` | a student-facing locator (study path `ref`; `answer`, D-019) names a material with `audience: instructor` | advisory | **alert** **(target, D-040)** |
+| `private_material_committed` | git tracks a file under `materials/source/private/` or `materials/private-text/` — it is in the repo's history; removing it from history is the teacher's decision | advisory | warn **(target, D-040)** |
 | `unit_has_entry_quiz_items` | the unit has ≥1 item with `usage: in-class-quiz` | advisory | warn **(target, D-031c)** |
 | `guiding_question_assessed` | every guiding question is tested by ≥1 assessment item | advisory | **off in Core**; warn from the Assessment phase **(D-031c)** |
 
@@ -948,13 +957,20 @@ tidy tree, duplicates included.
 #### Layout — two layers, never mixed
 
 ```
-course/materials/
-  source/                  the teacher's: any files, any structure. Agents never modify it.
-    links.md               the course's links, one per line
-  ingested/                derived: one .md per material, flat, named by id
-    M0007-heaps.md
-    M0012-2024-final.md
-  manifest.yaml            every material: id, kind, format, paths, hashes, status
+course/
+  .gitignore               scaffolded: keeps private material out of git (target, D-040)
+  materials/
+    source/                the teacher's: any files, any structure. Agents never modify it.
+      links.md             the course's links, one per line
+      private/             (target, D-040) the teacher's files that must not be committed —
+                           a published book, a solutions manual. Gitignored.
+    ingested/              derived and committed: one .md per material, flat, named by id
+      M0007-heaps.md
+      M0012-2024-final.md
+      M0005-clrs.md        for a private material: the INDEX only — no body text
+    private-text/          (target, D-040) derived, gitignored, this machine only: the full
+      M0005-clrs.md        text of each private material, same anchors as its index
+    manifest.yaml          every material: id, kind, format, paths, hashes, status
 ```
 
 `ingested/` is **flat and keyed by a stable id**, not a mirror of `source/`. A file that is renamed or
@@ -1016,6 +1032,8 @@ its line goes; one found inside a document stays.
 | `ingested_at` | date | | `YYYY-MM-DD`, stored as a string |
 | `removed_at` | date | | the source disappeared. The record and its `.md` are kept, so locators to it fail visibly |
 | `merged_into` | `M<NNNN>` | | the teacher confirmed this is the same material as another; its sources moved there and this id is retired |
+| `private` | boolean | | **(target, D-040)** `true` when the canonical source is under `source/private/`. Set by ingest from the path, never by hand; recorded so that a clone without the file still knows |
+| `audience` | enum | | **(target, D-040)** `student \| instructor`; absent means `student`. Who may be *pointed at* this material. Proposed by the classifying agent, confirmed by the teacher at gate 3. Independent of `private` (a published book is private but `student`) |
 
 Schema: `schemas/manifest.schema.json`, checked by `classkit validate` (`schema`; an unreadable
 manifest is a `schema` error too). The file is tool-owned: every save rewrites the whole list from
@@ -1055,6 +1073,67 @@ renamed by hand.
   resolves, and the teacher may type the text in by hand.
 - `unsupported` and `media` materials have no `.md` and no anchors; they are cited by id alone.
 
+#### Private and instructor-only material **(target, D-040)**
+
+Two different properties, with two mechanisms suited to each:
+
+| | Example | Source committed? | Full text committed? | Student-facing material may cite it? |
+|---|---|---|---|---|
+| ordinary | the teacher's own slides | yes | yes | yes |
+| **private** | a published textbook's PDF | **no** | **no** — index only | yes |
+| **instructor** | a solutions manual, a past exam | per its folder | per its folder | **no** |
+
+**Private = where the file is.** Anything under `source/private/` is private. Git ignores by path,
+not by manifest field, so a folder is the one mechanism a `.gitignore` can protect. `scaffold
+course` writes `course/.gitignore` covering `materials/source/private/` and
+`materials/private-text/` — in `course/`, so it belongs to the course and never conflicts with a
+framework update; create-only, like every scaffolded file.
+
+- **The committed `ingested/M<NNNN>-slug.md` of a private material is an index**, not the text:
+  front matter as usual plus `text: index`, and in the body every anchor the full text has
+  (`## Page 63`), each with its printed page label and the section(s) starting on that page, taken
+  from the PDF's outline (bookmarks) and, failing that, from headings detected on the page. A few
+  KB, no body text. Locators resolve against the index, so they validate on every clone.
+- **The full text is written to `materials/private-text/M<NNNN>-slug.md`** — gitignored, this
+  machine only, the same anchors. Agents read it when it is there. Where it is not, an agent is told
+  the material is *index only here* and must not present recall as a reading of it.
+- **A private source that is missing is "not on this machine", never "removed".** A teacher's
+  machine without the PDF and a TA's clone that never had it are indistinguishable from inside a
+  checkout, so ingest does not mark a private material removed, and its locators keep resolving.
+  Removing one is explicit: `classkit material remove ID` (run by the teacher, or by `/ingest` on
+  the teacher's confirmation). Cost, accepted: a book deleted from the teacher's own machine keeps
+  its record until removed; `classkit doctor` lists it.
+- **Moving a file into or out of `private/`** is a move (same id) that changes `private`: the next
+  ingest rewrites the committed `.md` as an index (or as the full text) and adds or drops the local
+  copy. Moving a file into `private/` **does not remove it from git history**; `validate` reports it
+  (`private_material_committed`), and cleaning history stays the teacher's decision.
+- **The framework does not decide what is copyrighted.** The classifying agent may say "this looks
+  like a published book — consider moving it to `source/private/`"; the move is the teacher's.
+- Without an outline (a scan, some exports) the index has pages and printed labels but no sections.
+
+**Instructor = what the material is.** The manifest's `audience: instructor`, proposed by the
+classifying agent with its reason and confirmed by the teacher at gate 3. Default `student`: most
+material is student-facing, and gate 3 follows conversion directly.
+
+- **Citing it from a student-facing place is an `alert`** (`instructor_material_cited`): a study
+  path's `ref`, a guiding question's `answer` (D-019), and later a Gem's knowledge files. **Not**
+  the in-class plan or an assessment item's model answer — those are the teacher's, and "discuss the
+  manual's solution on p. 13" is legitimate there.
+- An alert, not an error (D-037): a study path in the course repo does not reach a student until it
+  is *published*. **The hard guarantee is at publication** — every exporter refuses, in code, to
+  bundle or publish `audience: instructor` or private material (Exports phase).
+- "Instructor" does not mean "agents never read it": the classifier must read a solutions manual to
+  classify it. It means "never pointed at, or handed to, a student". What an agent reads also goes to
+  the model provider; neither property changes that.
+
+**`classkit doctor`** — this machine's copy of the course, read-only, each line with the command
+that fixes it: `course/.gitignore` present and covering `private/`; per private material, whether
+its source and its full text are here and whether the full text is stale against the source;
+leftover full texts whose material is gone; private sources not on this machine; the framework's
+dependencies installed and importable; the optional converters available (pandoc, LibreOffice); the
+working mode. `/ingest` runs it first, and an agent runs it before relying on a private material's
+full text. The pre-flight refers to it rather than repeating it.
+
 #### Extractors — proactive for common formats, reactive for the rest
 
 Conversion is **code**, not agent work (D-018): it must produce the *same anchors every time*, or
@@ -1087,7 +1166,12 @@ classkit material apply [--from FILE] [--course DIR]       # YAML list of {id, k
 classkit material set ID [--kind K] [--unit UNN]... [--no-units] [--title T] [--course DIR]
 classkit material merge ID --into ID [--course DIR]
 classkit material duplicates [--course DIR]
+classkit material remove ID [--course DIR]                 # (target, D-040) only for a private material
+classkit doctor [--course DIR]                             # (target, D-040)
 ```
+
+`material apply` and `material set` also accept `audience` (`--audience student|instructor`)
+**(target, D-040)**.
 
 1. **Pre-flight, no processing** — `classkit ingest --preflight` writes nothing. Files found by
    format and total size, total slides and PDF pages, links in `links.md` and embedded in documents,
@@ -1102,7 +1186,9 @@ classkit material duplicates [--course DIR]
    minting a second id.
 3. **Classify and confirm** — the `material-classifier` agent is **read-only** (`Read`, `Grep`,
    `Glob`; no `Write`, `Edit` or `Bash` — D-039: it reads more untrusted text than any other agent,
-   so it can run nothing). It **returns** `kind` and `units` for each material as a YAML block, and
+   so it can run nothing). It **returns** `kind`, `units` and `audience` (target, D-040) for each
+   material as a YAML block — flagging any that looks like a published book outside `private/` —
+   and
    proposes suspected same-material duplicates (passed to it by the command) with its evidence. The
    command shows the classification, applies the teacher's corrections, and records the block with
    `classkit material apply` — **all or nothing**: every entry is checked (known id, not merged or
@@ -1119,7 +1205,9 @@ material knows is *moved* (if that material's path with the hash is gone) or an 
 (added to its `sources`); whose hash a removed material had, is *restored* under the old id; else
 *new*. Identical new files arrive as one material; its canonical path is the shallowest, then
 shortest, then alphabetical. When a canonical source disappears, an identical copy takes its place;
-if only non-identical copies remain, the material is marked removed and they stand alone.
+if only non-identical copies remain, the material is marked removed and they stand alone. **A
+private material is never marked removed this way** (target, D-040): its missing source means "not
+on this machine".
 
 **Suspected duplicates** are reported, never merged by code: in pre-flight, files whose names match
 across formats (ignoring markers such as `copy`, `final`, `export`, `(1)`); after conversion, also
@@ -1235,6 +1323,11 @@ Honest list, kept current.
   (D-039) — it returns, and the command records. The agents that still have `Bash` are reviewed as
   each is rewritten (G-4 carry-over). The orchestrating session itself has every tool; invariant 5
   is a guarantee of the write path, not a sandbox.
+- **A course with private material is not self-contained** (D-040). Another clone has the index
+  but not the book: agents there can cite and validate it, not read it. A new private file is not
+  reported by `validate` (which ignores `private/`, to stay the same on every machine) — only by
+  `classkit doctor` and the pre-flight. And a file committed before it was moved into `private/`
+  stays in git history; the framework detects it, the teacher cleans it.
 - **`materials_not_ingested` hashes every source file on every `validate`.** Correct and simple, and
   fast for a typical course; a course with gigabytes of video in `source/` will feel it.
 - **Extraction quality varies.** Slides that are mostly images or diagrams extract to little text, and

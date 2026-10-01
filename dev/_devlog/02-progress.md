@@ -1553,3 +1553,15 @@ anchors). Spec §3.1, §5.1, §6, §8.2, §8.7, §9; `CLAUDE.md`, `GETTING-START
 1. **Avin hand-tests `/ingest`** on real, messy materials (`dev/MANUAL-TESTING.md`, "Step 2b").
 2. Then **step 3** (`/plan-units`, D-032, the `units` re-map, G-30).
 
+## Session 30 — 2026-10-01 — Avin's hand test of 0–2b; private and instructor material (→ D-040)
+
+Avin hand-tested steps 0–2b with real material and wrote `reviews/manual-test-step-0-2b.md`. His
+main concern was privacy, copyright and book PDFs. Claude found that no course file is gitignored,
+so a push publishes every PDF and its full text — not flagged by the report or by earlier sessions.
+Decided with Avin, one at a time: `source/private/` with a committed index and a local full text;
+`audience` with an alert and a hard refusal at export; missing private ≠ removed; a scaffolded
+`course/.gitignore` and `private_material_committed`; `classkit doctor` (Avin's idea) and the
+principle that `validate` judges the course and `doctor` the machine. Spec, D-040, ledger (11 rows),
+handoff; interim warning in `GETTING-STARTED.md`. Nothing built. The rest of the report is still to
+be gone through.
+

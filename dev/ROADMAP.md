@@ -355,6 +355,22 @@ All land in **step 3**, with the coverage chain.
 | ⬜ | `.claude/agents/*` that cite books (step 4) | a book citation's `note` gives section, exercise/question number, printed page |
 | ⬜ | `src/classkit/validate.py` (step 4, proposed) | advisory: a locator to a `textbook` material with no `note` → warn |
 
+## D-040 — Private and instructor-only material; `classkit doctor`
+
+| | Artifact | Change |
+|---|---|---|
+| ⬜ | `src/classkit/scaffold.py`, `templates/course/` | scaffold `course/.gitignore` covering `materials/source/private/` and `materials/private-text/` (create-only; added to existing courses on re-scaffold) |
+| ⬜ | `src/classkit/ingest/` | `private` from the canonical path; a private material's committed `.md` is an index (anchors, printed page labels, sections from the PDF outline or detected headings; `text: index`); full text to `materials/private-text/`; moving into/out of `private/` rewrites both |
+| ⬜ | `src/classkit/ingest/` | a missing private source is never marked removed; `classkit material remove ID` |
+| ⬜ | `schemas/manifest.schema.json` | `private` (boolean), `audience` (`student \| instructor`) |
+| ⬜ | `src/classkit/ingest/core.py`, `cli.py` | `audience` in `material apply` / `material set --audience` |
+| ⬜ | `src/classkit/validate.py` | `instructor_material_cited` (alert) over student-facing locators; `private_material_committed` (warn, via git); `materials_not_ingested` ignores `private/` |
+| ⬜ | `src/classkit/doctor.py` (new), `cli.py` | `classkit doctor` — gitignore, private sources/full texts present or stale, leftovers, dependencies importable, optional converters, mode; read-only |
+| ⬜ | `.claude/agents/material-classifier.md`, `.claude/commands/ingest.md` | propose `audience` with a reason; flag a published book outside `private/`; `/ingest` runs `doctor` first; agents told when a material is index-only here |
+| ⬜ | exporters (Exports phase) | refuse, in code, to bundle or publish `audience: instructor` or private material |
+| ⬜ | `CLAUDE.md`, `GETTING-STARTED.md`, `dev/MANUAL-TESTING.md` | private/, audience, doctor (the interim "don't commit book PDFs" warning is in `GETTING-STARTED.md` now) |
+| ⬜ | `tests/` | gitignore scaffolded; private index has no body text and its locators resolve; full text only in `private-text/`; missing private source not removed; `remove`; both rules at their severity; `doctor` reports each case |
+
 ## Cross-cutting
 
 | | Artifact | Change |
@@ -363,12 +379,14 @@ All land in **step 3**, with the coverage chain.
 | ✅ | `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block was scaffolded and documented although Exports is deferred (G-16). **Removed from the template and the settings table** — shipping configuration for a feature that does not exist confuses a teacher reading their own `course.yaml`. The optional field stays in `course.schema.json`, so a course that sets it still validates |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-10-01 (after step 2b and its review, D-039):** 15 decision blocks, 147 artifact
-changes, **51 built, 5 in progress, 91 not started** — counted from the table. Steps 0, 1, 2a and 2b
+**Count as of 2026-10-01 (after D-040, designed from Avin's hand test):** 16 decision blocks, 158
+artifact changes, **51 built, 5 in progress, 102 not started** — counted from the table. (After step
+2b's review, D-039: 147 changes, 51 / 5 / 91.) Steps 0, 1, 2a and 2b
 are done (D-032 reopens step 1's syllabus; that lands in step 3), except the rows that belong to
 agents and commands of later steps (logging in the other five commands; agents that cite material
-prefer `M<NNNN>#anchor`; D-039's step 3 and step 4 rows). Next: Avin's hand test of `/ingest`, then
-step 3. (Previous count, after step 2b before its review: 45 / 5 / 88 of 138, in 14 blocks — that
+prefer `M<NNNN>#anchor`; D-039's step 3 and step 4 rows). Avin's hand test of steps 0–2b is done
+(`reviews/manual-test-step-0-2b.md`); D-040 came from it and is designed, not built. Next: finish
+going through that report, then build its fixes and D-040 (a step "2c"), then step 3. (Previous count, after step 2b before its review: 45 / 5 / 88 of 138, in 14 blocks — that
 line said "15 decisions". After step 2a: 33 / 3 / 101 of 137. The count before that, "14 built, 1 in progress, 88 not
 started", did not match its own table — 16/1/112 — and is superseded. D-025 refines D-020 rows and D-031 amends several — no double-counting intended;
 D-026/D-027 are documentation decisions, already executed. D-031 rows supersede the "(consider)"
