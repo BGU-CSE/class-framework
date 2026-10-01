@@ -1414,3 +1414,34 @@ changing part of a file shows it, then writes on approval. Rejected (2b), a key-
 keeping a commented `course.yaml`'s comments needs a new dependency and a path syntax. Cost: the
 invariant now openly says what it never covered.
 
+## D-041 — Step 2c-1 outcomes: the local full text certifies itself; several machines; one more guard
+**Date:** 2026-10-01 · **Status:** locked (design) · sources: `reviews/impl-gaps-step-2c-1.md`
+
+Step 2c-1 (privacy and `doctor`, D-040) was implemented in a fresh session (233 tests). Its gap
+report found that D-040's spec reasoned about one machine plus a clone without the file, not about
+several machines with the file. It also caught an error of Claude's: the spec claimed extraction "is
+the same on every machine", true only for one library version. The review is deferred to after 2c-2
+(Avin: two implementation rounds, one review). Avin decided:
+
+- **G-1/G-3 (b) — the local full text certifies itself.** Its front matter carries `body_hash`; a
+  body that matches is ingest's output and is replaced freely, including a stale one (refreshed, no
+  longer refused); one that does not is an edit, protected. `private_text_hash` retires from the
+  committed manifest. Why: it follows D-040's own principle — what differs per machine stays on the
+  machine. Cost: one front-matter field; an edit to that front matter counts as an edit.
+- **G-2 (c) — last machine wins, plus a `doctor` note** when this machine's copy differs from the
+  one the index was built from. Accepted while one person usually ingests; an explicit
+  `ingest --reindex ID` (b) is on record if several people do.
+- **G-4 — `course_gitignore_missing` (warn).** "Is `course/.gitignore` there and does it cover
+  `private/`" is committed state, so `validate` checks it too; `doctor` (asking git) still catches
+  "present but never committed". Found: Avin's `~/.gitignore_global` ignored `.gitignore` itself, so
+  no course created on his machine would have shipped its ignore rules. Avin deleted the file.
+  Follow-ups: `.DS_Store` into the framework's and the course's `.gitignore` (it surfaced at once);
+  `classkit mode developer`'s safety check must verify `.gitignore` is tracked.
+- **G-5 — accepted as built**, now stated in the spec: an identical copy across the `private/`
+  boundary leaves the material public; `doctor` says delete the public copy.
+- **G-6 (a) — `material remove` does not log itself**, like the other `material` verbs; `/ingest`
+  logs it. Claude leaned (b) for a simpler rule; Avin kept the smaller surface.
+- **Plain fixes:** G-16 — a guarded `write.remove()` so the one deletion goes through the write
+  path; G-22 — replacing a file keeps its permissions (the write path was leaving `0600`).
+- Ratified as built: G-7 … G-15, G-17 (recorded in the spec by the implementer).
+

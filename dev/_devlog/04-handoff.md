@@ -35,18 +35,15 @@ Ledger: 61 built, 5 in progress, 104 not started — `../ROADMAP.md` is authorit
   - `materials_not_ingested` ignores `private/`;
   - **`classkit doctor`**: `validate` judges the course, `doctor` this machine;
   - the classifier proposes `audience` and flags published books; `/ingest` runs `doctor` first.
-- **Found while building, needs Avin:**
-  - **G-4: his `~/.gitignore_global` ignores `.gitignore` itself**, so `course/.gitignore` is never
-    committed and no clone of a course made on this machine is protected. `doctor` now catches it.
-  - **G-1:** `private_text_hash` is committed, but extraction differs across library versions.
-    Recommended: a self-certifying hash in the full text's own front matter, which also resolves
-    **G-3** (a stale full text is refused today).
-  - **G-2:** two machines with different copies of a book; the last one to ingest wins.
-  - **G-5:** a *copy* of a public book in `private/` leaves the material public; `doctor` says so.
-  - **G-6:** `material remove` by hand is not logged.
-- **Next:** Avin's ⚑ decisions, then **step 2c-2** (the rest of the hand test's fixes, rows
-  [2c-2]), then **one independent review of 2c-1 and 2c-2 together**, then Avin re-tests
-  (`../MANUAL-TESTING.md`, "Step 2c-1" and 2c-2's section), then step 3.
+- **Avin decided the ⚑ items → D-041** (spec, decisions, ledger block "D-041", rows [2c-2]):
+  the local full text certifies itself (`body_hash`; stale-but-unedited is refreshed;
+  `private_text_hash` retired); last machine wins + a `doctor` note on a differing copy;
+  `course_gitignore_missing` (warn); G-5 as built; `material remove` does not log; `write.remove()`
+  and kept permissions; `.DS_Store` ignored; the `mode developer` check verifies `.gitignore` is
+  tracked. Avin deleted his `~/.gitignore_global` (it ignored `.gitignore` itself).
+- **Next:** **step 2c-2** — the D-040 and D-041 rows tagged [2c-2] in `../ROADMAP.md` — then **one
+  independent review of 2c-1 and 2c-2 together**, then Avin re-tests (`../MANUAL-TESTING.md`), then
+  step 3.
 
 ## State after Avin's hand test of steps 0–2b — 2026-10-01 (kept for history)
 

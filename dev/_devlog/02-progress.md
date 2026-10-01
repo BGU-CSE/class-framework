@@ -1633,3 +1633,13 @@ Gap report: `reviews/impl-gaps-step-2c-1.md` — 23 entries, six ⚑. The weight
    decide the ⚑ entries G-1 … G-6.
 2. **Step 2c-2** — the rest of the hand test's fixes. Then **one independent review of 2c-1 and
    2c-2 together**, then Avin re-tests (`MANUAL-TESTING.md`, "Step 2c-1"), then step 3.
+
+## Session 32 — 2026-10-01 — Step 2c-1's gap report decided (→ D-041); 2c-2 prepared
+
+Read the 2c-1 gap report, checked it (233 tests green; G-4's global excludes file, G-22's `0600`
+files and the one `unlink` outside the write path all confirmed). Claude's own spec error surfaced:
+"extraction is the same on every machine" holds for one library version only. Avin decided: G-1/G-3
+(b) self-certifying full text; G-2 (c) last machine wins + `doctor` note; G-4 `course_gitignore_missing`;
+G-5 as built; G-6 (a). Plain fixes added: `write.remove()`, kept permissions, `.DS_Store`, the mode
+check. Avin deleted `~/.gitignore_global`. Spec §8.6/§8.7/§8.4, D-041, ledger (177 changes).
+

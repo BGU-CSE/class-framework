@@ -84,7 +84,7 @@ Each step should end in something runnable and inspectable, not just green tests
 | **0. Foundation** ✅ | The overwrite-safe write path. Nothing else — this is deliberately thin. | D-031b |
 | **1. Initialize** ✅ | `classkit scaffold course` produces a complete, valid course skeleton *including* `syllabus/syllabus.md`. The teacher's first contact with the framework. | D-021 (schema, template, model, scaffold rows), D-031d |
 | **2. Ingest + course log** ✅ — **2a ✅** validation re-classification (D-037) + course log (D-036); **2b ✅** ingest (awaiting independent review and Avin's hand test on real materials) | `/ingest` end to end: pre-flight report, `classkit ingest` (extractors, anchors, manifest, incremental, hand-edit detection), classification and duplicate confirmation, `classkit add-url`, `material_locator_resolves`. Plus the course log — `classkit log` — since ingest is its first user. **Designed** (Q-028 → D-035, D-036). D-037 folded in as 2a, since it reworks the validator ingest's rule lands in. | D-035, D-036, D-037 |
-| **2c. The hand test's fixes** — **2c-1 ✅** privacy and `classkit doctor` (gap report `reviews/impl-gaps-step-2c-1.md`); **2c-2** the rest | From Avin's hand test of 0–2b (`reviews/manual-test-step-0-2b.md`). 2c-1: `source/private/` (committed index, local full text), `audience` and `instructor_material_cited`, `course/.gitignore`, `private_material_committed`, `classkit doctor`. 2c-2: duplicate detection and link harvesting dropped, `units: all`, `materials/coverage.md`, prose locators, refusal diff, `write --diff`, path kinds, and the plain extraction/UX fixes. Two implementation rounds, **one review after 2c-2**. Rows tagged **[2c-1]** / **[2c-2]** in the D-040 ledger block. | D-040 |
+| **2c. The hand test's fixes** — **2c-1 ✅** privacy and `classkit doctor` (gap report `reviews/impl-gaps-step-2c-1.md`); **2c-2** the rest | From Avin's hand test of 0–2b (`reviews/manual-test-step-0-2b.md`). 2c-1: `source/private/` (committed index, local full text), `audience` and `instructor_material_cited`, `course/.gitignore`, `private_material_committed`, `classkit doctor`. 2c-2: D-041 (the self-certifying full text, `course_gitignore_missing`, `write.remove()`, permissions, `.DS_Store`), duplicate detection and link harvesting dropped, `units: all`, `materials/coverage.md`, prose locators, refusal diff, `write --diff`, path kinds, and the plain extraction/UX fixes. Two implementation rounds, **one review after 2c-2**. Rows tagged **[2c-1]** / **[2c-2]** in the D-040 ledger block. | D-040 |
 | **3. Syllabus and units** | `/plan-units` end to end: syllabus schema and rules, `outcomes` on objectives, `syllabus-designer` + `curriculum-architect`, the file-based handoff. | D-021, D-029, D-031d, D-031i |
 | **4. Study sessions** | `answer`, `est_minutes`, `defer_to_class`, session-level `paths`, the budget rule, `study-session-designer`, the rewritten `estimating-study-time` skill. | D-019, D-020, D-023, D-025 |
 | **5. Entry quiz** | `model_answer` rename, `usage` scoping, `unit_has_entry_quiz_items`, `assessment-writer` scoped to the entry quiz. | D-031c, D-031g |
@@ -386,6 +386,18 @@ Tags: **[2c-1]** privacy and `doctor` · **[2c-2]** the rest of the hand test's 
 | ✅ | `CLAUDE.md`, `GETTING-STARTED.md`, `dev/MANUAL-TESTING.md` | **[2c-1]** private/, audience, doctor (the interim "don't commit book PDFs" warning is in `GETTING-STARTED.md` now) — done; also README, the scaffolded `source/README.md`, `dev/CLAUDE.md` |
 | ✅ | `tests/` | **[2c-1]** gitignore scaffolded; private index has no body text and its locators resolve; full text only in `private-text/`; missing private source not removed; `remove`; both rules at their severity; `doctor` reports each case — done: `tests/test_private_material.py`, `tests/test_doctor.py`, lifecycle rule tests |
 
+## D-041 — Step 2c-1 outcomes
+
+| | Artifact | Change |
+|---|---|---|
+| ⬜ | `src/classkit/ingest/`, `schemas/manifest.schema.json` | **[2c-2]** the full text certifies itself (`body_hash` in its front matter); a stale unedited full text is refreshed, not refused; `private_text_hash` retired (kept in the schema for old manifests) |
+| ⬜ | `src/classkit/doctor.py` | **[2c-2]** a note when this machine's private copy differs from the one the committed index was built from |
+| ⬜ | `src/classkit/validate.py` | **[2c-2]** `course_gitignore_missing` (warn, consistency) |
+| ⬜ | `src/classkit/write.py`, `ingest/` | **[2c-2]** `write.remove(path, expected_hash)`; ingest's one deletion goes through it; replacing a file keeps its permissions, new files get the umask default (not `0600`) |
+| ⬜ | `src/classkit/mode.py` | **[2c-2]** `classkit mode developer` also verifies `.gitignore` itself is tracked |
+| ⬜ | `.gitignore`, `templates/course/` (course `.gitignore`) | **[2c-2]** add `.DS_Store` |
+| ⬜ | `tests/` | **[2c-2]** a full text from another library version is not an edit; a stale unedited one is refreshed; an edited one refused; the differing-copy note; `course_gitignore_missing` at warn; `remove()` refuses a changed file; permissions kept; mode check refuses an untracked `.gitignore` |
+
 ## Cross-cutting
 
 | | Artifact | Change |
@@ -394,8 +406,9 @@ Tags: **[2c-1]** privacy and `doctor` · **[2c-2]** the rest of the hand test's 
 | ✅ | `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block was scaffolded and documented although Exports is deferred (G-16). **Removed from the template and the settings table** — shipping configuration for a feature that does not exist confuses a teacher reading their own `course.yaml`. The optional field stays in `course.schema.json`, so a course that sets it still validates |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-10-01 (after step 2c-1):** 16 decision blocks, 170 artifact changes, **61 built,
-5 in progress, 104 not started** — counted from the table. Step 2c-1 (D-040's [2c-1] rows: private
+**Count as of 2026-10-01 (after step 2c-1 and D-041):** 17 decision blocks, 177 artifact changes,
+**61 built, 5 in progress, 111 not started** — counted from the table. (After step 2c-1 alone: 170;
+61 / 5 / 104.) Step 2c-1 (D-040's [2c-1] rows: private
 material, `audience`, `classkit doctor`) is built; 2c-2 is next, then one review of both rounds.
 (After D-040 was designed: 51 / 5 / 114. After step 2b's review, D-039: 147 changes, 51 / 5 / 91.) Steps 0, 1, 2a and 2b
 are done (D-032 reopens step 1's syllabus; that lands in step 3), except the rows that belong to
