@@ -19,7 +19,25 @@ Then, for history and what is still open:
 6. `02-progress.md` (last block) — where we stopped.
 7. `03-open-questions.md` — what's unresolved.
 
-## Current state — 2026-10-01 (after step 2c-2)
+## Current state — 2026-10-01 (step 2 built and reviewed; awaiting Avin's re-test)
+
+**Step 2 (ingest, the course log, validation re-founding, privacy, `doctor`, the hand test's fixes)
+is built and independently reviewed.** Suite: **294 tests**, green. Ledger: 80 built, 6 in progress,
+96 not started — `../ROADMAP.md` is authoritative.
+
+- **The 2c review** (`../reviews/impl-review-step-2c.md`, Gemini): ready to build on, two nits (both
+  already resolved or a known D-041 cost). Thin — Claude's own check found the gap it missed:
+  agents could quote a private book into committed files (the coverage report; later sessions).
+  → **D-042**, built in Session 35: the rule (root `CLAUDE.md`, classifier, §8.7) and a `doctor`
+  check (12+ consecutive words shared with a private full text → ACTION).
+- **Next — Avin's re-test with a FRESH course** (`../MANUAL-TESTING.md`, Steps 2c-1 and 2c-2;
+  fresh because re-ingest keeps old titles, G-3 of 2c-2). Above all: **does CLRS now read
+  correctly** (F-09, the fontTools hypothesis — if not, the PDF extractor is a decision); the
+  low-yield thresholds; the classifier's untested new behaviour; `doctor`'s quotation check on the
+  saved coverage report. **Step 2 closes after it**; then step 3 (`/plan-units`, D-032, and D-040's
+  `unit_map` / incremental planning).
+
+## State after step 2c-2 — 2026-10-01 (kept for history)
 
 **Step 2c-2 is built** (Session 33): every ledger row tagged [2c-2] in the D-040 and D-041 blocks.
 Suite: **289 tests**, green. Ledger: 76 built, 6 in progress, 95 not started — `../ROADMAP.md` is

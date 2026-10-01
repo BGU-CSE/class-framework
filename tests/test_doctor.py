@@ -275,3 +275,62 @@ def test_a_private_copy_of_a_committed_file_does_not_make_it_private(course: Pat
     ingest.run(course, fetch=False)
     assert not find(course, doctor.ACTION, "identical copy")
     assert ingest.load(course)[0]["private"] is True
+
+
+# -- quotation of private material (D-042) ------------------------------------------
+
+BOOK_SENTENCE = ("a heap is a nearly complete binary tree in which the key of every node is at "
+                 "least as large as the keys of its children")
+
+
+def with_text_book(course: Path) -> None:
+    private(course).mkdir(parents=True, exist_ok=True)
+    (private(course) / "book.md").write_text(
+        f"# The book\n\n## Heaps\n\n{BOOK_SENTENCE.capitalize()}. More text follows here.\n",
+        encoding="utf-8")
+    ingest.run(course, fetch=False)
+
+
+def coverage(course: Path, text: str) -> None:
+    (course / "materials" / "coverage.md").write_text(f"# Coverage\n\n{text}\n", encoding="utf-8")
+
+
+def test_a_course_file_copying_a_private_book_needs_action(course: Path):
+    with_text_book(course)
+    coverage(course, f'The book says: "{BOOK_SENTENCE.upper()}." (M0001#heaps)')
+
+    found = find(course, doctor.ACTION, "coverage.md", "M0001#heaps")
+    assert len(found) == 1
+    assert "26 consecutive words" in found[0].what  # the whole sentence
+    assert exit_code(course) == 1
+
+
+def test_a_paraphrase_and_a_short_phrase_pass(course: Path):
+    with_text_book(course)
+    coverage(course, "Heaps keep the largest key at the root; see M0001#heaps. The book calls "
+                     "it a nearly complete binary tree, and so do we.")
+
+    assert not find(course, doctor.ACTION, "copies")
+    assert find(course, doctor.OK, "no committed course file copies")
+
+
+def test_the_course_log_is_checked_too(course: Path):
+    with_text_book(course)
+    with (course / "LOG.md").open("a", encoding="utf-8") as log:
+        log.write(f"\n## note\n- **Why:** {BOOK_SENTENCE}\n")
+
+    assert find(course, doctor.ACTION, "LOG.md", "M0001")
+
+
+def test_the_index_and_the_full_text_themselves_are_not_flagged(course: Path):
+    with_text_book(course)
+    assert not find(course, doctor.ACTION, "copies")
+
+
+def test_without_the_full_text_the_check_says_it_was_skipped(course: Path):
+    with_text_book(course)
+    coverage(course, BOOK_SENTENCE)
+    private_text_file(course, "M0001").unlink()
+
+    assert find(course, doctor.OK, "quotation check skipped")
+    assert not find(course, doctor.ACTION, "copies")

@@ -155,6 +155,11 @@ bibliography, publisher pages and references: they are not course materials. The
 - **No invented resources.** Cite only materials in the manifest and anchors in their ingested
   files. If the materials do not cover something, say it is missing; do not fill the gap from
   memory as though it were in the course.
+- **Never copy text from a private material** into your report (D-042). It is saved to
+  `materials/coverage.md`, which is committed: a quoted passage of a private book puts the book's
+  text in git. Describe what a page covers in your own words and cite it (`M0005#page-63`); at most a
+  short phrase in quotation marks. `classkit doctor` flags 12 or more consecutive words shared with a
+  private full text.
 - **Say what you guessed.** A kind or unit you are unsure of is marked as such in the table.
 - **Citing a book.** A locator into a textbook is a physical page (`M0003#page-63`), which may not be
   the page number printed on it. Whenever you name a place in a book, also give the book's own

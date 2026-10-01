@@ -42,6 +42,15 @@ NOTE = "note"
 #: The paths the scaffolded course/.gitignore must keep out of git, relative to the course.
 IGNORED = ("materials/source/private/", "materials/private-text/")
 
+#: A run of this many consecutive words, shared by a committed course file and a private full
+#: text, counts as copied (D-042). Long enough that a definition's usual phrasing ("a binary tree
+#: in which every node …") does not trigger it; short enough to catch a copied sentence.
+QUOTE_WORDS = 12
+
+#: Course files that are not checked for quotation: the teacher's sources, derived ingest output
+#: (the index's labels come from the book by design), and the local full texts themselves.
+NOT_SCANNED = ("materials/source", "materials/ingested", "materials/private-text")
+
 #: Distribution name → the module it is imported as, where they differ.
 MODULES = {"pyyaml": "yaml", "python-pptx": "pptx", "python-docx": "docx", "fonttools": "fontTools"}
 
@@ -66,6 +75,7 @@ def diagnose(course_root: Path, framework_root: Path | None = None) -> list[Line
     return [
         *check_gitignore(course_root),
         *check_private_material(course_root),
+        *check_quotation(course_root),
         *check_dependencies(),
         *check_converters(course_root),
         *check_mode(framework_root),
@@ -273,6 +283,93 @@ def check_private_material(course_root: Path) -> list[Line]:
 
 
 # -- the machine ----------------------------------------------------------------------
+
+# -- quotation of private material -----------------------------------------------------
+
+_WORD = re.compile(r"\w+", re.UNICODE)
+_ANCHOR = re.compile(r"^#{1,6}\s+(.+?)\s*$", re.MULTILINE)
+
+
+def _words(text: str) -> list[str]:
+    return [w.lower() for w in _WORD.findall(text)]
+
+
+def _shingles(course_root: Path, records: list[dict]) -> dict[int, tuple[str, str]]:
+    """Every QUOTE_WORDS-word run of every private full text on this machine → (id, anchor)."""
+    index: dict[int, tuple[str, str]] = {}
+    for record in records:
+        path = private_text_file(course_root, str(record.get("id")))
+        if path is None:
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        # Section by section, so a match can name its anchor (`page-63`).
+        bounds = [(m.start(), m.group(1)) for m in _ANCHOR.finditer(text)]
+        sections = [(0, "")] + bounds
+        for i, (start, heading) in enumerate(sections):
+            end = sections[i + 1][0] if i + 1 < len(sections) else len(text)
+            anchor = extract.slug(heading) if heading else ""
+            words = _words(text[start:end])
+            for k in range(len(words) - QUOTE_WORDS + 1):
+                index.setdefault(hash(tuple(words[k:k + QUOTE_WORDS])), (record["id"], anchor))
+    return index
+
+
+def _scanned_files(course_root: Path) -> list[Path]:
+    files = []
+    for path in sorted(course_root.rglob("*.md")):
+        rel = path.relative_to(course_root).as_posix()
+        if any(rel == p or rel.startswith(p + "/") for p in NOT_SCANNED):
+            continue
+        if any(part.startswith(".") for part in path.relative_to(course_root).parts):
+            continue
+        files.append(path)
+    return files
+
+
+def check_quotation(course_root: Path) -> list[Line]:
+    """D-042: no committed course file may copy text from a private material. Only a machine
+    that has the full texts can check it — which is why it is here and not in `validate`."""
+    try:
+        records = [r for r in load(course_root) if isinstance(r, dict)]
+    except ManifestError:
+        return []  # check_private_material already reports an unreadable manifest
+    private_records = [r for r in active(records) if r.get(PRIVATE)]
+    if not private_records:
+        return []
+    index = _shingles(course_root, private_records)
+    if not index:
+        return [Line(OK, "quotation check skipped: no private full text on this machine to "
+                         "compare against")]
+
+    lines: list[Line] = []
+    for path in _scanned_files(course_root):
+        words = _words(path.read_text(encoding="utf-8", errors="replace"))
+        # Longest run per material: consecutive matching windows extend one run.
+        runs: dict[str, tuple[int, str]] = {}
+        run_len, run_source = 0, None
+        for k in range(len(words) - QUOTE_WORDS + 1):
+            hit = index.get(hash(tuple(words[k:k + QUOTE_WORDS])))
+            if hit is not None and run_source is not None and hit[0] == run_source[0]:
+                run_len += 1
+            elif hit is not None:
+                run_len, run_source = 1, hit
+            else:
+                run_len, run_source = 0, None
+            if run_source is not None:
+                length = run_len + QUOTE_WORDS - 1
+                if length > runs.get(run_source[0], (0, ""))[0]:
+                    runs[run_source[0]] = (length, run_source[1])
+        rel = path.relative_to(course_root.parent).as_posix()
+        for mid, (length, anchor) in sorted(runs.items()):
+            where = f"{mid}#{anchor}" if anchor else mid
+            lines.append(Line(
+                ACTION,
+                f"{rel} copies {length} consecutive words of private material {where} — "
+                "committed, it puts the book's text in git",
+                f"rewrite it in your own words and cite the place: `{where}`",
+            ))
+    return lines or [Line(OK, "no committed course file copies text from a private material")]
+
 
 def _requirements() -> list[str]:
     try:

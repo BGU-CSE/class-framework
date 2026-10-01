@@ -322,6 +322,10 @@ fresh course.
   that reads fine?
 - **Is the refusal diff enough to decide** keep or overwrite without opening the files?
 - **Does the coverage report's scope read as honest** about what is not uploaded yet?
+- **Does the coverage report quote the private book?** It must not (D-042). Run
+  `.venv/bin/classkit doctor` after `/ingest`: any committed file sharing 12+ consecutive words
+  with a private full text is an ACTION. Also read the report yourself — the check catches copying,
+  not close paraphrase.
 
 ---
 

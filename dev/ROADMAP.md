@@ -84,7 +84,7 @@ Each step should end in something runnable and inspectable, not just green tests
 | **0. Foundation** ✅ | The overwrite-safe write path. Nothing else — this is deliberately thin. | D-031b |
 | **1. Initialize** ✅ | `classkit scaffold course` produces a complete, valid course skeleton *including* `syllabus/syllabus.md`. The teacher's first contact with the framework. | D-021 (schema, template, model, scaffold rows), D-031d |
 | **2. Ingest + course log** ✅ — **2a ✅** validation re-classification (D-037) + course log (D-036); **2b ✅** ingest (awaiting independent review and Avin's hand test on real materials) | `/ingest` end to end: pre-flight report, `classkit ingest` (extractors, anchors, manifest, incremental, hand-edit detection), classification and duplicate confirmation, `classkit add-url`, `material_locator_resolves`. Plus the course log — `classkit log` — since ingest is its first user. **Designed** (Q-028 → D-035, D-036). D-037 folded in as 2a, since it reworks the validator ingest's rule lands in. | D-035, D-036, D-037 |
-| **2c. The hand test's fixes** — **2c-1 ✅** privacy and `classkit doctor` (gap report `reviews/impl-gaps-step-2c-1.md`); **2c-2 ✅** the rest (gap report `reviews/impl-gaps-step-2c-2.md`); **review of both next** | From Avin's hand test of 0–2b (`reviews/manual-test-step-0-2b.md`). 2c-1: `source/private/` (committed index, local full text), `audience` and `instructor_material_cited`, `course/.gitignore`, `private_material_committed`, `classkit doctor`. 2c-2: D-041 (the self-certifying full text, `course_gitignore_missing`, `write.remove()`, permissions, `.DS_Store`), duplicate detection and link harvesting dropped, `units: all`, `materials/coverage.md`, prose locators, refusal diff, `write --diff`, path kinds, and the plain extraction/UX fixes. Two implementation rounds, **one review after 2c-2**. Rows tagged **[2c-1]** / **[2c-2]** in the D-040 ledger block. | D-040 |
+| **2c. The hand test's fixes** — **2c-1 ✅** privacy and `classkit doctor` (gap report `reviews/impl-gaps-step-2c-1.md`); **2c-2 ✅** the rest (gap report `reviews/impl-gaps-step-2c-2.md`); **reviewed ✅** (`reviews/impl-review-step-2c.md`; its outcome is D-042). **Step 2 closes after Avin's re-test** with a fresh course | From Avin's hand test of 0–2b (`reviews/manual-test-step-0-2b.md`). 2c-1: `source/private/` (committed index, local full text), `audience` and `instructor_material_cited`, `course/.gitignore`, `private_material_committed`, `classkit doctor`. 2c-2: D-041 (the self-certifying full text, `course_gitignore_missing`, `write.remove()`, permissions, `.DS_Store`), duplicate detection and link harvesting dropped, `units: all`, `materials/coverage.md`, prose locators, refusal diff, `write --diff`, path kinds, and the plain extraction/UX fixes. Two implementation rounds, **one review after 2c-2**. Rows tagged **[2c-1]** / **[2c-2]** in the D-040 ledger block. | D-040 |
 | **3. Syllabus and units** | `/plan-units` end to end: syllabus schema and rules, `outcomes` on objectives, `syllabus-designer` + `curriculum-architect`, the file-based handoff. | D-021, D-029, D-031d, D-031i |
 | **4. Study sessions** | `answer`, `est_minutes`, `defer_to_class`, session-level `paths`, the budget rule, `study-session-designer`, the rewritten `estimating-study-time` skill. | D-019, D-020, D-023, D-025 |
 | **5. Entry quiz** | `model_answer` rename, `usage` scoping, `unit_has_entry_quiz_items`, `assessment-writer` scoped to the entry quiz. | D-031c, D-031g |
@@ -398,6 +398,16 @@ Tags: **[2c-1]** privacy and `doctor` · **[2c-2]** the rest of the hand test's 
 | ✅ | `.gitignore`, `templates/course/` (course `.gitignore`) | **[2c-2]** add `.DS_Store` |
 | ✅ | `tests/` | **[2c-2]** a full text from another library version is not an edit; a stale unedited one is refreshed; an edited one refused; the differing-copy note; `course_gitignore_missing` at warn; `remove()` refuses a changed file; permissions kept; mode check refuses an untracked `.gitignore` |
 
+## D-042 — Agents never copy private text into course files
+
+| | Artifact | Change |
+|---|---|---|
+| ✅ | `src/classkit/doctor.py` | `check_quotation`: a committed course Markdown file sharing 12+ consecutive words with a private full text on this machine is an ACTION (file, material, anchor); the course log included; `source/`, `ingested/`, `private-text/` excluded; skipped where no full text is present |
+| ✅ | `CLAUDE.md`, `.claude/agents/material-classifier.md` | the rule: cite by locator, own words, at most a short quoted phrase |
+| ✅ | `dev/FRAMEWORK-SPEC.md`, `dev/MANUAL-TESTING.md` | §8.7 and §9; a re-test check |
+| ✅ | `tests/test_doctor.py` | a copied sentence flagged with its length and anchor; a paraphrase and a short phrase pass; the log is checked; the index and full text are not; skipped without the full text |
+| ⬜ | `.claude/agents/` that read material (study-session-designer, lesson-planner, assessment-writer, course-critic, topic-researcher) | state the rule in each, as each is rewritten (steps 4–7); the root `CLAUDE.md` carries it until then |
+
 ## Cross-cutting
 
 | | Artifact | Change |
@@ -406,8 +416,9 @@ Tags: **[2c-1]** privacy and `doctor` · **[2c-2]** the rest of the hand test's 
 | ✅ | `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block was scaffolded and documented although Exports is deferred (G-16). **Removed from the template and the settings table** — shipping configuration for a feature that does not exist confuses a teacher reading their own `course.yaml`. The optional field stays in `course.schema.json`, so a course that sets it still validates |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-10-01 (after step 2c-2):** 17 decision blocks, 177 artifact changes,
-**76 built, 6 in progress, 95 not started** — counted from the table. Step 2c-2 (every [2c-2] row in
+**Count as of 2026-10-01 (after step 2c's review, D-042):** 18 decision blocks, 182 artifact
+changes, **80 built, 6 in progress, 96 not started** — counted from the table. Step 2 is built and
+reviewed; it closes after Avin's re-test with a fresh course. (After step 2c-2: 177; 76 / 6 / 95.) Step 2c-2 (every [2c-2] row in
 the D-040 and D-041 blocks) is built; the path-kinds row is 🔨 because its step-4 half remains. Next:
 one independent review of 2c-1 and 2c-2 together. (After step 2c-1 and D-041: 61 / 5 / 111 of 177.
 After step 2c-1 alone: 170; 61 / 5 / 104.)

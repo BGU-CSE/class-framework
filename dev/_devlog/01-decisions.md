@@ -1456,3 +1456,25 @@ false — Claude's error, the second unverified claim about the code in two roun
 is the same on every machine"); the implementer fixed the extraction. Claude now verifies a claim
 about the code before writing it into the spec.
 
+## D-042 — Agents never copy private text into course files; `doctor` checks for it
+**Date:** 2026-10-01 · **Status:** locked (design + implemented) · sources:
+`reviews/impl-review-step-2c.md` (Gemini review of 2c-1 + 2c-2) and Claude's own check of it
+
+The independent review of 2c-1 and 2c-2 found nothing blocking or should-fix (two nits, both
+already resolved or known). Claude's assessment: thin — it did not say how it searched committed
+files for the book's text, and it missed the one real gap although the review prompt named the place.
+**The gap:** D-040's guarantee ("no body text of a private material reaches a committed file") is
+enforced in code only for what *code* writes. Agents read the full text and write committed files —
+the coverage report (now saved, `materials/coverage.md`), and from steps 4–6 sessions, answers'
+notes, activities — and nothing told them not to quote. Neither implementer nor the reviewer caught
+it. **Decided (Avin):** both layers —
+1. **the rule**, in the root `CLAUDE.md`, the classifier and §8.7: cite by locator, own words, at
+   most a short quoted phrase;
+2. **the check**, in `classkit doctor` (only a machine with the full text can make it): any
+   committed course Markdown file sharing **12+ consecutive words** with a private full text is an
+   ACTION naming the file, material and anchor; the course log is included; skipped, and said so,
+   where no full text is present.
+Cost: catches verbatim copying only; 12 is a first guess; a few seconds and ~150 MB on a book-sized
+text. 294 tests (+5). Review nits: (1) the deletion is already through `write.remove()`; (2) a
+globally-ignored `.gitignore` is caught only by `doctor` — the stated cost of D-041.
+

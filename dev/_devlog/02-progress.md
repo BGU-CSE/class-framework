@@ -1713,3 +1713,15 @@ Pulled 2c-2, 289 tests green. Avin accepted G-1/G-2/G-3 as built (D-041 addendum
 second unverified claim of Claude's in the spec (hyperlinks "readable" in the ingested text) — now
 a working rule: verify before writing a claim about the code. Next: one review of 2c-1 + 2c-2.
 
+## Session 35 — 2026-10-01 — The 2c review checked; D-042 built; step 2 ready for re-test
+
+The independent review of 2c-1 + 2c-2 (Gemini) found nothing blocking. Claude checked it: no write
+or delete outside `classkit.write` (only `mode.py`'s developer marker, which is framework-side); the
+removals complete; but a real gap missed by both implementers and the reviewer — agents read a
+private book's full text and write committed files, and nothing stopped them quoting it. Avin chose
+both layers → **D-042**: the rule (root `CLAUDE.md`, classifier, spec §8.7/§9) and
+`doctor.check_quotation` (12-word shingles; ~2.8 s and ~150 MB on a 600k-word text, measured).
+Two test-expectation errors of Claude's own were caught by running the tests (a "short phrase" that
+shared exactly 12 words; a sentence miscounted as 25 words). 294 tests. Step 2 marked built and
+reviewed in the ROADMAP, closing after Avin's re-test.
+

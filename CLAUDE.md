@@ -186,6 +186,11 @@ their own** — only when you ask — and they never "fix" something you decided
   fabricated reference fails a student mid-session. Prefer a material locator (`M0007#slide-18`):
   the validator catches a slide that does not exist — though not one that exists but is wrong.
   Always write a locator in full, `M0005#page-39`, never the shorthand `#page-39`.
+- **Never copy text from a private material into a course file** (D-042). A private book or manual
+  (`materials/source/private/`) may be *read* in full on this machine, but its text must not reach
+  anything committed — a session, an activity, a note, the coverage report, the course log. Cite the
+  place by locator and say it in your own words; at most a short phrase in quotation marks.
+  `classkit doctor` flags any course file sharing 12 or more consecutive words with a private text.
 - **Fix what you caused; never overrule the teacher.** Resolve or report any finding your own output
   produced. Never add `accepted:`, change `rules:`, or raise a threshold unless the teacher asks.
 - **Every activity in the class hour builds on the home study.** An activity that references no

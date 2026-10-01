@@ -1220,6 +1220,18 @@ is itself committed — a global excludes file that lists `.gitignore` defeats t
   is gone, the private one becomes canonical and the next ingest makes the material private.
   Preferring a private path as canonical was rejected: it would commit an index while the PDF itself
   stayed committed — a false sense of privacy.
+- **Agents never copy text from a private material into a course file** (D-042). Code keeps the
+  text out of what *code* writes (the index); but agents read the full text and write committed
+  files too — the coverage report, sessions, activities, notes, the course log. The rule, in the
+  root `CLAUDE.md` and each agent that reads material: cite by locator, say it in your own words, at
+  most a short phrase in quotation marks. The check is in `classkit doctor` — only a machine with
+  the full text can make it: every committed course Markdown file (all of `course/` except
+  `materials/source/`, `materials/ingested/` and `materials/private-text/`; the course log
+  included) is compared with every private full text here, and a run of **12 or more consecutive
+  words** in common is an ACTION naming the file, the material and its anchor. It catches verbatim
+  copying, not close paraphrase; the threshold is a first guess. On a machine with no private full
+  text the check is skipped and says so. Cost: on a book-sized text (~600k words) it takes a few
+  seconds and ~150 MB.
 - **The framework does not decide what is copyrighted.** The classifying agent may say "this looks
   like a published book — consider moving it to `source/private/`"; the move is the teacher's.
 - Without an outline (a scan, some exports) the index has pages and printed labels but no sections.
@@ -1505,6 +1517,10 @@ Honest list, kept current.
   (D-039) — it returns, and the command records. The agents that still have `Bash` are reviewed as
   each is rewritten (G-4 carry-over). The orchestrating session itself has every tool; invariant 5
   is a guarantee of the write path, not a sandbox.
+- **Keeping a private book's text out of git rests partly on agents** (D-042). Code writes only an
+  index; an agent that reads the full text could still copy it into a committed file. The rule is a
+  prompt; `doctor` catches verbatim runs of 12+ words, on a machine with the full text, when run —
+  not paraphrase, and not between runs.
 - **A course with private material is not self-contained** (D-040). Another clone has the index
   but not the book: agents there can cite and validate it, not read it. A new private file is not
   reported by `validate` (which ignores `private/`, to stay the same on every machine) — only by
