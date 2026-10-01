@@ -9,7 +9,7 @@ from pathlib import Path
 
 import yaml
 
-from . import ingest, log
+from . import doctor, ingest, log
 from .frontmatter import FrontMatterError
 from .ingest import links as linkfile
 from .ingest.manifest import AUDIENCES, KINDS, SOURCE_DIR, ManifestError
@@ -216,6 +216,15 @@ def build_parser() -> argparse.ArgumentParser:
     remove_cmd.add_argument("--course", help="course directory (default: search upward)")
     dupes = actions.add_parser("duplicates", help="list materials that look like duplicates")
     dupes.add_argument("--course", help="course directory (default: search upward)")
+
+    # This machine's copy of the course (D-040): `validate` judges the course, `doctor` the
+    # machine — private files present or stale, the .gitignore, dependencies, converters, mode.
+    doctor_cmd = subcommands.add_parser(
+        "doctor",
+        help="check this machine's copy of the course: private files, .gitignore, dependencies "
+             "(read-only; exit 1 if something needs action)",
+    )
+    doctor_cmd.add_argument("--course", help="course directory (default: search upward)")
 
     # Which hat a session in this repo wears (D-034). Teacher is the default; switching
     # to framework-developer creates a gitignored marker, and refuses if the ignore rule
@@ -465,6 +474,17 @@ def run_material(args) -> int:
     return 0
 
 
+def run_doctor(args) -> int:
+    course_root = find_course_root(Path(args.course) if args.course else None)
+    try:
+        framework_root = find_framework_root(course_root)
+    except LayoutError:
+        framework_root = None
+    lines = doctor.diagnose(course_root, framework_root)
+    print(doctor.report(lines))
+    return 1 if any(line.status == doctor.ACTION for line in lines) else 0
+
+
 def run_mode(args, framework_root: Path) -> int:
     if args.mode is None:
         mode = current_mode(framework_root)
@@ -506,6 +526,8 @@ def main(argv: list[str] | None = None) -> int:
             return run_add_url(args)
         if args.command == "material":
             return run_material(args)
+        if args.command == "doctor":
+            return run_doctor(args)
         framework_root = find_framework_root()
         if args.command == "mode":
             return run_mode(args, framework_root)
