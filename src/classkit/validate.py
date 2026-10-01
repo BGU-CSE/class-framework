@@ -24,6 +24,7 @@ then suppressed, and counted rather than hidden.
 from __future__ import annotations
 
 import re
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -46,6 +47,10 @@ DEFAULT_SEVERITY = {
     "material_locator_resolves": "error",
     # -- advisory, high priority: the coverage chain -----------------------
     "objective_coverage": "alert",
+    # D-040, consistency: a student-facing place points at instructor-only material. An alert,
+    # not an error — nothing reaches a student until it is published, and every exporter
+    # refuses instructor material in code (the hard guarantee is there).
+    "instructor_material_cited": "alert",
     # -- advisory ----------------------------------------------------------
     "schema_unavailable": "warn",
     "unit_count": "warn",
@@ -68,6 +73,8 @@ DEFAULT_SEVERITY = {
     "unknown_rule": "warn",
     "accepted_without_reason": "warn",
     "materials_not_ingested": "warn",
+    # D-040, consistency: git tracks private material — it is in the repo's history.
+    "private_material_committed": "warn",
 }
 
 # The order findings are printed in: alerts first (spec §8.4), then errors, then warnings.
@@ -96,6 +103,21 @@ LOCATOR_FIELDS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("activities", "*", "materials", "*"),  # what an activity uses in the room
     ),
 }
+
+# The student-facing subset of LOCATOR_FIELDS (D-040): a material cited here is one a student
+# is pointed at, so it must not be `audience: instructor` (`instructor_material_cited`). Step 4
+# adds the guiding question's `answer[].ref` and the session-level `paths[].ref`; later phases a
+# Gem's knowledge files. `activities[].materials` is deliberately absent: the in-class plan is
+# the teacher's, and "discuss the manual's solution on p. 13" is legitimate there.
+STUDENT_FACING_FIELDS: dict[str, tuple[tuple[str, ...], ...]] = {
+    "session": (
+        ("goals", "*", "paths", "*", "ref"),  # a study path's resource
+    ),
+}
+
+# What `private_material_committed` asks git about (D-040). `:(icase)` because macOS git ignores
+# `Private/` too, and ingest treats any case of it as private.
+PRIVATE_PATHSPECS = (":(icase)materials/source/private", ":(icase)materials/private-text")
 
 # `M0007` or `M0007#slide-18` inside a string — not part of a longer word, a URL path, or an
 # anchor of its own.
@@ -705,27 +727,35 @@ class Validator:
 
     def check_materials(self) -> None:
         self.check_material_locators()
+        self.check_instructor_material()
         self.check_materials_ingested()
+        self.check_private_material_committed()
 
-    def check_material_locators(self) -> None:
-        """Every `M<NNNN>` / `M<NNNN>#anchor` names a material that exists and, if it names an
-        anchor, a heading that exists in that material's ingested file (D-035). Integrity: a
-        fabricated "slide 18" of a 12-slide deck is a reference to something that does not exist.
-        It proves the place exists — not that the answer is there; that is the critic's job."""
+    def _cited(self, table: dict[str, tuple[tuple[str, ...], ...]]) -> list[tuple[object, str, str | None]]:
+        """Every material locator in the fields `table` names: (document, material id, anchor)."""
         documents: list[tuple[str, object]] = []
         for unit in self.course.units:
             documents += [("session", s) for s in unit.sessions]
             if unit.in_class is not None:
                 documents.append(("in-class", unit.in_class))
-
-        cited = [
+        return [
             (doc, match.group(1), match.group(2))
             for kind, doc in documents
-            for field_path in LOCATOR_FIELDS.get(kind, ())
+            for field_path in table.get(kind, ())
             for value in _reach(doc.data, field_path)
             if isinstance(value, str)
             for match in LOCATOR.finditer(value)
         ]
+
+    def check_material_locators(self) -> None:
+        """Every `M<NNNN>` / `M<NNNN>#anchor` names a material that exists and, if it names an
+        anchor, a heading that exists in that material's ingested file (D-035). Integrity: a
+        fabricated "slide 18" of a 12-slide deck is a reference to something that does not exist.
+        It proves the place exists — not that the answer is there; that is the critic's job.
+
+        A private material's committed file is its index (D-040), which has every anchor of the
+        full text — so its locators resolve on every clone, with or without the book."""
+        cited = self._cited(LOCATOR_FIELDS)
         if not cited:
             return
 
@@ -767,10 +797,64 @@ class Validator:
             if problem:
                 self.report("material_locator_resolves", doc.path, f"cites {locator}, but {problem}")
 
+    def check_instructor_material(self) -> None:
+        """A student-facing place (STUDENT_FACING_FIELDS) cites a material whose `audience` is
+        `instructor` — a solutions manual in a study path (D-040). Advisory, high priority: the
+        teacher may mean it, and nothing reaches a student until it is published; the hard
+        guarantee is the exporters' refusal. A consistency rule."""
+        cited = self._cited(STUDENT_FACING_FIELDS)
+        if not cited:
+            return
+        materials = {str(r.get("id")): r for r in (self._manifest() or []) if isinstance(r, dict)}
+        for doc, material_id, anchor in cited:
+            record = materials.get(material_id)
+            if record is None or record.get("audience") != "instructor":
+                continue
+            locator = material_id + (f"#{anchor}" if anchor else "")
+            self.report(
+                "instructor_material_cited",
+                doc.path,
+                f"cites {locator} in a study path, but {material_id} ({record.get('title')}) is "
+                "for instructors only (audience: instructor) — students would be pointed at it. "
+                "Cite it from the in-class plan instead; or, if students may see it, "
+                f"`classkit material set {material_id} --audience student`.",
+            )
+
+    def check_private_material_committed(self) -> None:
+        """Git tracks a file under `materials/source/private/` or `materials/private-text/`
+        (D-040): it is in the repository's history, and the .gitignore did not stop it — it was
+        added before, or forced. Detecting is the framework's; cleaning history is the
+        teacher's. Asks git, so every clone gets the same answer; outside a git repository, or
+        without git, it is skipped silently (`classkit doctor` says why). A consistency rule."""
+        try:
+            result = subprocess.run(
+                ["git", "ls-files", "-z", "--", *PRIVATE_PATHSPECS],
+                cwd=self.course.root, capture_output=True, check=False,
+            )
+        except OSError:
+            return
+        if result.returncode != 0:
+            return  # not a git repository
+        tracked = [p for p in result.stdout.decode("utf-8", "replace").split("\0") if p]
+        if not tracked:
+            return
+        shown = ", ".join(tracked[:5]) + (f", and {len(tracked) - 5} more" if len(tracked) > 5 else "")
+        self.report(
+            "private_material_committed",
+            self.course.root / "materials" / "manifest.yaml",
+            f"git tracks {len(tracked)} private file(s): {shown}. They are in the repository's "
+            "history, so anyone with the repo has them. `git rm --cached PATH` stops tracking a "
+            "file from the next commit; removing it from history (e.g. git filter-repo) is your "
+            "decision. Run `classkit doctor` to check that course/.gitignore covers private/.",
+        )
+
     def check_materials_ingested(self) -> None:
         """A source file that is new, changed, moved or gone since the last ingest — the
         manifest, and so every locator check, is out of date. Advisory: the teacher may be
-        mid-way through adding material."""
+        mid-way through adding material.
+
+        Ignores `source/private/` (D-040): what is there differs per machine, and `validate`
+        must give the same answer on every clone. `classkit doctor` reports it."""
         from .ingest import core, links  # noqa: PLC0415
         from .ingest.manifest import ManifestError, load  # noqa: PLC0415
 
@@ -781,7 +865,7 @@ class Validator:
         files = core.scan(self.course.root)
         listed = links.read(self.course.root / "materials" / "source")
         _state, plan = core.reconcile(self.course.root, [r for r in records if isinstance(r, dict)],
-                                      files, listed)
+                                      files, listed, local=False)
         outstanding = plan.outstanding()
         if not outstanding:
             return

@@ -774,3 +774,112 @@ def test_a_malformed_manifest_record_fails_the_schema(course_root: Path):
 def test_an_unreadable_manifest_is_an_error_not_a_crash(course_root: Path):
     (course_root / "materials" / "manifest.yaml").write_text("- id: [unclosed\n", encoding="utf-8")
     assert levels(course_root, "schema") == {"error"}
+
+
+# -- private and instructor-only material (D-040) ----------------------------
+
+def ingest_a_manual(course_root: Path, audience: str = "instructor", *, private: bool = False) -> None:
+    """A small solutions-manual PDF, ingested as M0001 with the given audience."""
+    from materials_fixtures import make_pdf
+
+    from classkit import ingest
+
+    folder = course_root / "materials" / "source" / ("private" if private else "")
+    make_pdf(folder / "manual.pdf", ["Solution 6.1-1", "Solution 6.1-2", "Solution 6.2-1"])
+    ingest.run(course_root, fetch=False)
+    ingest.set_fields(course_root, "M0001", kind="exercise", audience=audience)
+
+
+def test_citing_instructor_material_in_a_study_path_is_an_alert(course_root: Path):
+    """F-22: the solutions manual cited to students passed silently."""
+    ingest_a_manual(course_root)
+    cite(course_root, "M0001#page-2")
+    found = [f for f in findings(course_root) if f.code == "instructor_material_cited"]
+    assert {f.level for f in found} == {"alert"}
+    assert "M0001#page-2" in found[0].message and "audience: instructor" in found[0].message
+    assert errors(course_root) == []  # an alert, never an error (D-037, D-040)
+
+
+def test_citing_student_material_in_a_study_path_is_fine(course_root: Path):
+    ingest_a_manual(course_root, audience="student")
+    cite(course_root, "M0001#page-2")
+    assert levels(course_root, "instructor_material_cited") == set()
+
+
+def test_instructor_material_in_the_in_class_plan_is_legitimate(course_root: Path):
+    """The hour is the teacher's: "discuss the manual's solution on p. 2" is allowed there."""
+    ingest_a_manual(course_root)
+    text = in_class(course_root).read_text(encoding="utf-8")
+    end = text.index("\n", text.index("  - id: U01-A1"))
+    in_class(course_root).write_text(
+        text[: end + 1] + "    materials: [\"M0001#page-2\"]\n" + text[end + 1 :], encoding="utf-8"
+    )
+    assert levels(course_root, "instructor_material_cited") == set()
+    assert levels(course_root, "material_locator_resolves") == set()
+
+
+def test_a_teacher_may_accept_an_instructor_citation(course_root: Path):
+    ingest_a_manual(course_root)
+    cite(course_root, "M0001#page-2")
+    edit(session(course_root, 1), "goals:", "accepted:\n  - rule: instructor_material_cited\n"
+         "    reason: \"TA-only revision session\"\ngoals:")
+    assert levels(course_root, "instructor_material_cited") == set()
+
+
+def test_a_new_file_in_private_does_not_make_validate_differ_per_machine(course_root: Path):
+    """What is under source/private/ differs per machine; validate ignores it (spec §2.2)."""
+    from materials_fixtures import make_pdf
+
+    make_pdf(course_root / "materials" / "source" / "private" / "clrs.pdf", ["Heaps"])
+    assert levels(course_root, "materials_not_ingested") == set()
+    (course_root / "materials" / "source" / "notes.md").write_text("# Notes\n", encoding="utf-8")
+    assert levels(course_root, "materials_not_ingested") == {"warn"}  # the rest is still checked
+
+
+def test_a_private_source_missing_here_is_not_reported_by_validate(course_root: Path):
+    ingest_a_manual(course_root, audience="student", private=True)
+    cite(course_root, "M0001#page-3")
+    (course_root / "materials" / "source" / "private" / "manual.pdf").unlink()  # a TA's clone
+    assert levels(course_root, "materials_not_ingested") == set()
+    assert levels(course_root, "material_locator_resolves") == set()  # resolves against the index
+
+
+def git(course_root: Path, *args: str) -> None:
+    import subprocess
+
+    subprocess.run(["git", *args], cwd=course_root.parent, check=True, capture_output=True)
+
+
+needs_git = pytest.mark.skipif(__import__("shutil").which("git") is None, reason="git is not installed")
+
+
+@needs_git
+def test_private_material_tracked_by_git_is_a_warning(course_root: Path):
+    from materials_fixtures import make_pdf
+
+    git(course_root, "init", "-q")
+    make_pdf(course_root / "materials" / "source" / "private" / "clrs.pdf", ["Heaps"])
+    assert levels(course_root, "private_material_committed") == set()  # ignored: fine
+
+    git(course_root, "add", "-f", "course/materials/source/private/clrs.pdf")  # forced past .gitignore
+    found = [f for f in findings(course_root) if f.code == "private_material_committed"]
+    assert {f.level for f in found} == {"warn"}
+    assert "materials/source/private/clrs.pdf" in found[0].message
+    assert errors(course_root) == []
+
+
+@needs_git
+def test_a_committed_full_text_is_a_warning_too(course_root: Path):
+    git(course_root, "init", "-q")
+    full = course_root / "materials" / "private-text" / "M0001-clrs.md"
+    full.parent.mkdir(parents=True)
+    full.write_text("---\nid: M0001\n---\n", encoding="utf-8")
+    git(course_root, "add", "-f", "course/materials/private-text/M0001-clrs.md")
+    assert levels(course_root, "private_material_committed") == {"warn"}
+
+
+def test_private_material_committed_is_skipped_outside_git(course_root: Path):
+    from materials_fixtures import make_pdf
+
+    make_pdf(course_root / "materials" / "source" / "private" / "clrs.pdf", ["Heaps"])
+    assert levels(course_root, "private_material_committed") == set()
