@@ -83,14 +83,16 @@ COURSE_DIRECTORIES = [
     "assessments/quizzes",
     "assessments/homework",
     "assessments/exams",
-    "materials",
+    "materials/ingested",
     "policies",
 ]
 
 # `materials/source/` is where the teacher drops their existing course materials. It is the
-# primary input to /ingest and the curriculum-architect, so it ships with a README explaining
-# what belongs there — an empty unexplained directory gets ignored.
+# input to /ingest, so it ships with a README explaining what belongs there — an empty
+# unexplained directory gets ignored — and with `links.md`, the course's list of links (D-035).
+# `materials/ingested/` is the derived layer `classkit ingest` writes into.
 SOURCE_README = "materials/source/README.md"
+SOURCE_LINKS = "materials/source/links.md"
 
 # The syllabus is the course-level top layer (D-021), so it is part of the first thing a
 # teacher sees rather than something a later command conjures. Scaffold writes the skeleton
@@ -117,6 +119,11 @@ def scaffold_course(
     write_new(
         course_root / SOURCE_README,
         _template(framework_root, "course", "materials-source-README.md"),
+        result,
+    )
+    write_new(
+        course_root / SOURCE_LINKS,
+        _template(framework_root, "course", "links.md"),
         result,
     )
 
