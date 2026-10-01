@@ -374,7 +374,7 @@ Course-level setup runs once; then units are designed one at a time.
                    4. report what the course actually covers and where it is thin —
                       stating its scope (which units the materials reach, and "no material
                       yet" for the rest, never "thin"); after the teacher has read it,
-                      written to materials/coverage.md (target, D-040)
+                      written to materials/coverage.md (D-040)
                    Every approved step appends to course/LOG.md (§8.8).
 /plan-units        ONE flow, two agents, sequential and file-based (D-029, D-031i):
                    1. syllabus-designer writes syllabus/syllabus.md — goal, Course
@@ -678,8 +678,9 @@ Goal object (the Guiding Question):
 > link | video | other`, plus `gem` and `web` for paths and answers. Before D-040 there were three
 > overlapping lists (`slide` vs `slides`; a teacher's own deck could only be `other`). Where `ref` is
 > a material locator (`M0006#slide-2`), `kind` may be omitted — the manifest knows it, and a second
-> copy could only repeat or contradict it. *Step 2c adds `slides` and `notes` to today's per-goal path
-> kinds; the full vocabulary lands with D-019/D-020 in step 4.*
+> copy could only repeat or contradict it. *Today's per-goal path kinds are `gem | video | textbook |
+> slides | notes | article | exercise | other` (`slides` and `notes` added in step 2c-2); the full
+> vocabulary, and `kind` optional for a locator, land with D-019/D-020 in step 4.*
 
 > A goal's `answer` is a **list of locators** — where the answer can be found. It is not the answer
 > itself. The assessment item's model answer is a separate field named `model_answer` (D-031g), so the
@@ -871,7 +872,7 @@ Severity is the default; **(target)** means not built yet. Every rule is also a 
 | `syllabus_workload_missing` | the syllabus declares no `workload` | advisory | warn |
 | `unknown_rule` | a rule code in `course.yaml` `rules:`, a methodology's `rules:`, or an `accepted:` entry names no rule — a typo that would otherwise silently do nothing | advisory | warn |
 | `accepted_without_reason` | an `accepted:` entry gives no `reason` (or a blank one). The exception still takes effect (D-038) | advisory | warn |
-| `material_locator_in_text` | a `M<NNNN>#anchor` in the Markdown body of a course file (not `LOG.md`, not `ingested/`) names a real material and anchor (§8.7) | integrity, reported as advisory (prose) | warn **(target, D-040)** |
+| `material_locator_in_text` | a `M<NNNN>#anchor` in the Markdown body of a course file (not `LOG.md`, not `ingested/`) names a real material and anchor (§8.7). Consistency rule | integrity, reported as advisory (prose) | warn |
 | `materials_not_ingested` | a source (file or `links.md` line) is new, changed, moved or gone since the last ingest — one finding, reported against `materials/manifest.yaml` (D-035). **Ignores `source/private/`** (D-040): its files are not looked at and private materials are not judged — what is there differs per machine, and `classkit doctor` reports it. For a material whose hand-edit refusal awaits the teacher, the message says so and names `classkit ingest --keep ID` / `--overwrite ID`, not "run /ingest" (target, F-25) | advisory | warn |
 | `course_gitignore_missing` | `course/.gitignore` is absent or does not list `materials/source/private/` and `materials/private-text/` (§8.7). Reported against `course/.gitignore`. Consistency rule | advisory | warn |
 | `instructor_material_cited` | a student-facing locator (today a study path's `ref`; step 4 adds `answer`, D-019) names a material with `audience: instructor` (D-040). Consistency rule | advisory | **alert** |
@@ -1024,7 +1025,7 @@ course/
     private-text/          (D-040) derived, gitignored, this machine only: the full
       M0005-clrs.md        text of each private material, same anchors as its index
     manifest.yaml          every material: id, kind, format, paths, hashes, status
-    coverage.md            (target, D-040) the latest coverage report, written by /ingest
+    coverage.md            (D-040) the latest coverage report, written by /ingest
 ```
 
 `ingested/` is **flat and keyed by a stable id**, not a mirror of `source/`. A file that is renamed or
@@ -1085,7 +1086,7 @@ unless `links.md` lists it, and listing it restores its old id, so a locator to 
 | `ingested_hash` | string | | hash of the `.md` ingest last wrote — lets a hand edit be detected |
 | `status` | enum | ✓ | `ingested \| unsupported \| no-text \| media \| link` |
 | `status_reason` | string | | e.g. "install LibreOffice, or export to PDF" |
-| `units` | array\<`U<NN>`\> or `all` | | units this material appears to support — a hint, proposed by the agent. **`all`** = course-wide (the textbook, a course Gem); `[]` = no particular unit (target, D-040). Set by `/ingest` before any unit exists, from the material's own numbering; **re-mapped by `/plan-units` once the unit map is approved (target, D-039, step 3)** |
+| `units` | array\<`U<NN>`\> or `all` | | units this material appears to support — a hint, proposed by the agent. **`all`** = course-wide (the textbook, a course Gem); `[]` = no particular unit (D-040). Set by `/ingest` before any unit exists, from the material's own numbering; **re-mapped by `/plan-units` once the unit map is approved (target, D-039, step 3)** |
 | `found_in` | `M<NNNN>` or `M<NNNN>#anchor` | | **retired (D-040)** — links are no longer harvested from materials; kept in the schema only so a manifest written before D-040 still validates |
 | `note` | string | | for a link: the note after it in `links.md` |
 | `duration` | string | | for a video link, when its page declares one: `12:03`, `1:02:45` |
@@ -1341,7 +1342,7 @@ classkit doctor [--course DIR]
    applies the teacher's corrections, and records the block with `classkit material apply` — **all
    or nothing**: every entry is checked (known id, not merged or removed, valid kind and unit ids,
    no unknown keys, no id twice) before any is recorded.
-4. **Report** what the course actually covers and where it is thin. **(target, D-040)** The report
+4. **Report** what the course actually covers and where it is thin. **(D-040)** The report
    states its scope — which units the ingested material reaches — and says "no material yet", not
    "thin", for the rest; the volume check and ordering problems apply only to what is covered. After
    the teacher has read it, `/ingest` writes it to **`materials/coverage.md`** through the write
@@ -1380,11 +1381,13 @@ the target. Merge into the material whose anchors you want: the deck, not its PD
 source has not changed is never re-converted, so its edit is simply left alone. If the source *has*
 changed and the file's hash no longer matches `ingested_hash`, re-ingest **does not regenerate it
 silently** — it writes through the write path (§8.6) without `overwrite`, which refuses; the run
-exits `3` (as `classkit write` does) and lists the refusals. **(target, D-040)** For each one it
+exits `3` (as `classkit write` does) and lists the refusals. **(D-040)** For each one it
 shows **what replacing would change**: the differences between the current file and a fresh
 extraction of the new source, grouped by anchor ("Slide 9: … → …"). It cannot say which differences
 are the teacher's edit and which the source's change — only a hash of the old extraction is kept —
-but it shows exactly what `--overwrite` would lose and gain, which is the decision being asked. The
+but it shows exactly what `--overwrite` would lose and gain, which is the decision being asked. The front
+matter and the opening note are left out (they say where the text came from); at most ten anchors,
+fourteen lines each, are shown, with a count of the rest. The
 command shows the teacher the edit and asks, then re-runs with the answer: `--overwrite ID` (replace
 the edit with a fresh extraction) or `--keep ID` (keep it; the changed source is marked as seen).
 Until then the material stays outstanding (`materials_not_ingested`). Replacing ingest's *own*
@@ -1399,14 +1402,16 @@ anchor that is not a heading of the material's `.md` — read as it is now, hand
 or names any anchor of a material that has none (link, media, unsupported). A textbook-key
 citation (`"CLRS ch.6"`) is not a locator and is not checked.
 
-**Locators in prose (target, D-040).** `material_locator_in_text` (warn) applies the same check to
+**Locators in prose (D-040).** `material_locator_in_text` (warn) applies the same check to
 `M<NNNN>#anchor` found in the Markdown **bodies** of the course's own files — syllabus, units,
 sessions, in-class, items, and `materials/coverage.md` — but not `LOG.md` (history: a locator to a
 since-removed material is a true record) or `ingested/` (derived text). A warning, not an error,
 though it names something that does not exist: front matter is data that tools act on, prose is read
 by people and may be a dated snapshot that legitimately goes stale. Agents always write locators
 **fully qualified** (`M0005#page-39`, never `#page-39`); the shorthand cannot be caught by code,
-because `#section` is also an ordinary Markdown link.
+because `#section` is also an ordinary Markdown link. Only locators with an anchor are read in prose — a bare
+`M0007` in a sentence may be anything — and text inside HTML comments (a template's instructions)
+is skipped.
 
 **Logging** (D-039). Ingest changes the course, so **every run that changes something is a log
 entry** (§8.8) — including a run by hand, which nothing else would record. `classkit ingest` appends

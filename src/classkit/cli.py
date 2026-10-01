@@ -188,7 +188,8 @@ def build_parser() -> argparse.ArgumentParser:
     set_cmd.add_argument("--kind", choices=KINDS)
     set_cmd.add_argument(
         "--unit", dest="units", action="append", metavar="UNN",
-        help="a unit this material supports, e.g. U03 (repeatable; replaces the list)",
+        help="a unit this material supports, e.g. U03 (repeatable; replaces the list), or `all` "
+             "for a course-wide material",
     )
     set_cmd.add_argument("--no-units", action="store_true", help="clear the units list")
     set_cmd.add_argument("--title")
@@ -447,10 +448,12 @@ def run_material(args) -> int:
     course_root = find_course_root(Path(args.course) if args.course else None)
     try:
         if args.action == "set":
-            units = [] if args.no_units else ([u.upper() for u in args.units] if args.units else None)
+            units = [] if args.no_units else (list(args.units) if args.units else None)
             record = ingest.set_fields(course_root, args.id.upper(), kind=args.kind, units=units,
                                        title=args.title, audience=args.audience)
-            print(f"{record['id']}  kind={record.get('kind')}  units={','.join(record.get('units') or []) or '-'}"
+            shown_units = record.get("units") or []
+            shown_units = shown_units if isinstance(shown_units, str) else ",".join(shown_units) or "-"
+            print(f"{record['id']}  kind={record.get('kind')}  units={shown_units}"
                   f"  audience={record.get('audience') or 'student'}  title={record.get('title')!r}")
         elif args.action == "merge":
             record = ingest.merge(course_root, args.id.upper(), args.into.upper())

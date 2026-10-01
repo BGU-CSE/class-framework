@@ -147,19 +147,53 @@ classkit log "/ingest, classification approved" --changed "kinds, units and audi
 
 ## Step 4 — Report what the course covers.
 
-Present the agent's report: what the course covers, in the order taught, with its weight; where it
-is thin; the volume reality check; ordering problems; what you need from the teacher; and a
-proposed unit map for `/plan-units`, clearly marked as a proposal. Cite materials by locator
-(`M0007#slide-3`), never by a page or slide you have not seen in the ingested file.
+Present the agent's report: **its scope first** — which units the ingested material reaches, and
+"no material yet" (not "thin") for the rest; what the course covers, in the order taught, with its
+weight; where it is thin; the volume reality check and ordering problems (only over what is
+covered); what you need from the teacher; and a proposed unit map for `/plan-units`, clearly marked
+as a proposal. Cite materials by locator, **always in full** (`M0007#slide-3`, never `#slide-3`),
+never by a page or slide you have not seen in the ingested file.
 
 Run `classkit validate`. Nothing should cite materials yet, but `materials_not_ingested` must now be
 silent; if it is not, say why.
 
-When the teacher has read the report, log it:
+**When the teacher has read the report, save it** — `/plan-units` reads it as input. Write it to
+`course/materials/coverage.md` through the write path, headed by today's date and the material ids
+it covered:
 
 ```bash
-classkit log "/ingest, coverage report reviewed" --changed "coverage report; proposed unit map" \
-  --why "<the main finding — e.g. 'weeks 7–9 thin; volume ~1.5× the budget'>"
+classkit write course/materials/coverage.md <<'MD'
+# Coverage report — 2026-10-01
+
+Written by /ingest after the teacher read it. A dated snapshot: /plan-units reads it as input, not
+as truth. Materials covered: M0001–M0021.
+
+## Scope
+…the report, as the teacher approved it, with the teacher's corrections…
+MD
+```
+
+**If it exits with code 3**, an earlier report is there — and it may hold notes the teacher added.
+Show what replacing it would change, without writing:
+
+```bash
+classkit write course/materials/coverage.md --diff <<'MD'
+…the new report…
+MD
+```
+
+Ask the teacher: replace it, or keep the old one (or merge their notes into the new report and show
+the diff again). Only on their word, write with `--overwrite`. Never choose for them.
+
+Run `classkit validate` again: every `M<NNNN>#anchor` in the saved report is checked
+(`material_locator_in_text`, a warning). Fix any the report got wrong before the teacher relies on
+it.
+
+Then log it:
+
+```bash
+classkit log "/ingest, coverage report saved" --changed "materials/coverage.md (M0001–M0021); proposed unit map" \
+  --why "<the main finding — e.g. 'weeks 7–9 thin; volume ~1.5× the budget'>" --file materials/coverage.md
 ```
 
 ---

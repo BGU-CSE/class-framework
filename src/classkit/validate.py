@@ -77,6 +77,10 @@ DEFAULT_SEVERITY = {
     "private_material_committed": "warn",
     # D-041, consistency: course/.gitignore is absent or does not keep private material out of git.
     "course_gitignore_missing": "warn",
+    # D-040, consistency: a `M<NNNN>#anchor` in a Markdown body names something that does not
+    # exist. Integrity in substance, advisory in severity: prose is read by people and may be a
+    # dated snapshot (materials/coverage.md) that legitimately goes stale.
+    "material_locator_in_text": "warn",
 }
 
 # The order findings are printed in: alerts first (spec §8.4), then errors, then warnings.
@@ -128,6 +132,13 @@ PRIVATE_PATHSPECS = (":(icase)materials/source/private", ":(icase)materials/priv
 # `M0007` or `M0007#slide-18` inside a string — not part of a longer word, a URL path, or an
 # anchor of its own.
 LOCATOR = re.compile(r"(?<![\w/.#-])(M\d{4})(?!\w)(?:#([\w-]+))?")
+
+# Course files whose Markdown *body* `material_locator_in_text` reads, besides every front-matter
+# document (syllabus, units, sessions, in-class, items). Not LOG.md — history: a locator to a
+# since-removed material is a true record — and not ingested/ or private-text/, derived text.
+PROSE_FILES = (Path("materials") / "coverage.md",)
+
+_HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
 
 
 def _reach(data, path: tuple[str, ...]):
@@ -734,6 +745,7 @@ class Validator:
     def check_materials(self) -> None:
         self.check_course_gitignore()
         self.check_material_locators()
+        self.check_locators_in_text()
         self.check_instructor_material()
         self.check_materials_ingested()
         self.check_private_material_committed()
@@ -762,47 +774,78 @@ class Validator:
 
         A private material's committed file is its index (D-040), which has every anchor of the
         full text — so its locators resolve on every clone, with or without the book."""
-        cited = self._cited(LOCATOR_FIELDS)
-        if not cited:
-            return
+        for doc, material_id, anchor in self._cited(LOCATOR_FIELDS):
+            problem = self._locator_problem(material_id, anchor)
+            if problem:
+                locator = material_id + (f"#{anchor}" if anchor else "")
+                self.report("material_locator_resolves", doc.path, f"cites {locator}, but {problem}")
 
+    def check_locators_in_text(self) -> None:
+        """`material_locator_in_text` (D-040): the same check over `M<NNNN>#anchor` in the Markdown
+        bodies of the course's own files. A warning, not an error, though it names something that
+        does not exist: front matter is data tools act on; prose is read by people, and may be a
+        dated snapshot. Only fully qualified locators with an anchor are read — a bare `M0007` in
+        prose may be anything, and the shorthand `#page-39` cannot be told from an ordinary
+        Markdown link. HTML comments (a template's instructions) are skipped. A consistency rule."""
+        bodies: list[tuple[Path, str]] = [(doc.path, doc.body) for doc in self.course.documents()]
+        for relative in PROSE_FILES:
+            path = self.course.root / relative
+            if not path.is_file():
+                continue
+            try:
+                bodies.append((path, _body(path.read_text(encoding="utf-8"))))
+            except (OSError, UnicodeDecodeError):
+                continue
+        for path, body in bodies:
+            seen: set[str] = set()
+            for match in LOCATOR.finditer(_HTML_COMMENT.sub("", body or "")):
+                material_id, anchor = match.group(1), match.group(2)
+                if not anchor or match.group(0) in seen:
+                    continue
+                seen.add(match.group(0))
+                problem = self._locator_problem(material_id, anchor)
+                if problem:
+                    self.report("material_locator_in_text", path,
+                                f"the text cites {match.group(0)}, but {problem}")
+
+    def _locator_problem(self, material_id: str, anchor: str | None) -> str | None:
+        """Why `material_id` / `material_id#anchor` does not resolve — or None when it does. The
+        one definition both locator rules share. It proves the place exists, not that the answer
+        is there; that is the critic's job. A private material's committed file is its index
+        (D-040), which has every anchor of the full text, so its locators resolve on every clone."""
         from .ingest import extract, ingested_file  # noqa: PLC0415
 
         manifest = self._manifest()
-        materials = {str(r.get("id")): r for r in (manifest or []) if isinstance(r, dict)}
-        anchors: dict[str, list[str] | None] = {}
-
-        for doc, material_id, anchor in cited:
-            locator = material_id + (f"#{anchor}" if anchor else "")
-            record = materials.get(material_id)
-            problem = None
-            if manifest is None:
-                problem = "no materials have been ingested (there is no materials/manifest.yaml). Run /ingest."
-            elif record is None:
-                problem = f"{material_id} is not in materials/manifest.yaml."
-            elif record.get("merged_into"):
-                problem = (f"{material_id} was merged into {record['merged_into']}; cite "
-                           f"{record['merged_into']} instead (its anchors may differ).")
-            elif record.get("removed_at"):
-                problem = f"the source of {material_id} was removed (marked {record['removed_at']})."
-            elif anchor:
-                if record.get("status") not in ("ingested", "no-text"):
-                    problem = (f"{material_id} is a {record.get('status')} material, which has no "
-                               f"anchors; cite {material_id} alone (a timestamp goes in the note).")
-                else:
-                    if material_id not in anchors:
-                        path = ingested_file(self.course.root, material_id)
-                        try:
-                            anchors[material_id] = extract.anchors(_body(path.read_text(encoding="utf-8"))) if path else None
-                        except (OSError, UnicodeDecodeError):
-                            anchors[material_id] = None
-                    known = anchors[material_id]
-                    if known is None:
-                        problem = f"the ingested file of {material_id} is missing or unreadable. Run /ingest."
-                    elif anchor.rstrip("-") not in known:
-                        problem = f"{material_id} has no anchor {anchor!r} ({_summarize(known)})."
-            if problem:
-                self.report("material_locator_resolves", doc.path, f"cites {locator}, but {problem}")
+        if not hasattr(self, "_materials"):
+            self._materials = {str(r.get("id")): r for r in (manifest or []) if isinstance(r, dict)}
+            self._anchors: dict[str, list[str] | None] = {}
+        record = self._materials.get(material_id)
+        if manifest is None:
+            return "no materials have been ingested (there is no materials/manifest.yaml). Run /ingest."
+        if record is None:
+            return f"{material_id} is not in materials/manifest.yaml."
+        if record.get("merged_into"):
+            return (f"{material_id} was merged into {record['merged_into']}; cite "
+                    f"{record['merged_into']} instead (its anchors may differ).")
+        if record.get("removed_at"):
+            return f"the source of {material_id} was removed (marked {record['removed_at']})."
+        if not anchor:
+            return None
+        if record.get("status") not in ("ingested", "no-text"):
+            return (f"{material_id} is a {record.get('status')} material, which has no "
+                    f"anchors; cite {material_id} alone (a timestamp goes in the note).")
+        if material_id not in self._anchors:
+            path = ingested_file(self.course.root, material_id)
+            try:
+                self._anchors[material_id] = extract.anchors(_body(path.read_text(encoding="utf-8"))) if path else None
+            except (OSError, UnicodeDecodeError):
+                self._anchors[material_id] = None
+        known = self._anchors[material_id]
+        if known is None:
+            return f"the ingested file of {material_id} is missing or unreadable. Run /ingest."
+        if anchor.rstrip("-") not in known:
+            return f"{material_id} has no anchor {anchor!r} ({_summarize(known)})."
+        return None
 
     def check_instructor_material(self) -> None:
         """A student-facing place (STUDENT_FACING_FIELDS) cites a material whose `audience` is

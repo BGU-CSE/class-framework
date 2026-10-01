@@ -738,3 +738,48 @@ def test_installing_a_converter_later_retries_the_file(course: Path, monkeypatch
     monkeypatch.setattr(extract, "pandoc", lambda: "/usr/bin/pandoc")
     plan = ingest.reconcile(course, load(course), ingest.scan(course), links.read(source(course)))[1]
     assert plan.pending == [("M0001", "a converter for it is now available")]
+
+
+# -- units: all (D-040) ------------------------------------------------------------------
+
+def test_units_all_marks_a_course_wide_material(course: Path, monkeypatch, capsys):
+    make_pdf(source(course) / "book.pdf", ["Heaps"])
+    make_pdf(source(course) / "notes.pdf", ["Sorting"])
+    run(course)
+    monkeypatch.setattr("sys.stdin", __import__("io").StringIO("- id: M0001\n  units: all\n"))
+    assert main(["material", "apply", "--course", str(course)]) == 0
+    assert main(["material", "set", "M0002", "--unit", "all", "--course", str(course)]) == 0
+    assert records(course)["M0001"]["units"] == "all" == records(course)["M0002"]["units"]
+    schema = json.loads((FRAMEWORK_ROOT / "schemas" / "manifest.schema.json").read_text(encoding="utf-8"))
+    jsonschema.validate(load(course), schema)
+    assert ingest.core.units_of(records(course)["M0001"], ["U01", "U02"]) == ["U01", "U02"]
+
+
+def test_units_all_cannot_be_mixed_with_unit_ids(course: Path):
+    make_pdf(source(course) / "book.pdf", ["Heaps"])
+    run(course)
+    with pytest.raises(ingest.MaterialError, match="use it alone"):
+        ingest.apply(course, [{"id": "M0001", "units": ["all", "U03"]}])
+    with pytest.raises(ingest.MaterialError, match="unit ids look like U03"):
+        ingest.set_fields(course, "M0001", units=["every"])
+
+
+# -- the hand-edit refusal shows what --overwrite would change (D-040, F-24) ---------------
+
+def test_a_refusal_shows_the_diff_by_anchor_not_the_front_matter(course: Path, capsys):
+    deck = make_pptx(source(course) / "deck.pptx", [("Intro", "a"), ("Heaps", "b"), ("Sorting", "c")])
+    run(course)
+    path = ingest.ingested_file(course, "M0001")
+    path.write_text(path.read_text(encoding="utf-8").replace("- b", "- b, corrected by the teacher"),
+                    encoding="utf-8")
+    make_pptx(deck, [("Intro", "a"), ("Heaps", "b"), ("Sorting", "c, now with merge sort")])
+
+    code = main(["ingest", "--no-fetch", "--course", str(course)])
+
+    out = capsys.readouterr().out
+    assert code == 3
+    section = out[out.index("What --overwrite would change"):]
+    assert "Slide 2:" in section and "- - b, corrected by the teacher" in section and "+ - b" in section
+    assert "Slide 3:" in section and "+ - c, now with merge sort" in section
+    assert "Slide 1:" not in section
+    assert "source_hash" not in section and "id: M0001" not in section

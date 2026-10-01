@@ -105,7 +105,9 @@ def run_text(r: RunReport) -> str:
         lines += ["", "REFUSED — replacing these files could lose edits made by hand:"]
         for refusal in r.refused:
             lines.append(f"  {refusal.id}  {refusal.ingested} — {refusal.reason}")
-            lines += [f"      | {line}" for line in refusal.preview.splitlines()]
+            lines.append("    What --overwrite would change (the current file → a fresh extraction of the "
+                         "new source; your edit and the source's change are both in it):")
+            lines += [f"      {line}" for line in (refusal.diff or refusal.preview).splitlines()]
         lines += [
             "Ask the teacher, then re-run with either",
             "  --overwrite ID   replace the edit with a fresh extraction, or",

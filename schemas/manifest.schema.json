@@ -58,9 +58,11 @@
         "description": "Why a material was not extracted, and what to do, e.g. 'install LibreOffice, or export to PDF'."
       },
       "units": {
-        "type": "array",
-        "items": { "type": "string", "pattern": "^U\\d{2}$" },
-        "description": "Units this material appears to support — a hint set by the classifying agent."
+        "oneOf": [
+          { "type": "array", "items": { "type": "string", "pattern": "^U\\d{2}$" } },
+          { "const": "all" }
+        ],
+        "description": "Units this material appears to support — a hint set by the classifying agent. `all` = course-wide (the textbook, a course Gem); [] = no particular unit (D-040). Consumers treat `all` as every unit."
       },
       "found_in": {
         "type": "string",

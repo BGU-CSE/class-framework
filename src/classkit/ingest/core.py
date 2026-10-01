@@ -70,6 +70,16 @@ SKIP_NAMES = {"thumbs.db", "desktop.ini"}
 #: Which status values come with an ingested `.md` (and so with anchors).
 HAS_FILE = (ex.INGESTED, ex.NO_TEXT)
 
+#: `units: all` — a course-wide material (D-040).
+ALL_UNITS = "all"
+
+
+def units_of(record: dict, unit_ids: list[str]) -> list[str]:
+    """The units a material supports, with `all` expanded to every unit in `unit_ids` — how a
+    consumer reads the hint."""
+    units = record.get("units") or []
+    return list(unit_ids) if units == ALL_UNITS else [u for u in units if isinstance(u, str)]
+
 
 def today() -> str:
     return datetime.date.today().isoformat()
@@ -477,6 +487,80 @@ class Refusal:
     preview: str
     #: why the file may hold the teacher's work — shown with the refusal
     reason: str = "edited by hand, and its source has changed"
+    #: what `--overwrite` would change: the current file against a fresh extraction, by anchor
+    diff: str = ""
+
+
+#: How much of a refusal's diff is shown: anchors, and lines per anchor.
+DIFF_ANCHORS = 10
+DIFF_LINES = 14
+
+
+def _sections(text: str) -> tuple[list[str], dict[str, tuple[str, list[str]]]]:
+    """A rendered ingested file's body split at its anchor headings: (anchors in order,
+    anchor → (heading text, the lines under it)). The front matter and the opening note are left
+    out — they say where the text came from, not what it says."""
+    try:
+        _front, body = parse_front_matter(text)
+    except FrontMatterError:
+        body = text
+    order: list[str] = []
+    found: dict[str, tuple[str, list[str]]] = {}
+    seen: dict[str, int] = {}
+    current = None
+    fenced = False
+    for line in body.splitlines():
+        if ex._FENCE.match(line):
+            fenced = not fenced
+        heading = None if fenced else ex._HEADING.match(line)
+        base = ex.slug(heading.group(2)) if heading else ""
+        if base:
+            seen[base] = seen.get(base, -1) + 1
+            current = base if seen[base] == 0 else f"{base}-{seen[base]}"
+            order.append(current)
+            found[current] = (heading.group(2), [])
+        elif current is not None:
+            found[current][1].append(line)
+    return order, found
+
+
+def anchor_diff(current: str, fresh: str) -> str:
+    """What replacing `current` with `fresh` would change, grouped by anchor ("Slide 9: …").
+
+    It cannot say which differences are the teacher's edit and which the source's change — only a
+    hash of the old extraction is kept — but it shows exactly what `--overwrite` would lose and
+    gain, which is the decision being asked (D-040, F-24)."""
+    import difflib  # noqa: PLC0415
+
+    old_order, old = _sections(current)
+    new_order, new = _sections(fresh)
+    order = old_order + [a for a in new_order if a not in old]
+    out: list[str] = []
+    changed = 0
+    for anchor in order:
+        before, after = old.get(anchor), new.get(anchor)
+        if before is not None and after is not None and before[1] == after[1]:
+            continue
+        changed += 1
+        if changed > DIFF_ANCHORS:
+            continue
+        name = (before or after)[0]
+        if after is None:
+            out.append(f"{name}: only in the current file — replacing removes it")
+            body = [f"- {line}" for line in before[1] if line.strip()]
+        elif before is None:
+            out.append(f"{name}: new in the fresh extraction")
+            body = [f"+ {line}" for line in after[1] if line.strip()]
+        else:
+            out.append(f"{name}:")
+            body = [line[0] + " " + line[1:] for line in difflib.unified_diff(
+                before[1], after[1], lineterm="", n=0) if line[:1] in "+-" and line[:3] not in ("+++", "---")]
+        out += [f"    {line}" for line in body[:DIFF_LINES]]
+        if len(body) > DIFF_LINES:
+            out.append(f"    … {len(body) - DIFF_LINES} more line(s)")
+    if changed > DIFF_ANCHORS:
+        out.append(f"… and {changed - DIFF_ANCHORS} more anchor(s) differ")
+    return "\n".join(out) if out else "(the text under every anchor is the same; only the front matter differs)"
 
 
 @dataclass
@@ -749,7 +833,8 @@ def _convert(course_root: Path, record: dict, source: SourceFile, date: str, rep
         # files of a private material are asked first, so neither is written if one is refused —
         # an index and a full text from different versions would disagree about their anchors.
         refusals = [
-            Refusal(record["id"], path, outcome.preview, _refusal_reason(record, path, field_name))
+            Refusal(record["id"], path, outcome.preview, _refusal_reason(record, path, field_name),
+                    diff=anchor_diff(path.read_text(encoding="utf-8", errors="replace"), content))
             for (path, content, field_name), was_edited in zip(writes, edited)
             if (outcome := write(path, content, overwrite=overwrite or not was_edited, dry_run=True)).refused
         ]
@@ -862,13 +947,23 @@ def _checked(material_id: str, kind, units, title, audience=None) -> dict:
             raise MaterialError(f"{material_id}: kind must be one of {', '.join(KINDS)}, not {kind!r}")
         fields["kind"] = kind
     if units is not None:
+        # `all` = course-wide (D-040): the textbook, a course Gem. Accepted as the value itself or
+        # as the only entry of a list (`--unit all` on the command line).
+        if isinstance(units, str) and units.strip().lower() == ALL_UNITS:
+            units = [ALL_UNITS]
         if not isinstance(units, list):
-            raise MaterialError(f"{material_id}: units must be a list, e.g. [U03, U04]")
-        units = [str(u).upper() for u in units]
-        bad = [u for u in units if not re.fullmatch(r"U\d{2}", u)]
-        if bad:
-            raise MaterialError(f"{material_id}: unit ids look like U03, not {', '.join(bad)}")
-        fields["units"] = sorted(set(units))
+            raise MaterialError(f"{material_id}: units must be a list, e.g. [U03, U04], or `all`")
+        units = [str(u).upper() if str(u).lower() != ALL_UNITS else ALL_UNITS for u in units]
+        if ALL_UNITS in units:
+            if len(units) > 1:
+                raise MaterialError(f"{material_id}: `all` means every unit — use it alone, not "
+                                    "alongside unit ids")
+            fields["units"] = ALL_UNITS
+        else:
+            bad = [u for u in units if not re.fullmatch(r"U\d{2}", u)]
+            if bad:
+                raise MaterialError(f"{material_id}: unit ids look like U03, not {', '.join(bad)}")
+            fields["units"] = sorted(set(units))
     if title is not None:
         if not str(title).strip():
             raise MaterialError(f"{material_id}: a title cannot be empty")
@@ -952,7 +1047,10 @@ def merge(course_root: Path, material_id: str, into: str) -> dict:
         if path not in target["sources"]:
             target["sources"].append(path)
             target["source_hashes"][path] = (source.get("source_hashes") or {}).get(path) or source.get("source_hash")
-    target["units"] = sorted(set(target.get("units") or []) | set(source.get("units") or [])) or target.get("units")
+    if ALL_UNITS in (target.get("units"), source.get("units")):
+        target["units"] = ALL_UNITS
+    else:
+        target["units"] = sorted(set(target.get("units") or []) | set(source.get("units") or [])) or target.get("units")
     source["merged_into"] = into
     save(course_root, records)
     return target

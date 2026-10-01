@@ -101,7 +101,10 @@ and waits for your go-ahead. It then turns everything into a readable, citable c
 (slides, exam, textbook, …, and which units it serves) — **you see and correct that before it is
 recorded** — mentions links inside your materials that look like course resources (only links
 you list in `links.md` become materials), and reports what your course actually
-covers and where it is thin. Each step you approve is recorded in the course log.
+covers and where it is thin — saying first which units your materials reach, and "no material
+yet" for the rest. Once you have read it, it is saved to `course/materials/coverage.md` (a later run
+asks before replacing it, so notes you add there are not lost), and `/plan-units` reads it. Each
+step you approve is recorded in the course log.
 
 What that buys you: an answer reference can point at **`M0007#slide-18`**, and `classkit validate`
 reports an error if that slide does not exist — a made-up "slide 18" of a 12-slide deck is caught

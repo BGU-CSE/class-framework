@@ -110,6 +110,8 @@ Scaffolding **never overwrites**, so it is safe to re-run at any time.
 - **Cite material by locator** — `M0007#slide-18`. `classkit validate` checks that the material and
   the anchor exist (`material_locator_resolves`, an error), though not that the answer is there.
   A textbook key (`"CLRS ch.6"`) is still allowed for what is not ingested, but cannot be checked.
+  A `M0007#slide-18` written in **prose** — a unit's or session's body, `materials/coverage.md` — is
+  checked too (`material_locator_in_text`, a warning; not `LOG.md`, not `ingested/`).
 - **A book citation also gives the book's own coordinates** in its `note` — section, exercise or
   question number where there is one, and the printed page: `ref: "M0003#page-63"`,
   `note: "CLRS §6.2, Exercise 6.2-3 (printed p. 45)"`. `page-63` is the 63rd page of the PDF, which
@@ -136,6 +138,13 @@ Scaffolding **never overwrites**, so it is safe to re-run at any time.
   only on the teacher's word.
 - **Links become materials only from `links.md`** (`classkit add-url`); a link inside a deck is read
   in its ingested text, never harvested.
+- **`units`** on a material is a hint: a list, **`all`** for course-wide material (the textbook,
+  the course Gem — read it as every unit), or `[]`.
+- **`materials/coverage.md`** is the coverage report `/ingest` saved after the teacher read it: a
+  dated snapshot of what the materials cover, with its scope ("no material yet" for units nothing
+  reaches is not "thin"). Read it as input, not as truth; replace it only on the teacher's word.
+- To change **part of a file** (one key in `course.yaml`), show `classkit write PATH --diff` first,
+  then write with `--overwrite` once the teacher approves.
 - Running `classkit ingest` by hand writes a course-log entry saying what changed; add `--why` to
   say why.
 

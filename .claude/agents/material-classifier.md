@@ -51,9 +51,9 @@ classification is **returned** as one YAML block, which `/ingest` shows the teac
   audience: instructor     # last year's final, with its solutions
 - id: M0003
   kind: textbook
-  units: [U06]
+  units: all               # course-wide: the textbook, the course Gem
   audience: student
-  title: "CLRS chapter 6 — Heapsort"   # only if the extracted title is junk
+  title: "CLRS 4th edition"   # only if the extracted title is junk
 ```
 
 Include every material you were asked to classify, even where you agree with what is already
@@ -62,7 +62,10 @@ nothing, so an unknown id or a malformed unit id rejects the whole block — che
 the manifest.
 
 `kind` is one of `slides | textbook | notes | exam | exercise | syllabus | reading | link | video |
-other`. `units` is a **hint** — the units the material appears to support. Before the unit map
+other`. `units` is a **hint** — the units the material appears to support: a list (`[U03, U04]`),
+**`all`** for course-wide material (the textbook, the course Gem, the syllabus — not a list of every
+unit, which would look like a per-unit resource), or `[]` for none in particular (an instructor's
+manual you have not placed). Before the unit map
 exists (`/plan-units` has not run), say so in your report and base the hint on the material's own
 order and numbering ("Lecture 3", "week 5"), counted against `units` in `course.yaml`.
 
@@ -124,21 +127,31 @@ bibliography, publisher pages and references: they are not course materials. The
 2. **What the course actually covers** — the inventory as it exists today, in the order it is
    taught, with the weight each part gets. Cite materials by locator (`M0007#slide-3`) — only
    anchors that exist in the ingested file.
+   **Start this section with its scope**: which units the ingested material reaches ("material for
+   units 1–3 of 12; nothing yet for 4–12"). A unit no material reaches has **no material yet** —
+   say exactly that, not "thin": partial material is the normal case early in a course, and "thin"
+   would read as a judgement of teaching that has not been uploaded.
 3. **Where it is thin** — subjects with one weak source, units nothing supports, assessments with
    no matching teaching material, a material that extracted to almost no text (slides that are
    mostly images) and so may be under-rated by you.
+   Only among the units the material reaches.
 4. **Volume reality check.** Lecture weeks usually carry more than the methodology's home-study
    plus in-class minutes per unit can hold. Estimate what fits and name what would have to be cut,
    made optional, or moved. Be specific — a cheerful "it all fits" is how the home-study budget
    silently doubles later.
 5. **Ordering problems.** Lectures can defer motivation; independent home study cannot. Flag
-   anything introduced before the reason it matters.
+   anything introduced before the reason it matters. The volume check and this one apply only to
+   what is covered — never extrapolate to units with no material yet.
 6. **What you need from the teacher** — what the materials do not say: assumed prerequisites,
    which parts are examinable, which weeks are known to be hard.
 7. **A proposed unit map** (week → subject), clearly marked as a suggestion for `/plan-units`.
 
 ## Rules
 
+- **Locators in full, always.** Write `M0005#page-39`, never the shorthand `#page-39`: the report is
+  saved to `materials/coverage.md`, where `classkit validate` checks every `M<NNNN>#anchor`
+  (`material_locator_in_text`) — and a bare `#page-39` cannot be checked, and is read against the
+  wrong material.
 - **No invented resources.** Cite only materials in the manifest and anchors in their ingested
   files. If the materials do not cover something, say it is missing; do not fill the gap from
   memory as though it were in the course.

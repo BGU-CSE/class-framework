@@ -910,3 +910,49 @@ def test_course_gitignore_accepts_rules_without_slashes(course_root: Path):
     (course_root / ".gitignore").write_text("/materials/source/private\nmaterials/private-text\n",
                                             encoding="utf-8")
     assert levels(course_root, "course_gitignore_missing") == set()
+
+
+# -- material_locator_in_text (D-040): locators in prose ------------------------------
+
+def append_body(path: Path, text: str) -> None:
+    path.write_text(path.read_text(encoding="utf-8") + "\n" + text + "\n", encoding="utf-8")
+
+
+def test_a_broken_locator_in_a_session_body_warns(course_root: Path):
+    ingest_a_deck(course_root, slides=3)
+    append_body(session(course_root, 1), "Read `M0001#slide-3`, then `M0001#slide-18`.")
+    found = [f for f in findings(course_root) if f.code == "material_locator_in_text"]
+    assert [f.level for f in found] == ["warn"]  # integrity in substance, advisory in severity
+    assert "M0001#slide-18" in found[0].message and "slide-1 … slide-3" in found[0].message
+    assert DEFAULT_SEVERITY["material_locator_in_text"] == "warn"
+    assert errors(course_root) == []
+
+
+def test_a_broken_locator_in_the_saved_coverage_report_warns(course_root: Path):
+    ingest_a_deck(course_root, slides=3)
+    (course_root / "materials" / "coverage.md").write_text(
+        "# Coverage report — 2026-10-01\n\nHeaps: M0001#slide-2; sorting: M0002#page-4.\n", encoding="utf-8")
+    found = [f for f in findings(course_root) if f.code == "material_locator_in_text"]
+    assert len(found) == 1 and "M0002#page-4" in found[0].message
+    assert found[0].where.endswith("materials/coverage.md")
+
+
+def test_locators_in_the_log_and_in_ingested_text_are_not_checked(course_root: Path):
+    ingest_a_deck(course_root, slides=3)
+    append_body(course_root / "LOG.md", "M0099#slide-1 was removed last year.")
+    deck = next((course_root / "materials" / "ingested").glob("M0001-*.md"))
+    append_body(deck, "see M0099#page-1")
+    assert levels(course_root, "material_locator_in_text") == set()
+
+
+def test_a_bare_id_or_a_locator_in_a_comment_is_not_checked_in_prose(course_root: Path):
+    ingest_a_deck(course_root)
+    append_body(syllabus(course_root), "M0099 is mentioned bare; <!-- e.g. M0099#slide-1 -->")
+    assert levels(course_root, "material_locator_in_text") == set()
+
+
+def test_a_study_path_may_be_of_kind_slides_or_notes(course_root: Path):
+    ingest_a_deck(course_root)
+    edit(session(course_root, 1), 'kind: gem\n        ref: "U01"', 'kind: slides\n        ref: "M0001#slide-1"')
+    edit(session(course_root, 2), "kind: gem", "kind: notes")
+    assert "schema" not in {f.code for f in findings(course_root)}
