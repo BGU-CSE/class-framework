@@ -186,6 +186,16 @@ def check_private_material(course_root: Path) -> list[Line]:
     private_ids: set[str] = set()
     for record in active(state):
         canonical = str(record.get("canonical") or "")
+        copies = [p for p in record.get("sources") or [] if is_private(p) and p != canonical]
+        if copies and not is_private(canonical):
+            lines.append(Line(
+                ACTION,
+                f"{record.get('id')} ({record.get('title') or canonical}): materials/source/{copies[0]} is "
+                f"an identical copy of materials/source/{canonical}, which is not private — so the "
+                "material is not private, and the copy outside private/ is committed",
+                f"if it must not be committed, delete materials/source/{canonical} (keep the copy "
+                "in private/) and run `classkit ingest`",
+            ))
         if record.get("format") == "url" or not (record.get("private") or is_private(canonical)):
             continue
         mid = str(record.get("id"))

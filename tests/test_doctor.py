@@ -239,3 +239,21 @@ def test_an_uncommitted_gitignore_is_a_note_until_committed(course: Path):
     run_git("add", "-f", "course/.gitignore")
     run_git("-c", "user.name=t", "-c", "user.email=t@example.org", "commit", "-qm", "gitignore")
     assert not find(course, doctor.NOTE, "not committed yet")
+
+
+def test_a_private_copy_of_a_committed_file_does_not_make_it_private(course: Path):
+    """Copying (not moving) a book into private/ merges it as an identical copy: the material
+    stays public and its source stays committed. Doctor says so, and how to fix it."""
+    make_pdf(course / "materials" / "source" / "clrs.pdf", ["Heaps body"])
+    ingest.run(course, fetch=False)
+    private(course).mkdir()
+    shutil.copy(course / "materials" / "source" / "clrs.pdf", private(course) / "clrs.pdf")
+    ingest.run(course, fetch=False)
+
+    (found,) = find(course, doctor.ACTION, "identical copy", "not private")
+    assert "delete materials/source/clrs.pdf" in found.fix
+
+    (course / "materials" / "source" / "clrs.pdf").unlink()  # the teacher follows the fix
+    ingest.run(course, fetch=False)
+    assert not find(course, doctor.ACTION, "identical copy")
+    assert ingest.load(course)[0]["private"] is True

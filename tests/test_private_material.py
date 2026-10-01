@@ -431,3 +431,10 @@ def test_apply_reads_audience_from_the_cli(course: Path, monkeypatch):
     monkeypatch.setattr("sys.stdin", io.StringIO(yaml.safe_dump([{"id": "M0001", "audience": "instructor"}])))
     assert main(["material", "apply", "--course", str(course)]) == 0
     assert record(course)["audience"] == "instructor"
+
+
+def test_links_inside_a_private_material_are_not_recorded(course: Path):
+    """A URL in a private book's text is its text; the manifest is committed."""
+    make_pdf(private(course) / "clrs.pdf", ["See https://example.org/errata for the errata"])
+    run(course)
+    assert [r["id"] for r in load(course)] == ["M0001"]

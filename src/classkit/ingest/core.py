@@ -775,7 +775,8 @@ def _convert(course_root: Path, record: dict, source: SourceFile, date: str, rep
     record["source_hash"] = current_hash
     if committed:
         record["ingested_at"] = date
-        report.embedded.append((record["id"], result.links))
+        if not private:  # URLs inside a private book are its text, and the manifest is committed
+            report.embedded.append((record["id"], result.links))
     return Converted(record["id"], record["title"], result.status, source.rel, ingested_rel,
                      result.reason, new, full_text=full_text_rel, local=not committed)
 
