@@ -23,6 +23,7 @@ then suppressed, and counted rather than hidden.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -42,6 +43,7 @@ DEFAULT_SEVERITY = {
     "outcome_reference": "error",
     "activity_references_guiding_question": "error",
     "item_reference": "error",
+    "material_locator_resolves": "error",
     # -- advisory, high priority: the coverage chain -----------------------
     "objective_coverage": "alert",
     # -- advisory ----------------------------------------------------------
@@ -65,6 +67,7 @@ DEFAULT_SEVERITY = {
     "guiding_question_assessed": "warn",
     "unknown_rule": "warn",
     "accepted_without_reason": "warn",
+    "materials_not_ingested": "warn",
 }
 
 # The order findings are printed in: alerts first (spec §8.4), then errors, then warnings.
@@ -78,7 +81,39 @@ SCHEMA_FOR = {
     "in-class": "in-class-session.schema.json",
     "item": "assessment-item.schema.json",
     "methodology": "methodology.schema.json",
+    "manifest": "manifest.schema.json",
 }
+
+# Where a material locator (`M0007`, `M0007#slide-18`, spec §8.1) may appear, per artifact: a
+# path into the front matter, `*` meaning every element of a list. `material_locator_resolves`
+# checks every string these reach. Step 4 adds the guiding question's `answer` (D-019) — and the
+# session-level study-path pool (D-020) — as one line each here; the rule itself does not change.
+LOCATOR_FIELDS: dict[str, tuple[tuple[str, ...], ...]] = {
+    "session": (
+        ("goals", "*", "paths", "*", "ref"),  # a study path's resource
+    ),
+    "in-class": (
+        ("activities", "*", "materials", "*"),  # what an activity uses in the room
+    ),
+}
+
+# `M0007` or `M0007#slide-18` inside a string — not part of a longer word, a URL path, or an
+# anchor of its own.
+LOCATOR = re.compile(r"(?<![\w/.#-])(M\d{4})(?!\w)(?:#([\w-]+))?")
+
+
+def _reach(data, path: tuple[str, ...]):
+    """Every value at `path` inside `data`, following `*` into lists."""
+    if not path:
+        yield data
+        return
+    head, rest = path[0], path[1:]
+    if head == "*":
+        if isinstance(data, list):
+            for element in data:
+                yield from _reach(element, rest)
+    elif isinstance(data, dict) and head in data:
+        yield from _reach(data[head], rest)
 
 
 _MARK = {"error": "ERROR", "alert": "ALERT", "warn": "warn "}
@@ -185,6 +220,7 @@ class Validator:
             self.check_unit(unit)
         self.check_items()
         self.check_assessment_coverage()
+        self.check_materials()
         return self.findings
 
     # -- layer 1: schema ---------------------------------------------------
@@ -231,6 +267,9 @@ class Validator:
                 check("in-class", unit.in_class.path, unit.in_class.data)
         for item in self.course.items:
             check("item", item.path, item.data)
+        manifest = self._manifest()
+        if manifest is not None:
+            check("manifest", self.course.root / "materials" / "manifest.yaml", manifest)
 
     # -- layer 2: semantics ------------------------------------------------
 
@@ -644,6 +683,137 @@ class Validator:
                             session.path,
                             f"{goal_id} is not tested by any assessment item.",
                         )
+
+
+    # -- materials (D-035) ---------------------------------------------------
+
+    def _manifest(self) -> list | None:
+        """The materials manifest, or None if there is none — or if it cannot be read, which
+        is reported once, as an integrity error (an unreadable file)."""
+        if hasattr(self, "_manifest_cache"):
+            return self._manifest_cache
+        from .ingest.manifest import ManifestError, load  # noqa: PLC0415
+
+        path = self.course.root / "materials" / "manifest.yaml"
+        self._manifest_cache = None
+        if path.is_file():
+            try:
+                self._manifest_cache = load(self.course.root)
+            except ManifestError as exc:
+                self.report("schema", path, f"cannot be read: {exc}")
+        return self._manifest_cache
+
+    def check_materials(self) -> None:
+        self.check_material_locators()
+        self.check_materials_ingested()
+
+    def check_material_locators(self) -> None:
+        """Every `M<NNNN>` / `M<NNNN>#anchor` names a material that exists and, if it names an
+        anchor, a heading that exists in that material's ingested file (D-035). Integrity: a
+        fabricated "slide 18" of a 12-slide deck is a reference to something that does not exist.
+        It proves the place exists — not that the answer is there; that is the critic's job."""
+        documents: list[tuple[str, object]] = []
+        for unit in self.course.units:
+            documents += [("session", s) for s in unit.sessions]
+            if unit.in_class is not None:
+                documents.append(("in-class", unit.in_class))
+
+        cited = [
+            (doc, match.group(1), match.group(2))
+            for kind, doc in documents
+            for field_path in LOCATOR_FIELDS.get(kind, ())
+            for value in _reach(doc.data, field_path)
+            if isinstance(value, str)
+            for match in LOCATOR.finditer(value)
+        ]
+        if not cited:
+            return
+
+        from .ingest import extract, ingested_file  # noqa: PLC0415
+
+        manifest = self._manifest()
+        materials = {str(r.get("id")): r for r in (manifest or []) if isinstance(r, dict)}
+        anchors: dict[str, list[str] | None] = {}
+
+        for doc, material_id, anchor in cited:
+            locator = material_id + (f"#{anchor}" if anchor else "")
+            record = materials.get(material_id)
+            problem = None
+            if manifest is None:
+                problem = "no materials have been ingested (there is no materials/manifest.yaml). Run /ingest."
+            elif record is None:
+                problem = f"{material_id} is not in materials/manifest.yaml."
+            elif record.get("merged_into"):
+                problem = (f"{material_id} was merged into {record['merged_into']}; cite "
+                           f"{record['merged_into']} instead (its anchors may differ).")
+            elif record.get("removed_at"):
+                problem = f"the source of {material_id} was removed (marked {record['removed_at']})."
+            elif anchor:
+                if record.get("status") not in ("ingested", "no-text"):
+                    problem = (f"{material_id} is a {record.get('status')} material, which has no "
+                               f"anchors; cite {material_id} alone (a timestamp goes in the note).")
+                else:
+                    if material_id not in anchors:
+                        path = ingested_file(self.course.root, material_id)
+                        try:
+                            anchors[material_id] = extract.anchors(_body(path.read_text(encoding="utf-8"))) if path else None
+                        except (OSError, UnicodeDecodeError):
+                            anchors[material_id] = None
+                    known = anchors[material_id]
+                    if known is None:
+                        problem = f"the ingested file of {material_id} is missing or unreadable. Run /ingest."
+                    elif anchor.rstrip("-") not in known:
+                        problem = f"{material_id} has no anchor {anchor!r} ({_summarize(known)})."
+            if problem:
+                self.report("material_locator_resolves", doc.path, f"cites {locator}, but {problem}")
+
+    def check_materials_ingested(self) -> None:
+        """A source file that is new, changed, moved or gone since the last ingest — the
+        manifest, and so every locator check, is out of date. Advisory: the teacher may be
+        mid-way through adding material."""
+        from .ingest import core, links  # noqa: PLC0415
+        from .ingest.manifest import ManifestError, load  # noqa: PLC0415
+
+        try:
+            records = load(self.course.root)
+        except ManifestError:
+            return  # already reported as unreadable
+        files = core.scan(self.course.root)
+        listed = links.read(self.course.root / "materials" / "source")
+        _state, plan = core.reconcile(self.course.root, [r for r in records if isinstance(r, dict)],
+                                      files, listed)
+        outstanding = plan.outstanding()
+        if not outstanding:
+            return
+        shown = "; ".join(outstanding[:5]) + (f"; and {len(outstanding) - 5} more" if len(outstanding) > 5 else "")
+        self.report(
+            "materials_not_ingested",
+            self.course.root / "materials" / "manifest.yaml",
+            f"{len(outstanding)} change(s) in materials/source/ since the last ingest — {shown}. "
+            "Run /ingest (or `classkit ingest`).",
+        )
+
+
+def _body(text: str) -> str:
+    """An ingested file's body — anchors are its headings, never its front matter."""
+    from .frontmatter import FrontMatterError, parse  # noqa: PLC0415
+
+    try:
+        return parse(text)[1]
+    except FrontMatterError:
+        return text  # a hand edit that dropped the front matter still has its headings
+
+
+def _summarize(anchors: list[str]) -> str:
+    """What anchors a material does have, briefly: 'slide-1 … slide-12', or the first few."""
+    if not anchors:
+        return "it has no anchors"
+    for prefix in ("slide", "page"):
+        numbered = [a for a in anchors if re.fullmatch(rf"{prefix}-\d+", a)]
+        if numbered and len(numbered) == len(anchors):
+            return f"it has {numbered[0]} … {numbered[-1]}"
+    head = ", ".join(anchors[:6])
+    return f"it has {head}" + (f", … ({len(anchors)} in all)" if len(anchors) > 6 else "")
 
 
 def validate(course: Course, framework_root: Path) -> list[Finding]:

@@ -343,6 +343,8 @@ def test_only_integrity_rules_default_to_error():
         "outcome_reference",
         "activity_references_guiding_question",
         "item_reference",
+        # D-035: a locator to a slide, page or heading that does not exist in the material
+        "material_locator_resolves",
     }
     defaults_to_error = {code for code, level in DEFAULT_SEVERITY.items() if level == "error"}
     assert defaults_to_error <= integrity
@@ -602,3 +604,124 @@ def test_a_bare_yaml_off_in_rules_means_off(course_root: Path):
         handle.write("\nrules:\n  guiding_question_assessed: off\n")
     assert "schema" not in codes(course_root)
     assert levels(course_root, "guiding_question_assessed") == set()
+
+
+# -- materials: locators resolve, sources are ingested (D-035) ----------------
+
+def ingest_a_deck(course_root: Path, slides: int = 3) -> None:
+    """Put a small generated deck in materials/source/ and ingest it — it becomes M0001."""
+    from materials_fixtures import make_pptx
+
+    from classkit import ingest
+
+    make_pptx(
+        course_root / "materials" / "source" / "lecture.pptx",
+        [(f"Title {n}", f"Body {n}") for n in range(1, slides + 1)],
+    )
+    ingest.run(course_root, fetch=False)
+
+
+def cite(course_root: Path, locator: str) -> None:
+    """Point the first study path of session 1 at `locator`."""
+    edit(session(course_root, 1), 'ref: "U01"', f'ref: "{locator}"')
+
+
+def test_a_fresh_scaffold_has_no_materials_findings(course_root: Path):
+    assert levels(course_root, "material_locator_resolves") == set()
+    assert levels(course_root, "materials_not_ingested") == set()
+
+
+def test_a_locator_to_an_existing_slide_resolves(course_root: Path):
+    ingest_a_deck(course_root, slides=3)
+    cite(course_root, "M0001#slide-3")
+    assert levels(course_root, "material_locator_resolves") == set()
+    assert errors(course_root) == []
+
+
+def test_a_locator_to_a_missing_slide_is_an_error(course_root: Path):
+    """The fabricated "slide 18" of a 3-slide deck — invariant 7 made partly mechanical."""
+    ingest_a_deck(course_root, slides=3)
+    cite(course_root, "M0001#slide-18")
+    found = [f for f in findings(course_root) if f.code == "material_locator_resolves"]
+    assert {f.level for f in found} == {"error"}
+    assert "slide-1 … slide-3" in found[0].message
+
+
+def test_a_locator_to_an_unknown_material_is_an_error(course_root: Path):
+    ingest_a_deck(course_root)
+    cite(course_root, "M0042")
+    assert levels(course_root, "material_locator_resolves") == {"error"}
+
+
+def test_a_locator_before_any_ingest_is_an_error(course_root: Path):
+    cite(course_root, "M0001#slide-1")
+    assert levels(course_root, "material_locator_resolves") == {"error"}
+
+
+def test_a_locator_to_a_removed_source_is_an_error(course_root: Path):
+    from classkit import ingest
+
+    ingest_a_deck(course_root)
+    (course_root / "materials" / "source" / "lecture.pptx").unlink()
+    ingest.run(course_root, fetch=False)
+    cite(course_root, "M0001#slide-1")
+    assert levels(course_root, "material_locator_resolves") == {"error"}
+
+
+def test_a_locator_in_an_activitys_materials_is_checked(course_root: Path):
+    ingest_a_deck(course_root)
+    text = in_class(course_root).read_text(encoding="utf-8")
+    assert "  - id: U01-A1" in text, "fixture drifted: in-class template changed"
+    first = text.index("  - id: U01-A1")
+    end = text.index("\n", first)
+    in_class(course_root).write_text(
+        text[: end + 1] + "    materials: [\"M0001#slide-99\"]\n" + text[end + 1 :], encoding="utf-8"
+    )
+    assert levels(course_root, "material_locator_resolves") == {"error"}
+
+
+def test_a_textbook_citation_is_not_a_locator(course_root: Path):
+    """Un-ingested sources may still be cited by key (§8.2) — the rule only reads M-locators."""
+    cite(course_root, "CLRS ch.6 pp.151-153")
+    assert levels(course_root, "material_locator_resolves") == set()
+
+
+def test_a_new_source_file_warns_until_ingested(course_root: Path):
+    from classkit import ingest
+
+    (course_root / "materials" / "source" / "notes.md").write_text("# Notes\n", encoding="utf-8")
+    assert levels(course_root, "materials_not_ingested") == {"warn"}
+
+    ingest.run(course_root, fetch=False)
+    assert levels(course_root, "materials_not_ingested") == set()
+
+
+def test_a_changed_source_file_warns(course_root: Path):
+    from classkit import ingest
+
+    notes = course_root / "materials" / "source" / "notes.md"
+    notes.write_text("# Notes\n", encoding="utf-8")
+    ingest.run(course_root, fetch=False)
+    notes.write_text("# Notes, revised\n", encoding="utf-8")
+    assert levels(course_root, "materials_not_ingested") == {"warn"}
+
+
+def test_a_new_link_warns_until_ingested(course_root: Path):
+    from classkit.ingest.links import add_url
+
+    add_url(course_root / "materials" / "source", "https://example.org/heaps")
+    assert levels(course_root, "materials_not_ingested") == {"warn"}
+
+
+def test_a_malformed_manifest_record_fails_the_schema(course_root: Path):
+    from classkit import ingest
+
+    (course_root / "materials" / "source" / "notes.md").write_text("# Notes\n", encoding="utf-8")
+    ingest.run(course_root, fetch=False)
+    edit(course_root / "materials" / "manifest.yaml", "kind: other", "kind: lecture-ish")
+    assert levels(course_root, "schema") == {"error"}
+
+
+def test_an_unreadable_manifest_is_an_error_not_a_crash(course_root: Path):
+    (course_root / "materials" / "manifest.yaml").write_text("- id: [unclosed\n", encoding="utf-8")
+    assert levels(course_root, "schema") == {"error"}

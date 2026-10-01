@@ -7,8 +7,11 @@ import datetime
 import sys
 from pathlib import Path
 
-from . import log
+from . import ingest, log
 from .frontmatter import FrontMatterError
+from .ingest import links as linkfile
+from .ingest.manifest import KINDS, SOURCE_DIR, ManifestError
+from .ingest.report import preflight_text, run_text
 from .mode import DEVELOPER, TEACHER, UnsafeMarker, current_mode, set_mode
 from .model import LayoutError, find_course_root, find_framework_root, load_course
 from .scaffold import (
@@ -118,6 +121,69 @@ def build_parser() -> argparse.ArgumentParser:
     )
     log_cmd.add_argument("--date", help="YYYY-MM-DD (default: today)")
     log_cmd.add_argument("--course", help="course directory (default: search upward)")
+
+    # Ingest (D-035): turn materials/source/ into materials/ingested/ + manifest.yaml.
+    ingest_cmd = subcommands.add_parser(
+        "ingest",
+        help="convert new or changed course materials into citable Markdown (never touches source/)",
+    )
+    ingest_cmd.add_argument(
+        "--preflight",
+        action="store_true",
+        help="report what is there and what would be converted, without converting or writing",
+    )
+    ingest_cmd.add_argument(
+        "--overwrite",
+        action="append",
+        default=[],
+        metavar="ID",
+        help="the teacher confirmed: replace this material's hand-edited ingested file (repeatable)",
+    )
+    ingest_cmd.add_argument(
+        "--keep",
+        action="append",
+        default=[],
+        metavar="ID",
+        help="the teacher confirmed: keep this material's hand edit despite a changed source (repeatable)",
+    )
+    ingest_cmd.add_argument(
+        "--no-fetch",
+        action="store_true",
+        help="do not fetch link titles from the network",
+    )
+    ingest_cmd.add_argument("--course", help="course directory (default: search upward)")
+
+    add_url = subcommands.add_parser(
+        "add-url", help="add a link to materials/source/links.md"
+    )
+    add_url.add_argument("url")
+    add_url.add_argument("--note", default="", help="what it is, e.g. 'heaps explained, 12 min'")
+    add_url.add_argument("--course", help="course directory (default: search upward)")
+
+    # How the classifying agent and the teacher record decisions about materials, without
+    # editing the manifest by hand.
+    material = subcommands.add_parser(
+        "material", help="record a material's kind, units or title; merge confirmed duplicates"
+    )
+    actions = material.add_subparsers(dest="action", required=True)
+    set_cmd = actions.add_parser("set", help="set kind, units or title of a material")
+    set_cmd.add_argument("id", help="material id, e.g. M0007")
+    set_cmd.add_argument("--kind", choices=KINDS)
+    set_cmd.add_argument(
+        "--unit", dest="units", action="append", metavar="UNN",
+        help="a unit this material supports, e.g. U03 (repeatable; replaces the list)",
+    )
+    set_cmd.add_argument("--no-units", action="store_true", help="clear the units list")
+    set_cmd.add_argument("--title")
+    set_cmd.add_argument("--course", help="course directory (default: search upward)")
+    merge_cmd = actions.add_parser(
+        "merge", help="merge a teacher-confirmed duplicate into another material"
+    )
+    merge_cmd.add_argument("id", help="the duplicate, e.g. the PDF export")
+    merge_cmd.add_argument("--into", required=True, help="the material to keep, e.g. the deck")
+    merge_cmd.add_argument("--course", help="course directory (default: search upward)")
+    dupes = actions.add_parser("duplicates", help="list materials that look like duplicates")
+    dupes.add_argument("--course", help="course directory (default: search upward)")
 
     # Which hat a session in this repo wears (D-034). Teacher is the default; switching
     # to framework-developer creates a gitignored marker, and refuses if the ignore rule
@@ -285,6 +351,59 @@ def run_log(args) -> int:
     return 0
 
 
+def run_ingest(args) -> int:
+    course_root = find_course_root(Path(args.course) if args.course else None)
+    if args.preflight:
+        print(preflight_text(ingest.preflight(course_root, fetch=not args.no_fetch)))
+        return 0
+    report = ingest.run(
+        course_root,
+        overwrite=[i.upper() for i in args.overwrite],
+        keep=[i.upper() for i in args.keep],
+        fetch=not args.no_fetch,
+    )
+    print(run_text(report))
+    # 3, like `classkit write`: "ask the teacher first", not "something broke".
+    return 3 if report.refused else 0
+
+
+def run_add_url(args) -> int:
+    course_root = find_course_root(Path(args.course) if args.course else None)
+    try:
+        path = linkfile.add_url(course_root / SOURCE_DIR, args.url, args.note)
+    except linkfile.BadURL as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(f"added  {args.url.strip()}  → {path.relative_to(course_root.parent)}")
+    print("  Run /ingest (or `classkit ingest`) to record it as a material.")
+    return 0
+
+
+def run_material(args) -> int:
+    course_root = find_course_root(Path(args.course) if args.course else None)
+    try:
+        if args.action == "set":
+            units = [] if args.no_units else ([u.upper() for u in args.units] if args.units else None)
+            record = ingest.set_fields(course_root, args.id.upper(), kind=args.kind, units=units,
+                                       title=args.title)
+            print(f"{record['id']}  kind={record.get('kind')}  units={','.join(record.get('units') or []) or '-'}"
+                  f"  title={record.get('title')!r}")
+        elif args.action == "merge":
+            record = ingest.merge(course_root, args.id.upper(), args.into.upper())
+            print(f"merged {args.id.upper()} into {record['id']}: sources {', '.join(record['sources'])}")
+            print(f"  {args.id.upper()} is retired; anchors stay those of {record['canonical']}.")
+        else:
+            pairs = ingest.suspected_duplicates(course_root, ingest.load(course_root))
+            if not pairs:
+                print("No suspected duplicates.")
+            for a, b, why in pairs:
+                print(f"{a} ~ {b}: {why}")
+    except ingest.MaterialError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    return 0
+
+
 def run_mode(args, framework_root: Path) -> int:
     if args.mode is None:
         mode = current_mode(framework_root)
@@ -320,13 +439,19 @@ def main(argv: list[str] | None = None) -> int:
             return run_write(args)
         if args.command == "log":
             return run_log(args)
+        if args.command == "ingest":
+            return run_ingest(args)
+        if args.command == "add-url":
+            return run_add_url(args)
+        if args.command == "material":
+            return run_material(args)
         framework_root = find_framework_root()
         if args.command == "mode":
             return run_mode(args, framework_root)
         if args.command == "validate":
             return run_validate(args, framework_root)
         return run_scaffold(args, framework_root)
-    except (LayoutError, FrontMatterError, FileNotFoundError) as exc:
+    except (LayoutError, FrontMatterError, FileNotFoundError, ManifestError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
