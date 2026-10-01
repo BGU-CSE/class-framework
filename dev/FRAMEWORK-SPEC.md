@@ -1057,14 +1057,16 @@ rejecting a malformed URL or one already listed (exit 2).
 **A link becomes a material only when the teacher lists it** (D-040). Ingest does **not** harvest
 URLs from inside slides and documents: in the hand test that recorded a book's whole bibliography as
 course materials, broke URLs at line wraps, and buried the one link that mattered. A link inside a
-deck is already readable in the deck's ingested text. The classifying agent *mentions* links it
+deck is readable in the deck's ingested text (kept as `[text](url)`). The classifying agent *mentions* links it
 noticed that look like course resources ("the Unit 1 deck links to the course Gem — add it with
 `classkit add-url`?"); the teacher decides. Each listed link becomes a material of kind `video` (a
 known video host or a video file extension) or `link`. **In Core only the link and safely fetchable metadata (title,
 duration) are recorded — not its content.** Fetching is best-effort — 5-second timeout, HTML only,
 the first 512 KB — and a link whose metadata cannot be fetched is recorded all the same, titled by
 its note or its URL (`--no-fetch` skips it). A link listed only in `links.md` is marked removed when
-its line goes.
+its line goes. A link harvested by an
+earlier version (it carries `found_in`) is treated the same way: the next ingest marks it removed
+unless `links.md` lists it, and listing it restores its old id, so a locator to it keeps working.
 
 #### The manifest
 
@@ -1296,7 +1298,9 @@ locators rot.
     once, by name, in the summary.
 - **Adding a format** is one extractor registered by file extension — an extension point like adding a
   methodology (§2.5). In code: `@register(".ext")` in `src/classkit/ingest/extract.py`, a function
-  from a path to the extracted Markdown, its title, the links found, and a status.
+  from a path to the extracted Markdown, its title, and a status (and, for a private material's index,
+  its one-line labels). A hyperlink is kept in the Markdown as `[text](url)` — a PDF's link
+  annotation as `*(link: url)*` — so it stays readable; it is never recorded as a material (D-040).
 - A file an extractor cannot read (corrupt, password-protected) is `unsupported` with the reason;
   one bad file never stops the run. An `unsupported` file is retried only once an optional converter
   for its format has been installed.

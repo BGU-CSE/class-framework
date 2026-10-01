@@ -32,8 +32,8 @@ def preflight_text(p: Preflight) -> str:
     if p.private:
         lines.append(f"Private:      {p.private} file(s) under private/ — an index is committed, the full "
                      "text stays on this machine")
-    lines.append(f"Links:        {p.links_listed} in links.md, {p.embedded_links} embedded in "
-                 "slides and documents (recorded during conversion)")
+    lines.append(f"Links:        {p.links_listed} in links.md (a link becomes a material only "
+                 "when it is listed there)")
     for number, text in p.plan.rejected_link_lines:
         lines.append(f"              links.md line {number} is not a link, ignored: {text}")
     lines.append("")
@@ -55,10 +55,6 @@ def preflight_text(p: Preflight) -> str:
         lines.append("Exact duplicates (identical files — merged automatically):")
         lines += [f"  {' = '.join(group)}" for group in p.exact_duplicates]
         lines.append("")
-    if p.suspected_duplicates:
-        lines.append("Suspected duplicates (same name, different format — you will be asked to confirm):")
-        lines += [f"  {' ~ '.join(group)}" for group in p.suspected_duplicates]
-        lines.append("")
     if p.unsupported:
         lines.append("Cannot be read — recorded as unsupported, never dropped:")
         lines += [f"  {path}: {reason}" for path, reason in p.unsupported]
@@ -74,7 +70,7 @@ def preflight_text(p: Preflight) -> str:
 
 def run_text(r: RunReport) -> str:
     lines = []
-    if not (r.converted or r.found_links or r.refused or r.kept or r.plan.outstanding()):
+    if not (r.converted or r.refused or r.kept or r.plan.outstanding()):
         return "Nothing to do: every source is already ingested."
 
     plan = r.plan
@@ -85,7 +81,11 @@ def run_text(r: RunReport) -> str:
     for mid, path in plan.gone:
         lines.append(f"  gone       {mid}  - {path} (a copy; the material remains)")
     for mid in plan.removed:
-        lines.append(f"  removed    {mid}  source deleted — marked removed, not forgotten")
+        if mid in plan.unharvested:
+            lines.append(f"  removed    {mid}  a link found inside a material, not in links.md — links "
+                         "come only from links.md now; `classkit add-url` brings it back under this id")
+        else:
+            lines.append(f"  removed    {mid}  source deleted — marked removed, not forgotten")
     for mid, path in plan.restored:
         lines.append(f"  restored   {mid}  {path}")
     for c in r.converted:
@@ -98,8 +98,6 @@ def run_text(r: RunReport) -> str:
             where += f" (index) + {c.full_text} (full text, this machine only)"
         reason = f"  ({c.reason})" if c.reason else ""
         lines.append(f"  {label:<10} {c.id}  [{c.status}] {c.path}{where}{reason}")
-    for c in r.found_links:
-        lines.append(f"  link       {c.id}  {c.path}")
     for mid in r.kept:
         lines.append(f"  kept       {mid}  your edit kept; the changed source is marked as seen")
 
@@ -114,14 +112,7 @@ def run_text(r: RunReport) -> str:
             "  --keep ID        keep the edit and mark the changed source as seen.",
         ]
 
-    if r.suspected_duplicates:
-        lines += ["", "Suspected duplicates — ask the teacher; merge only on confirmation:"]
-        for a, b, why in r.suspected_duplicates:
-            lines.append(f"  {a} ~ {b}: {why}")
-        lines.append("  classkit material merge ID --into ID   (into the one whose anchors to keep — "
-                     "a deck over its PDF)")
-
-    created = sum(1 for c in r.converted if c.new) + len(r.found_links)
+    created = sum(1 for c in r.converted if c.new)
     updated = sum(1 for c in r.converted if not c.new and not c.local)
     local = sum(1 for c in r.converted if c.local)
     lines += ["", f"{created} new materials, {updated} updated, {len(r.refused)} refused."
@@ -141,7 +132,7 @@ def log_summary(r: RunReport) -> str | None:
     an entry."""
     plan = r.plan
     parts = []
-    new = [c.id for c in r.converted if c.new] + [c.id for c in r.found_links]
+    new = [c.id for c in r.converted if c.new]
     if new:
         parts.append(_ids("new", new))
     # A private material's full text written on this machine alone changed nothing committed —

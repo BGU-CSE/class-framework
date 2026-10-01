@@ -131,7 +131,11 @@ Scaffolding **never overwrites**, so it is safe to re-run at any time.
   `instructor_material_cited`; the in-class plan may cite it. No export will bundle it.
 - The classifying agent only reads and **returns** each material's kind, units and audience;
   `/ingest` shows them to the teacher and records them (`classkit material apply`). Nobody edits the
-  manifest's bookkeeping by hand, and only the teacher confirms a merge (`classkit material merge`).
+  manifest's bookkeeping by hand. Identical copies merge automatically; a deck and its PDF export
+  stay two materials and nobody is asked — **cite the deck**. `classkit material merge` is optional,
+  only on the teacher's word.
+- **Links become materials only from `links.md`** (`classkit add-url`); a link inside a deck is read
+  in its ingested text, never harvested.
 - Running `classkit ingest` by hand writes a course-log entry saying what changed; add `--why` to
   say why.
 

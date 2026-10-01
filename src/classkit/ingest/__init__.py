@@ -27,7 +27,6 @@ from .core import (
     run,
     scan,
     set_fields,
-    suspected_duplicates,
 )
 from .extract import anchors
 from .manifest import INGESTED_DIR, MANIFEST, SOURCE_DIR, ManifestError, ingested_file, load
@@ -35,5 +34,5 @@ from .manifest import INGESTED_DIR, MANIFEST, SOURCE_DIR, ManifestError, ingeste
 __all__ = [
     "INGESTED_DIR", "MANIFEST", "SOURCE_DIR", "ManifestError", "MaterialError", "Plan",
     "Preflight", "RunReport", "anchors", "apply", "ingested_file", "load", "merge", "preflight",
-    "reconcile", "remove", "run", "scan", "set_fields", "suspected_duplicates",
+    "reconcile", "remove", "run", "scan", "set_fields",
 ]

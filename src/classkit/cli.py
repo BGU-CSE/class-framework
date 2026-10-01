@@ -198,7 +198,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     set_cmd.add_argument("--course", help="course directory (default: search upward)")
     merge_cmd = actions.add_parser(
-        "merge", help="merge a teacher-confirmed duplicate into another material"
+        "merge", help="optional: merge one material into another the teacher says is the same "
+                      "(never prompted; exact copies are merged by ingest already)"
     )
     merge_cmd.add_argument("id", help="the duplicate, e.g. the PDF export")
     merge_cmd.add_argument("--into", required=True, help="the material to keep, e.g. the deck")
@@ -219,8 +220,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     remove_cmd.add_argument("id", help="material id, e.g. M0005")
     remove_cmd.add_argument("--course", help="course directory (default: search upward)")
-    dupes = actions.add_parser("duplicates", help="list materials that look like duplicates")
-    dupes.add_argument("--course", help="course directory (default: search upward)")
 
     # This machine's copy of the course (D-040): `validate` judges the course, `doctor` the
     # machine — private files present or stale, the .gitignore, dependencies, converters, mode.
@@ -475,12 +474,6 @@ def run_material(args) -> int:
                 )
                 print(f"{material_id}  {shown}")
             print(f"{len(changes)} materials changed, {len(entries or []) - len(changes)} already so.")
-        else:
-            pairs = ingest.suspected_duplicates(course_root, ingest.load(course_root))
-            if not pairs:
-                print("No suspected duplicates.")
-            for a, b, why in pairs:
-                print(f"{a} ~ {b}: {why}")
     except ingest.MaterialError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

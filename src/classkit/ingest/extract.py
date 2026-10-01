@@ -42,9 +42,6 @@ MEDIA_EXTENSIONS = {
     ".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac",
 }
 
-_URL = re.compile(r"https?://[^\s<>\"'`\]\[)(]+", re.I)
-_URL_TRAILING = ".,;:!?'\""
-
 
 @dataclass
 class Extraction:
@@ -53,8 +50,6 @@ class Extraction:
     status: str
     body: str = ""
     title: str = ""
-    #: URLs found inside the material, each with the anchor it was found under ("" if none)
-    links: list[tuple[str, str]] = field(default_factory=list)
     reason: str = ""
     #: anchor → one-line labels for a private material's index (D-040): a slide's title, a
     #: page's printed label and the sections that start on it. Never body text.
@@ -71,7 +66,6 @@ class Probe:
 
     slides: int = 0
     pages: int = 0
-    links: int = 0
     status: str = INGESTED  # the status conversion is expected to produce
     reason: str = ""
 
@@ -123,7 +117,7 @@ def extract(path: Path) -> Extraction:
 
 
 def probe(path: Path) -> Probe:
-    """Cheap facts for the pre-flight report: slide/page/link counts, expected status."""
+    """Cheap facts for the pre-flight report: slide and page counts, expected status."""
     extension = path.suffix.lower()
     if extension in MEDIA_EXTENSIONS:
         return Probe(status=MEDIA, reason="audio/video: recorded, content not extracted")
@@ -227,15 +221,6 @@ def index_body(markdown: str, labels: dict[str, list[str]]) -> str:
     return "\n".join(lines).rstrip() + "\n" if lines else ""
 
 
-def find_urls(text: str) -> list[str]:
-    urls = []
-    for match in _URL.finditer(text):
-        url = match.group(0).rstrip(_URL_TRAILING)
-        if url not in urls:
-            urls.append(url)
-    return urls
-
-
 def _clean(text: str | None) -> str:
     return " ".join(str(text or "").split())
 
@@ -262,20 +247,15 @@ def _read_text(path: Path) -> str:
     return raw.decode("latin-1")
 
 
-def _markdown_probe(path: Path) -> Probe:
-    return Probe(links=len(find_urls(_read_text(path))))
-
-
-@register(".md", ".markdown", probe=_markdown_probe, seconds=0.01)
+@register(".md", ".markdown", seconds=0.01)
 def extract_markdown(path: Path) -> Extraction:
     text = _read_text(path).replace("\r\n", "\n")
     found = headings(text)
     title = found[0][1] if found else ""
-    links = _links_by_anchor(text)
-    return Extraction(INGESTED, body=text.rstrip() + "\n", title=title, links=links)
+    return Extraction(INGESTED, body=text.rstrip() + "\n", title=title)
 
 
-@register(".txt", ".text", probe=_markdown_probe, seconds=0.01)
+@register(".txt", ".text", seconds=0.01)
 def extract_text(path: Path) -> Extraction:
     text = _read_text(path).replace("\r\n", "\n")
     # A plain-text file has no headings, so it has no anchors: it is cited by its id alone.
@@ -283,26 +263,7 @@ def extract_text(path: Path) -> Extraction:
     body = "\n".join(("\\" + line) if line.lstrip().startswith("#") else line
                      for line in text.splitlines())
     first = next((line.strip() for line in text.splitlines() if line.strip()), "")
-    return Extraction(INGESTED, body=body.rstrip() + "\n", title=first[:80],
-                      links=[(u, "") for u in find_urls(text)], title_from_body=True)
-
-
-def _links_by_anchor(markdown: str) -> list[tuple[str, str]]:
-    """URLs in a Markdown document, each with the anchor of the heading it sits under."""
-    found: list[tuple[str, str]] = []
-    current = ""
-    names = iter(anchors(markdown))
-    fenced = False
-    for line in markdown.splitlines():
-        if _FENCE.match(line):
-            fenced = not fenced
-        elif not fenced and _HEADING.match(line) and slug(_HEADING.match(line).group(2)):
-            current = next(names, current)
-            continue
-        for url in find_urls(line):
-            if all(url != u for u, _ in found):
-                found.append((url, current))
-    return found
+    return Extraction(INGESTED, body=body.rstrip() + "\n", title=first[:80], title_from_body=True)
 
 
 # -- built in: PowerPoint -----------------------------------------------------
@@ -313,18 +274,7 @@ def _pptx_probe(path: Path) -> Probe:
     with zipfile.ZipFile(path) as archive:
         names = archive.namelist()
         slides = sum(1 for n in names if re.fullmatch(r"ppt/slides/slide\d+\.xml", n))
-        links = _count_external_links(archive, r"ppt/slides/_rels/slide\d+\.xml\.rels")
-    return Probe(slides=slides, links=links)
-
-
-def _count_external_links(archive, pattern: str) -> int:
-    total = 0
-    for name in archive.namelist():
-        if re.fullmatch(pattern, name):
-            xml = archive.read(name).decode("utf-8", "replace")
-            total += len(re.findall(r'relationships/hyperlink"[^>]*TargetMode="External"', xml))
-            total += len(re.findall(r'TargetMode="External"[^>]*relationships/hyperlink"', xml))
-    return total
+    return Probe(slides=slides)
 
 
 @register(".pptx", probe=_pptx_probe, seconds=0.05)
@@ -333,13 +283,11 @@ def extract_pptx(path: Path) -> Extraction:
 
     deck = Presentation(str(path))
     lines: list[str] = []
-    links: list[tuple[str, str]] = []
     labels: dict[str, list[str]] = {}
     first_title = ""
 
     for number, slide in enumerate(deck.slides, start=1):
         anchor = f"slide-{number}"
-        start = len(lines)
         lines += [f"## Slide {number}", ""]
         if slide._element.get("show") == "0":
             lines += ["*(hidden slide)*", ""]
@@ -357,11 +305,10 @@ def extract_pptx(path: Path) -> Extraction:
                 continue
             if getattr(shape, "has_text_frame", False) and shape.has_text_frame:
                 for paragraph in shape.text_frame.paragraphs:
-                    text = _clean("".join(run.text for run in paragraph.runs))
-                    for run in paragraph.runs:
-                        address = run.hyperlink.address if run.hyperlink is not None else None
-                        if address:
-                            links.append((address, anchor))
+                    # A hyperlink is kept as a Markdown link, so its URL is readable in the
+                    # ingested text — links are no longer harvested as materials (D-040).
+                    text = _clean("".join(_linked(run.text, run.hyperlink.address if run.hyperlink is not None else None)
+                                          for run in paragraph.runs))
                     if text:
                         lines.append(("  " * paragraph.level) + f"- {_escape_heading(text)}")
                 lines.append("")
@@ -371,7 +318,7 @@ def extract_pptx(path: Path) -> Extraction:
             click = getattr(shape, "click_action", None)
             address = getattr(getattr(click, "hyperlink", None), "address", None) if click else None
             if address:
-                links.append((address, anchor))
+                lines += [f"*(link: {address})*", ""]
 
         if slide.has_notes_slide:
             notes = slide.notes_slide.notes_text_frame.text.strip() if slide.notes_slide.notes_text_frame else ""
@@ -379,12 +326,15 @@ def extract_pptx(path: Path) -> Extraction:
                 lines.append("> **Notes:** " + " ".join(notes.split()))
                 lines.append("")
 
-        for url in find_urls("\n".join(lines[start:])):
-            links.append((url, anchor))
-
     title = first_title or _title_from_metadata(deck.core_properties.title)
-    return Extraction(INGESTED, body="\n".join(lines).rstrip() + "\n", title=title,
-                      links=_unique(links), labels=labels)
+    return Extraction(INGESTED, body="\n".join(lines).rstrip() + "\n", title=title, labels=labels)
+
+
+def _linked(text: str, address: str | None) -> str:
+    """A run of text, as a Markdown link when it carries a hyperlink."""
+    if not address or not text.strip():
+        return text
+    return f"[{text}]({address})"
 
 
 def _shapes(shapes):
@@ -402,13 +352,7 @@ def _pdf_probe(path: Path) -> Probe:
     from pypdf import PdfReader  # noqa: PLC0415
 
     reader = PdfReader(str(path))
-    links = 0
-    for page in reader.pages:
-        for annotation in page.get("/Annots") or []:
-            obj = annotation.get_object()
-            if obj.get("/Subtype") == "/Link" and "/URI" in (obj.get("/A") or {}):
-                links += 1
-    return Probe(pages=len(reader.pages), links=links)
+    return Probe(pages=len(reader.pages))
 
 
 @register(".pdf", probe=_pdf_probe, seconds=0.08)
@@ -417,7 +361,6 @@ def extract_pdf(path: Path) -> Extraction:
 
     reader = PdfReader(str(path))
     lines: list[str] = []
-    links: list[tuple[str, str]] = []
     characters = 0
     printed = list(getattr(reader, "page_labels", []) or [])
     sections = _outline_by_page(reader)
@@ -445,13 +388,11 @@ def extract_pdf(path: Path) -> Extraction:
             line = line.rstrip()
             lines.append(_escape_heading(line) if line else "")
         lines.append("")
-        for url in find_urls(text):
-            links.append((url, anchor))
-        for annotation in page.get("/Annots") or []:
-            obj = annotation.get_object()
-            action = obj.get("/A") or {}
-            if obj.get("/Subtype") == "/Link" and "/URI" in action:
-                links.append((str(action["/URI"]), anchor))
+        # A link annotation's target is not in the text layer; it is noted, so the URL stays
+        # readable in the ingested text (links are not harvested as materials, D-040).
+        for uri in _link_annotations(page):
+            if uri not in text:
+                lines += [f"*(link: {uri})*", ""]
 
     pages = len(reader.pages)
     metadata_title = _title_from_metadata((reader.metadata or {}).get("/Title"))
@@ -460,13 +401,29 @@ def extract_pdf(path: Path) -> Extraction:
     if pages == 0 or characters < NO_TEXT_CHARS_PER_PAGE * pages:
         # Scanned: no text to extract. The page headings are still written, so a locator to a
         # page that exists resolves, and the teacher may type in the text by hand.
-        return Extraction(NO_TEXT, body=body, title=metadata_title, links=_unique(links),
+        return Extraction(NO_TEXT, body=body, title=metadata_title,
                           reason="no text layer (a scan?) — OCR is not done in Core; "
                                  "pages are anchored, the text is empty", labels=labels)
 
     first_line = next((ln.strip() for ln in lines if ln.strip() and not ln.startswith(("## ", "*("))), "")
     return Extraction(INGESTED, body=body, title=metadata_title or first_line[:80],
-                      links=_unique(links), labels=labels, title_from_body=not metadata_title)
+                      labels=labels, title_from_body=not metadata_title)
+
+
+def _link_annotations(page) -> list[str]:
+    """The URLs of a page's link annotations, in order, each once. A broken annotation is skipped."""
+    found: list[str] = []
+    try:
+        for annotation in page.get("/Annots") or []:
+            obj = annotation.get_object()
+            action = obj.get("/A") or {}
+            if obj.get("/Subtype") == "/Link" and "/URI" in action:
+                uri = str(action["/URI"]).strip()
+                if uri and uri not in found:
+                    found.append(uri)
+    except Exception:  # a malformed annotation must not lose the page
+        pass
+    return found
 
 
 def _outline_by_page(reader) -> dict[int, list[str]]:
@@ -497,15 +454,7 @@ def _outline_by_page(reader) -> dict[int, list[str]]:
 
 # -- built in: Word -----------------------------------------------------------
 
-def _docx_probe(path: Path) -> Probe:
-    import zipfile  # noqa: PLC0415
-
-    with zipfile.ZipFile(path) as archive:
-        links = _count_external_links(archive, r"word/_rels/document\.xml\.rels")
-    return Probe(links=links)
-
-
-@register(".docx", probe=_docx_probe, seconds=0.2)
+@register(".docx", seconds=0.2)
 def extract_docx(path: Path) -> Extraction:
     import docx  # noqa: PLC0415
     from docx.oxml.ns import qn  # noqa: PLC0415
@@ -520,7 +469,7 @@ def extract_docx(path: Path) -> Extraction:
     for child in body.iterchildren():
         if child.tag == qn("w:p"):
             paragraph = Paragraph(child, document)
-            text = _clean(paragraph.text)
+            text = _clean(_paragraph_text(paragraph))
             if not text:
                 continue
             level = _heading_level(paragraph.style.name if paragraph.style is not None else "")
@@ -538,18 +487,22 @@ def extract_docx(path: Path) -> Extraction:
     markdown = "\n".join(lines).strip() + "\n"
     markdown = re.sub(r"\n{3,}", "\n\n", markdown)
 
-    hyperlinks = [
-        rel.target_ref
-        for rel in document.part.rels.values()
-        if rel.reltype.endswith("/hyperlink") and rel.is_external
-    ]
-    links = _links_by_anchor(markdown)
-    for url in hyperlinks:
-        if all(url != u for u, _ in links):
-            links.append((url, ""))
-
     title = first_heading or _title_from_metadata(document.core_properties.title)
-    return Extraction(INGESTED, body=markdown, title=title, links=links)
+    return Extraction(INGESTED, body=markdown, title=title)
+
+
+def _paragraph_text(paragraph) -> str:
+    """A paragraph's text with its hyperlinks kept as Markdown links (D-040: a link inside a
+    document is readable in its ingested text, not harvested as a material)."""
+    from docx.text.hyperlink import Hyperlink  # noqa: PLC0415
+
+    parts = []
+    for item in paragraph.iter_inner_content():
+        if isinstance(item, Hyperlink):
+            parts.append(_linked(item.text, item.address))
+        else:
+            parts.append(item.text)
+    return "".join(parts)
 
 
 def _heading_level(style: str) -> int:
@@ -608,8 +561,7 @@ def extract_with_pandoc(path: Path) -> Extraction:
     )
     markdown = completed.stdout
     found = headings(markdown)
-    return Extraction(INGESTED, body=markdown.rstrip() + "\n", title=found[0][1] if found else "",
-                      links=_links_by_anchor(markdown))
+    return Extraction(INGESTED, body=markdown.rstrip() + "\n", title=found[0][1] if found else "")
 
 
 @register(*LIBREOFFICE_EXTENSIONS, probe=_optional_probe, seconds=4.0)
@@ -645,13 +597,3 @@ def _table_rows(rows: list[list[str]]) -> list[str]:
     out += ["| " + " | ".join(row) + " |" for row in cleaned[1:]]
     return out
 
-
-def _unique(links: list[tuple[str, str]]) -> list[tuple[str, str]]:
-    seen: set[str] = set()
-    result = []
-    for url, anchor in links:
-        url = url.strip()
-        if url and url not in seen:
-            seen.add(url)
-            result.append((url, anchor))
-    return result

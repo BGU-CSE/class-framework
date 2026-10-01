@@ -139,6 +139,9 @@ class Plan:
     gone: list[tuple[str, str]] = field(default_factory=list)  # (id, path) — a copy vanished
     restored: list[tuple[str, str]] = field(default_factory=list)  # (id, path)
     removed: list[str] = field(default_factory=list)  # ids
+    #: links an earlier version harvested from inside a material (`found_in`) and that links.md
+    #: does not list — retired, since links come only from links.md now (D-040)
+    unharvested: list[str] = field(default_factory=list)  # ids
     #: (id, why) — materials whose conversion is due: changed, file missing, refused last time,
     #: or a converter that is now available
     pending: list[tuple[str, str]] = field(default_factory=list)
@@ -157,7 +160,9 @@ class Plan:
         lines += [f"copy no longer identical: {path} (was part of {mid})" for mid, path in self.detached]
         lines += [f"copy removed: {path} ({mid})" for mid, path in self.gone]
         lines += [f"back again: {path} ({mid})" for mid, path in self.restored]
-        lines += [f"source removed: {mid}" for mid in self.removed]
+        lines += [f"source removed: {mid}" for mid in self.removed if mid not in self.unharvested]
+        lines += [f"link found inside a material, not in links.md — no longer recorded: {mid}"
+                  for mid in self.unharvested]
         changed_ids = {mid for mid, _ in self.changed}
         lines += [f"not converted: {mid} — {why}" for mid, why in self.pending if mid not in changed_ids]
         return lines
@@ -290,8 +295,9 @@ def reconcile(course_root: Path, records: list[dict], files: list[SourceFile],
 
     plan.new = list(new_by_hash.values())
 
-    # 4. Links: matched by normalized URL. A link found inside a document stays while its
-    #    `found_in` material does; one listed only in links.md goes when its line does.
+    # 4. Links: matched by normalized URL. A link is a material only while links.md lists it
+    #    (D-040). One an earlier version harvested from inside a material (`found_in`) is marked
+    #    removed like any other unlisted link — and `add-url` brings it back under its old id.
     listed = {linkfile.normalize(link.url): link for link in links.links}
     link_records = {linkfile.normalize(r.get("canonical", "")): r for r in records
                     if r.get("format") == "url" and not r.get("merged_into")}
@@ -304,12 +310,15 @@ def reconcile(course_root: Path, records: list[dict], files: list[SourceFile],
             record["note"] = link.note
         if record.get("removed_at"):
             record.pop("removed_at")
+            record.pop("found_in", None)  # listed now: it is the teacher's link, not a harvested one
             plan.restored.append((record["id"], link.url))
     for key, record in link_records.items():
-        if key in listed or record.get("removed_at") or record.get("found_in"):
+        if key in listed or record.get("removed_at"):
             continue
         record["removed_at"] = date
         plan.removed.append(record["id"])
+        if record.get("found_in"):
+            plan.unharvested.append(record["id"])
 
     # 5. What is due for conversion.
     for record in live:
@@ -382,11 +391,9 @@ class Preflight:
     size: int
     slides: int
     pages: int
-    embedded_links: int
     unsupported: list[tuple[str, str]]  # (path, reason)
     media: list[str]
     exact_duplicates: list[list[str]]
-    suspected_duplicates: list[list[str]]
     seconds: float
     to_convert: int
     private: int = 0  # files under source/private/
@@ -400,7 +407,7 @@ def preflight(course_root: Path, *, fetch: bool = True) -> Preflight:
     _state, plan = reconcile(course_root, records, files, links)
 
     by_format: dict[str, int] = defaultdict(int)
-    slides = pages = embedded = 0
+    slides = pages = 0
     unsupported: list[tuple[str, str]] = []
     media: list[str] = []
     for f in files:
@@ -408,24 +415,20 @@ def preflight(course_root: Path, *, fetch: bool = True) -> Preflight:
         probe = ex.probe(f.path)
         slides += probe.slides
         pages += probe.pages
-        embedded += probe.links
         if probe.status == ex.UNSUPPORTED:
             unsupported.append((f.rel, probe.reason))
         elif probe.status == ex.MEDIA:
             media.append(f.rel)
 
-    # Duplicates are worth showing only where this run has something to decide: a group the
-    # manifest already holds as one material was settled by an earlier run.
+    # Exact copies are worth showing only where this run has something new: a group the manifest
+    # already holds as one material was settled by an earlier run. Copies that are *not* identical
+    # (a deck and its PDF export) are not looked for at all (D-040).
     owner = {path: r["id"] for r in active(_state) for path in r.get("sources") or []}
-    unsettled = {p for item in plan.new for p in item.paths} | {p for _m, p in plan.changed} \
-        | {new for _m, _old, new in plan.moved}
-
     by_hash: dict[str, list[str]] = defaultdict(list)
     for f in files:
         by_hash[f.hash].append(f.rel)
     exact = [paths for paths in by_hash.values()
              if len(paths) > 1 and len({owner.get(p, p) for p in paths}) > 1]
-    suspected = [group for group in suspected_by_name(files) if unsettled & set(group)]
 
     # What will actually be converted this run, and roughly how long it takes.
     due = {p for item in plan.new for p in item.paths[:1]}
@@ -442,39 +445,11 @@ def preflight(course_root: Path, *, fetch: bool = True) -> Preflight:
 
     return Preflight(
         files=files, plan=plan, links_listed=len(links.links), by_format=dict(sorted(by_format.items())),
-        size=sum(f.size for f in files), slides=slides, pages=pages, embedded_links=embedded,
-        unsupported=unsupported, media=media, exact_duplicates=exact,
-        suspected_duplicates=suspected, seconds=seconds,
+        size=sum(f.size for f in files), slides=slides, pages=pages,
+        unsupported=unsupported, media=media, exact_duplicates=exact, seconds=seconds,
         to_convert=len(due) + len(plan.new_links),
         private=sum(1 for f in files if is_private(f.rel)),
     )
-
-
-_COPY_MARKERS = re.compile(r"(copy|final|export(ed)?|print|handout|v\d+|\(\d+\)|\d{1,2}$)", re.I)
-
-
-def _stem_key(path: str) -> str:
-    stem = Path(path).stem.lower()
-    stem = re.sub(r"[\s_\-.]+", " ", stem)
-    stem = " ".join(w for w in stem.split() if not _COPY_MARKERS.fullmatch(w))
-    return re.sub(r"[^\w]", "", stem)
-
-
-def suspected_by_name(files: list[SourceFile]) -> list[list[str]]:
-    """Files whose names say they are the same material in different formats — a deck and its
-    PDF export. A suspicion for the teacher to confirm, never merged automatically."""
-    groups: dict[str, list[SourceFile]] = defaultdict(list)
-    for f in files:
-        key = _stem_key(f.rel)
-        if key:
-            groups[key].append(f)
-    suspects = []
-    for members in groups.values():
-        hashes = {f.hash for f in members}
-        formats = {f.format for f in members}
-        if len(members) > 1 and len(hashes) > 1 and len(formats) > 1:
-            suspects.append(sorted(f.rel for f in members))
-    return suspects
 
 
 # -- the run -----------------------------------------------------------------------
@@ -510,10 +485,6 @@ class RunReport:
     converted: list[Converted] = field(default_factory=list)
     refused: list[Refusal] = field(default_factory=list)
     kept: list[str] = field(default_factory=list)
-    found_links: list[Converted] = field(default_factory=list)
-    suspected_duplicates: list[tuple[str, str, str]] = field(default_factory=list)  # (a, b, why)
-    #: URLs each conversion found inside its material, recorded as link materials at the end
-    embedded: list[tuple[str, list[tuple[str, str]]]] = field(default_factory=list, repr=False)
 
 
 def run(
@@ -545,7 +516,6 @@ def run(
     index = by_id(records)
     due = [mid for mid, _ in plan.pending]
     due += [mid for mid in sorted(overwrite_ids) if mid in index and mid not in due and index[mid].get("canonical") in present]
-    converted_ids: list[str] = []
 
     for material_id in due:
         record = index[material_id]
@@ -558,7 +528,6 @@ def run(
         save(course_root, records)
         if result is not None:
             report.converted.append(result)
-            converted_ids.append(material_id)
 
     for group in plan.new:
         first = group.files[0]
@@ -585,7 +554,6 @@ def run(
         save(course_root, records)
         if result is not None:
             report.converted.append(result)
-            converted_ids.append(record["id"])
 
     for link in plan.new_links:
         say(f"recording link  {link.url}")
@@ -593,23 +561,6 @@ def run(
                                           fetch=fetch, date=date))
         save(course_root, records)
 
-    # Links found inside the documents converted this run.
-    known = {linkfile.normalize(r.get("canonical", "")) for r in records if r.get("format") == "url"}
-    for material_id, found in report.embedded:
-        for url, anchor in found:
-            try:
-                url = linkfile.check_url(url)
-            except linkfile.BadURL:
-                continue
-            if linkfile.normalize(url) in known:
-                continue
-            known.add(linkfile.normalize(url))
-            where = f"{material_id}#{anchor}" if anchor else material_id
-            report.found_links.append(_add_link(course_root, records, url, found_in=where,
-                                                fetch=fetch, date=date))
-        save(course_root, records)
-
-    report.suspected_duplicates = suspected_duplicates(course_root, records, among=set(converted_ids))
     return report
 
 
@@ -826,8 +777,6 @@ def _convert(course_root: Path, record: dict, source: SourceFile, date: str, rep
     record["source_hash"] = current_hash
     if committed:
         record["ingested_at"] = date
-        if not private:  # URLs inside a private book are its text, and the manifest is committed
-            report.embedded.append((record["id"], result.links))
     return Converted(record["id"], record["title"], result.status, source.rel, ingested_rel,
                      result.reason, new, full_text=full_text_rel, local=not committed)
 
@@ -855,7 +804,7 @@ def _drop_full_text(course_root: Path, record: dict) -> None:
 
 
 def _add_link(course_root: Path, records: list[dict], url: str, *, note: str = "",
-              found_in: str = "", fetch: bool, date: str) -> Converted:
+              fetch: bool, date: str) -> Converted:
     title, duration = "", ""
     if fetch:
         try:
@@ -872,60 +821,12 @@ def _add_link(course_root: Path, records: list[dict], url: str, *, note: str = "
         "sources": [url],
         "canonical": url,
         "source_hash": link_hash(url),
-        "found_in": found_in,
         "note": note,
         "duration": duration,
         "ingested_at": date,
     }
     records.append(record)
     return Converted(record["id"], record["title"], ex.LINK, url, new=True)
-
-
-# -- suspected duplicates by content -------------------------------------------------
-
-_WORD = re.compile(r"[^\W\d_]{3,}")
-_ANCHOR_LINE = re.compile(r"^(## (Slide|Page) \d+|\*\((printed page|hidden slide).*)$", re.M)
-
-
-def _words(text: str) -> set[str]:
-    try:
-        _front, text = parse_front_matter(text)
-    except FrontMatterError:
-        pass
-    text = _ANCHOR_LINE.sub("", re.sub(r"<!--.*?-->", "", text, flags=re.S))
-    return {w.lower() for w in _WORD.findall(text)}
-
-
-def suspected_duplicates(course_root: Path, records: list[dict], *, among: set[str] | None = None,
-                         threshold: float = 0.8, min_words: int = 20) -> list[tuple[str, str, str]]:
-    """Pairs of materials that look like the same material — most of the smaller one's
-    vocabulary appears in the larger, or their file names match across formats. For the teacher
-    to confirm; nothing is merged here. With `among`, only pairs involving those ids."""
-    texts: dict[str, set[str]] = {}
-    names: dict[str, str] = {}
-    for record in active(records):
-        if record.get("status") not in HAS_FILE:
-            continue
-        path = ingested_file(course_root, record["id"])
-        if path is None:
-            continue
-        texts[record["id"]] = _words(path.read_text(encoding="utf-8", errors="replace"))
-        names[record["id"]] = _stem_key(record.get("canonical", ""))
-
-    pairs = []
-    ids = sorted(texts)
-    for i, a in enumerate(ids):
-        for b in ids[i + 1:]:
-            if among is not None and a not in among and b not in among:
-                continue
-            fa, fb = by_id(records)[a].get("format"), by_id(records)[b].get("format")
-            small, large = sorted((texts[a], texts[b]), key=len)
-            overlap = len(small & large) / len(small) if small else 0.0
-            if len(small) >= min_words and overlap >= threshold:
-                pairs.append((a, b, f"{overlap:.0%} of the shorter one's words appear in the other"))
-            elif names[a] and names[a] == names[b] and fa != fb:
-                pairs.append((a, b, "same file name, different format"))
-    return pairs
 
 
 # -- teacher/agent edits to the manifest ----------------------------------------------

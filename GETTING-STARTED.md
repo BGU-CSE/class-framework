@@ -78,8 +78,9 @@ past exams, reading lists, lecture notes. Any format. Nothing is required, and m
 the agents read this to work out what your course actually covers instead of inventing a
 generic version of it.
 
-It doesn't need to be organized — one folder of everything is fine, and duplicates (a deck and its
-PDF export) are detected. For videos and web pages, list them in
+It doesn't need to be organized — one folder of everything is fine. Identical copies are merged
+automatically; a deck and its PDF export simply stay two materials (both can be cited; agents
+prefer the deck). For videos and web pages, list them in
 `course/materials/source/links.md`, one per line with an optional note, or run:
 
 ```bash
@@ -92,13 +93,14 @@ else — and a scanned PDF with no text, or a video file — is recorded and lis
 dropped; export it to PDF if you want it read.
 
 Then run **`/ingest`** in Claude Code. It first shows you a **pre-flight report** — how many files of
-each kind, slides and pages, duplicates, links, what it can't read, roughly how long it will take —
+each kind, slides and pages, links, what changed since last time, what it can't read, roughly how
+long it will take —
 and waits for your go-ahead. It then turns everything into a readable, citable copy in
 `course/materials/ingested/`, one file per source with every slide and page marked, and lists them in
 `course/materials/manifest.yaml` under a stable id (`M0007`). An agent then proposes what each one is
 (slides, exam, textbook, …, and which units it serves) — **you see and correct that before it is
-recorded** — asks you before merging anything it thinks is the same material twice (a deck and its
-PDF export), and reports what your course actually
+recorded** — mentions links inside your materials that look like course resources (only links
+you list in `links.md` become materials), and reports what your course actually
 covers and where it is thin. Each step you approve is recorded in the course log.
 
 What that buys you: an answer reference can point at **`M0007#slide-18`**, and `classkit validate`

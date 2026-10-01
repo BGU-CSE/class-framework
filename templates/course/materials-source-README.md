@@ -9,7 +9,8 @@ assembled from the subject's name.
 ## What to put here
 
 Anything you already have, in any state. It does not need to be organized — one folder of
-everything is fine, and so is a tidy tree. Duplicates (a deck and its PDF export) are detected.
+everything is fine, and so is a tidy tree. Identical copies are merged automatically; a deck and
+its PDF export stay two materials (both can be cited).
 
 - The current syllabus
 - Lecture slides (PPTX, PDF)
@@ -50,7 +51,7 @@ exists. Its list of everything ingested is `../manifest.yaml`.
   is reported instead of quietly pointing at nothing.
 
 Before converting anything, `/ingest` shows you a pre-flight report — how many files of each
-format, slides and pages, duplicates, links, what it cannot read, and roughly how long it will
+format, slides and pages, links, what changed, what it cannot read, and roughly how long it will
 take — and waits for your go-ahead.
 
 ## If this directory is empty

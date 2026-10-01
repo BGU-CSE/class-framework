@@ -399,27 +399,36 @@ def test_deleting_one_copy_keeps_the_material(course: Path):
     assert not record.get("removed_at") and record["canonical"] != canonical
 
 
-def test_a_deck_and_its_pdf_export_are_suspected_not_merged(course: Path):
+def test_a_deck_and_its_pdf_export_stay_two_materials_and_nobody_is_asked(course: Path, capsys):
+    """D-040: same material in two formats is not detected. Both are valid to cite; asking about
+    it at every run cost more than the problem — the hand test's 13 suspected pairs were all false."""
     words = " ".join(f"word{n}alpha" for n in range(40))
     make_pptx(source(course) / "lecture3.pptx", [("Heaps", words)])
     make_pdf(source(course) / "lecture3.pdf", [f"Heaps {words}"])
 
+    main(["ingest", "--preflight", "--no-fetch", "--course", str(course)])
     report = run(course)
+    main(["ingest", "--no-fetch", "--course", str(course)])
 
-    assert len(records(course)) == 2  # never merged without the teacher
-    assert [(a, b) for a, b, _why in report.suspected_duplicates] == [("M0001", "M0002")]
+    out = capsys.readouterr().out
+    assert len(records(course)) == 2  # never merged
+    assert not hasattr(report, "suspected_duplicates")
+    assert "uspected" not in out and "~" not in out
+    assert not hasattr(ingest, "suspected_duplicates")
 
 
-def test_same_content_under_different_names_is_suspected(course: Path):
-    """The content check, not the name check: a PDF export saved under another name."""
-    words = " ".join("w" + "".join(chr(97 + int(d)) for d in str(n)) + "x" for n in range(40))
-    make_pptx(source(course) / "lecture3.pptx", [("Heaps", words)], notes={1: "speaker only"})
-    make_pdf(source(course) / "handout-for-students.pdf", [words])
+def test_the_duplicates_verb_is_gone(course: Path):
+    with pytest.raises(SystemExit):
+        main(["material", "duplicates", "--course", str(course)])
 
-    report = run(course)
 
-    assert len(report.suspected_duplicates) == 1
-    assert "words appear in the other" in report.suspected_duplicates[0][2]
+def test_ingest_asks_no_duplicate_question():
+    """D-040: the gate-3 duplicate question is gone from the command and the agent."""
+    command = (FRAMEWORK_ROOT / ".claude" / "commands" / "ingest.md").read_text(encoding="utf-8")
+    agent = (FRAMEWORK_ROOT / ".claude" / "agents" / "material-classifier.md").read_text(encoding="utf-8")
+    assert "material duplicates" not in command and "suspected" not in command.lower()
+    assert "suspected" not in agent.lower() and "proposed merges" not in agent.lower()
+    assert "cite the deck" in agent and "add-url" in agent
 
 
 def test_a_confirmed_duplicate_is_merged_and_its_id_retired(course: Path):
@@ -482,13 +491,47 @@ def test_fetched_metadata_is_recorded_when_available(course: Path, monkeypatch):
     assert (record["title"], record["duration"]) == ("Binary heap", "12:03")
 
 
-def test_links_inside_documents_are_recorded_with_where_they_were_found(course: Path):
+def test_links_inside_documents_are_not_harvested_but_stay_readable(course: Path):
+    """D-040: a link becomes a material only when the teacher lists it. One inside a deck or a
+    document is kept, as a Markdown link, in that material's ingested text."""
     make_pptx(source(course) / "deck.pptx", [("A", "a"), ("B", "b")],
-              link=(2, "https://en.wikipedia.org/wiki/Heap"))
+              link=(2, "https://gemini.google.com/gem/course-tutor"))
+    make_docx(source(course) / "syllabus.docx", [("h1", "Syllabus")], link="https://example.org/ref")
+    make_pdf(source(course) / "book.pdf", ["See https://arxiv.org/abs/1504.01234 for more"])
+
     run(course)
-    link = next(r for r in load(course) if r["format"] == "url")
-    assert link["found_in"] == "M0001#slide-2"
-    assert link["sources"] == ["https://en.wikipedia.org/wiki/Heap"]
+
+    assert [r for r in load(course) if r["format"] == "url"] == []
+    by_format = {r["format"]: r["id"] for r in load(course)}
+    assert "[ (more)](https://gemini.google.com/gem/course-tutor)" in ingested_text(course, by_format["pptx"])
+    assert "[the reference](https://example.org/ref)" in ingested_text(course, by_format["docx"])
+    assert "https://arxiv.org/abs/1504.01234" in ingested_text(course, by_format["pdf"])
+
+
+def test_a_link_harvested_before_d040_is_retired_and_add_url_brings_it_back(course: Path):
+    """An older manifest holds links found inside materials (`found_in`). Links come only from
+    links.md now, so the next ingest marks them removed — and listing one restores its old id,
+    so a locator citing it keeps working."""
+    make_pptx(source(course) / "deck.pptx", [("A", "a")])
+    run(course)
+    records_ = load(course)
+    records_.append({"id": "M0002", "title": "Course Gem", "kind": "link", "format": "url",
+                     "status": "link", "sources": ["https://gemini.google.com/gem/x"],
+                     "canonical": "https://gemini.google.com/gem/x",
+                     "source_hash": ingest.core.link_hash("https://gemini.google.com/gem/x"),
+                     "found_in": "M0001#slide-1"})
+    ingest.manifest.save(course, records_)
+    schema = json.loads((FRAMEWORK_ROOT / "schemas" / "manifest.schema.json").read_text(encoding="utf-8"))
+    jsonschema.validate(load(course), schema)  # `found_in` retired, still accepted
+
+    report = run(course)
+    assert report.plan.unharvested == ["M0002"] and records(course)["M0002"].get("removed_at")
+    assert "links come only from links.md" in ingest.report.run_text(report)
+
+    links.add_url(source(course), "https://gemini.google.com/gem/x", "course Gem")
+    run(course)
+    restored = records(course)["M0002"]
+    assert not restored.get("removed_at") and "found_in" not in restored
 
 
 def test_a_link_removed_from_links_md_is_marked_removed(course: Path):
@@ -541,7 +584,8 @@ def test_preflight_writes_nothing(course: Path, capsys):
     assert code == 0 and snapshot(course) == before
     assert "2 slides, 5 PDF pages" in out
     assert "x.xyz = y.xyz" in out  # exact duplicates
-    assert "deck.pdf ~ deck.pptx" in out  # suspected
+    assert "~" not in out and "uspected" not in out  # two formats: not looked for (D-040)
+    assert "embedded" not in out  # links are not harvested
     assert "Cannot be read" in out and "Estimated time" in out
 
 

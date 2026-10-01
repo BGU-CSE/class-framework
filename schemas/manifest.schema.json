@@ -65,7 +65,7 @@
       "found_in": {
         "type": "string",
         "pattern": "^M\\d{4}(#[^\\s#]+)?$",
-        "description": "For a link discovered inside another material: where it was found, e.g. 'M0007' or 'M0007#slide-3'."
+        "description": "RETIRED (D-040) — links are no longer harvested from inside materials; a link is a material only when links.md lists it. Was where a harvested link was found ('M0007#slide-3'). Accepted here only so a manifest written before D-040 still validates; such a link, unless links.md lists it, is marked removed by the next ingest."
       },
       "note": {
         "type": "string",

@@ -54,9 +54,9 @@ classkit log "/ingest, M0005 removed" --changed "M0005 marked removed" --why "<w
 classkit ingest --preflight
 ```
 
-Show the teacher the report: files by format, slides and pages, how many are private, links, exact duplicates (merged
-automatically), suspected duplicates (they will be asked), what cannot be read and why, and the
-time estimate.
+Show the teacher the report: files by format, slides and pages, how many are private, the links
+in `links.md`, what changed since the last ingest (by name and id), exact copies (merged
+automatically), what cannot be read and why, and the time estimate.
 
 - If `source/` is empty and `links.md` lists nothing, **stop**. Ask the teacher to add their
   syllabus, slides or notes first. Do not invent a course.
@@ -73,7 +73,8 @@ classkit ingest --no-log
 
 `--no-log` because this command writes its own, fuller log entry below; run by hand, `classkit
 ingest` logs itself. Only new or changed sources are converted; an interrupted run resumes. Show the summary: what was
-added (with ids), updated, moved (same id), removed (marked, not forgotten), and the links found.
+added (with ids), updated, moved (same id), and removed (marked, not forgotten). Links are recorded
+only from `links.md` — nothing is harvested from inside slides or documents.
 A private material is written twice: its index to `ingested/` and its full text to `private-text/`
 (this machine only). A `full text` line means only this machine's copy was written — nothing
 committed changed, so it is not part of the log entry.
@@ -99,21 +100,14 @@ classkit log "/ingest, conversion approved" --changed "M0001..M0023 ingested (�
   --why "<what the teacher added and why>" --file materials/manifest.yaml
 ```
 
-## Step 3 — Classify, and confirm duplicates.
+## Step 3 — Classify.
 
-First list the suspected duplicates:
-
-```bash
-classkit material duplicates
-```
-
-Then use the **material-classifier** agent. Tell it which ids are new or updated this run, give it
-the suspected pairs, **tell it which private materials are index-only on this machine** (from step
+Use the **material-classifier** agent. Tell it which ids are new or updated this run, **tell it which private materials are index-only on this machine** (from step
 0), and pass on anything the teacher said they care about (`$1`). It has no tool that writes or
 runs anything: it **returns** a classification table with the same values as a YAML block —
 including each material's `audience`, with a reason for every `instructor` — any published book it
-noticed outside `private/`, proposed same-material merges with its evidence, and the coverage
-report for step 4.
+noticed outside `private/`, two-format relations it noticed ("M0012 is the PDF of M0007"), links
+inside materials that look like course resources, and the coverage report for step 4.
 
 Show the teacher the classification table and **ask for corrections — and ask them to confirm each
 `audience: instructor`** (a solutions manual, a past exam): that is what keeps it from being cited
@@ -136,17 +130,18 @@ classkit material apply <<'YAML'
 YAML
 ```
 
-**Ask the teacher to confirm each proposed merge.** Merge only what they confirm, into the material
-whose anchors to keep (a deck over its PDF export):
+**Two formats of one material** (a deck and its PDF export) stay two materials, and you do not ask
+about them: both are valid to cite. Pass the agent's remark on as information — later agents cite the
+deck. `classkit material merge ID --into ID` exists, optional, for a teacher who asks for it; never
+prompt it.
 
-```bash
-classkit material merge M0012 --into M0007
-```
+**Links the agent noticed** inside materials (the course Gem in a deck): show them, and add one only
+if the teacher says so — `classkit add-url URL --note "…"`, then `classkit ingest --no-log` records it.
 
 Then log:
 
 ```bash
-classkit log "/ingest, classification approved" --changed "kinds and units set for M…; M0012 merged into M0007" \
+classkit log "/ingest, classification approved" --changed "kinds, units and audience set for M…" \
   --why "…" --file materials/manifest.yaml
 ```
 
