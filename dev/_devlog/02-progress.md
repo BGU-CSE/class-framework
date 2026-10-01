@@ -1572,3 +1572,64 @@ added to D-040, the spec and the ledger (169 changes; 51 / 5 / 113). Checked F-2
 (schema errors print as warn) — does not reproduce. Remaining: Avin's go-ahead on the plain fixes,
 then step 2c.
 
+
+## Session 31 — 2026-10-01 — Step 2c-1 built: private and instructor-only material; `classkit doctor` (D-040)
+
+A fresh implementation session, working from the spec. Scope: the ten D-040 ledger rows tagged
+[2c-1]. All built.
+
+- **Scaffold:** `course/.gitignore` (create-only, written first). A re-scaffold that creates
+  something on a course that already has a log appends an entry.
+- **Ingest — private material:**
+  - anything under `source/private/` (in any case) is private;
+  - its committed `ingested/` file is an index: `text: index`, every anchor with one-line labels
+    (printed page, outline sections, slide titles, headings), no body text, and no body-derived
+    title;
+  - its full text goes to `materials/private-text/`, protected by `private_text_hash`; both files
+    are checked before either is written;
+  - a missing private source is "not on this machine", never removed;
+  - a source appearing on a machine gets its full text without changing anything committed or
+    writing to the log;
+  - moves into and out of `private/` rewrite the committed copy;
+  - `classkit material remove`;
+  - `audience` in `apply` and `set --audience`;
+  - no link harvesting from private text.
+- **Validator:** `instructor_material_cited` (alert, over `STUDENT_FACING_FIELDS`) and
+  `private_material_committed` (warn, `git ls-files`, `:(icase)`, skipped outside git).
+  `materials_not_ingested` reconciles with `local=False`.
+- **`classkit doctor`** (`src/classkit/doctor.py`): read-only; `ok` / `note` / `ACTION`, each action
+  with its fix; exit 0/1.
+- **Agents:** the classifier proposes `audience` with reasons, flags published books outside
+  `private/`, and reads private text or says "index only here". `/ingest` gains a step 0
+  (`doctor`).
+- **Docs:** `CLAUDE.md`, `GETTING-STARTED.md` (the interim warning replaced), README, the
+  scaffolded `source/README.md`, `dev/CLAUDE.md`, and a 2c-1 section in `MANUAL-TESTING.md`.
+- **Spec:** "(target, D-040)" removed from what was built; the decided details are written into
+  §8.4, §8.7 and §8.8 and into the naming and data-flow tables.
+- **Ledger:** 61 / 5 / 104 of 170.
+- **Tests:** 233, up from 173. New files `test_private_material.py` and `test_doctor.py`, plus
+  lifecycle rule tests. Every fixture, including a PDF with an outline and printed labels written by
+  pypdf, is generated in `tmp_path`.
+
+Running the real CLI end to end in a scratch git repo found two things no unit test had:
+
+- **Avin's `~/.gitignore_global` ignores `.gitignore` itself.** So `course/.gitignore` is never
+  committed and no clone is protected. Locally everything looked fine. `doctor` now checks it (G-4).
+- **A copy (not a move) of a public book into `private/`** leaves the material public. `doctor` says
+  so (G-5).
+
+The test for "no body text in the index" also caught a PDF's first line leaking as its title (G-9).
+
+Gap report: `reviews/impl-gaps-step-2c-1.md` — 23 entries, six ⚑. The weightiest:
+
+- **G-1:** `private_text_hash` is committed, but extraction differs across library versions.
+  Recommended: a self-certifying hash in the full text's own front matter.
+- **G-2:** two machines with different copies of a book.
+- **G-3:** a stale full text is refused, because it cannot be told apart from an edited one.
+
+### Next
+
+1. **Avin:** remove `.gitignore` from `~/.gitignore_global` (or force-add it per course repo), and
+   decide the ⚑ entries G-1 … G-6.
+2. **Step 2c-2** — the rest of the hand test's fixes. Then **one independent review of 2c-1 and
+   2c-2 together**, then Avin re-tests (`MANUAL-TESTING.md`, "Step 2c-1"), then step 3.

@@ -19,7 +19,36 @@ Then, for history and what is still open:
 6. `02-progress.md` (last block) — where we stopped.
 7. `03-open-questions.md` — what's unresolved.
 
-## Current state — 2026-10-01 (after Avin's hand test of steps 0–2b)
+## Current state — 2026-10-01 (after step 2c-1)
+
+**Step 2c-1 is built** (Session 31): the D-040 rows tagged [2c-1]. Suite: **233 tests**, green.
+Ledger: 61 built, 5 in progress, 104 not started — `../ROADMAP.md` is authoritative. Gap report:
+`../reviews/impl-gaps-step-2c-1.md` (23 entries, six ⚑).
+
+- **What exists now:**
+  - `materials/source/private/`, which the scaffolded `course/.gitignore` keeps out of git;
+  - for each private material, a committed **index** in `ingested/` (`text: index`; anchors and
+    one-line labels, no body text) and its **full text** in the gitignored `materials/private-text/`;
+  - a missing private source is "not on this machine", never removed; `classkit material remove`;
+  - `audience: student | instructor` and the alert `instructor_material_cited`;
+  - `private_material_committed` (warn, via git);
+  - `materials_not_ingested` ignores `private/`;
+  - **`classkit doctor`**: `validate` judges the course, `doctor` this machine;
+  - the classifier proposes `audience` and flags published books; `/ingest` runs `doctor` first.
+- **Found while building, needs Avin:**
+  - **G-4: his `~/.gitignore_global` ignores `.gitignore` itself**, so `course/.gitignore` is never
+    committed and no clone of a course made on this machine is protected. `doctor` now catches it.
+  - **G-1:** `private_text_hash` is committed, but extraction differs across library versions.
+    Recommended: a self-certifying hash in the full text's own front matter, which also resolves
+    **G-3** (a stale full text is refused today).
+  - **G-2:** two machines with different copies of a book; the last one to ingest wins.
+  - **G-5:** a *copy* of a public book in `private/` leaves the material public; `doctor` says so.
+  - **G-6:** `material remove` by hand is not logged.
+- **Next:** Avin's ⚑ decisions, then **step 2c-2** (the rest of the hand test's fixes, rows
+  [2c-2]), then **one independent review of 2c-1 and 2c-2 together**, then Avin re-tests
+  (`../MANUAL-TESTING.md`, "Step 2c-1" and 2c-2's section), then step 3.
+
+## State after Avin's hand test of steps 0–2b — 2026-10-01 (kept for history)
 
 **Avin hand-tested steps 0–2b on real material** (CLRS 4e, its instructor's manual and solutions,
 syllabus docx, three decks): `../reviews/manual-test-step-0-2b.md`, findings F-01 … F-27 and P-1 … P-4.
