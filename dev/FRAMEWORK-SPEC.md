@@ -1077,6 +1077,7 @@ its line goes.
 | `removed_at` | date | | the source disappeared. The record and its `.md` are kept, so locators to it fail visibly |
 | `merged_into` | `M<NNNN>` | | the teacher confirmed this is the same material as another; its sources moved there and this id is retired |
 | `private` | boolean | | **(target, D-040)** `true` when the canonical source is under `source/private/`. Set by ingest from the path, never by hand; recorded so that a clone without the file still knows |
+| `private_text_hash` | string | | **(target, D-040)** for a private material: the hash of the full text ingest last wrote to `private-text/` — hand-edit detection there |
 | `audience` | enum | | **(target, D-040)** `student \| instructor`; absent means `student`. Who may be *pointed at* this material. Proposed by the classifying agent, confirmed by the teacher at gate 3. Independent of `private` (a published book is private but `student`) |
 
 Schema: `schemas/manifest.schema.json`, checked by `classkit validate` (`schema`; an unreadable
@@ -1134,13 +1135,25 @@ course` writes `course/.gitignore` covering `materials/source/private/` and
 framework update; create-only, like every scaffolded file.
 
 - **The committed `ingested/M<NNNN>-slug.md` of a private material is an index**, not the text:
-  front matter as usual plus `text: index`, and in the body every anchor the full text has
-  (`## Page 63`), each with its printed page label and the section(s) starting on that page, taken
-  from the PDF's outline (bookmarks) and, failing that, from headings detected on the page. A few
-  KB, no body text. Locators resolve against the index, so they validate on every clone.
+  front matter as usual plus `text: index`, and in the body **every anchor heading the full text
+  has**, each followed only by its one-line labels — never body text:
+  - PDF: per page, the printed page label and the section(s) that start on that page, from the PDF's
+    outline (bookmarks); without an outline, pages and labels only;
+  - PPTX/ODP: per slide, the slide title;
+  - DOCX and other heading-structured formats: the headings themselves (they *are* the anchors).
+
+  A few KB. Locators resolve against the index, so they validate on every clone. The index is
+  ingest's own output (`ingested_hash`, hand-edit protection as for any ingested file).
 - **The full text is written to `materials/private-text/M<NNNN>-slug.md`** — gitignored, this
-  machine only, the same anchors. Agents read it when it is there. Where it is not, an agent is told
-  the material is *index only here* and must not present recall as a reading of it.
+  machine only, the same anchors, its front matter carrying the `source_hash` it was made from. The
+  manifest records `private_text_hash` (the hash of the full text ingest last wrote — extraction is
+  deterministic, so it is the same on every machine): a teacher's fix to a bad extraction there is
+  protected like any hand edit (refused through the write path, `--keep` / `--overwrite`). Agents
+  read the full text when it is there. Where it is not, the material is *index only here*: an agent
+  says so and must not present recall as a reading of it.
+- **A private source that appears on a machine** (a TA copies the PDF in) is matched by hash like any
+  file; if its full text is missing or stale here, ingest writes it, and leaves the committed index
+  alone when nothing changed.
 - **A private source that is missing is "not on this machine", never "removed".** A teacher's
   machine without the PDF and a TA's clone that never had it are indistinguishable from inside a
   checkout, so ingest does not mark a private material removed, and its locators keep resolving.
@@ -1166,6 +1179,9 @@ material is student-facing, and gate 3 follows conversion directly.
 - An alert, not an error (D-037): a study path in the course repo does not reach a student until it
   is *published*. **The hard guarantee is at publication** — every exporter refuses, in code, to
   bundle or publish `audience: instructor` or private material (Exports phase).
+- Which fields count as student-facing is one table in the validator, like `LOCATOR_FIELDS`: today a
+  study path's `ref` (`goals[].paths[].ref`); step 4 adds `answer[].ref` and the session-level
+  `paths[].ref`. `activities[].materials` is deliberately absent.
 - "Instructor" does not mean "agents never read it": the classifier must read a solutions manual to
   classify it. It means "never pointed at, or handed to, a student". What an agent reads also goes to
   the model provider; neither property changes that.
@@ -1175,8 +1191,14 @@ that fixes it: `course/.gitignore` present and covering `private/`; per private 
 its source and its full text are here and whether the full text is stale against the source;
 leftover full texts whose material is gone; private sources not on this machine; the framework's
 dependencies installed and importable; the optional converters available (pandoc, LibreOffice); the
-working mode. `/ingest` runs it first, and an agent runs it before relying on a private material's
-full text. The pre-flight refers to it rather than repeating it.
+working mode. A full text is *stale* when the `source_hash` in its front matter differs from the
+manifest's. Exit `0` when nothing needs action, `1` when something does — so a script can gate on
+it; `--course DIR` as elsewhere. `/ingest` runs it first, and an agent runs it before relying on a
+private material's full text. The pre-flight refers to it rather than repeating it.
+
+`private_material_committed` asks git which files under `materials/source/private/` and
+`materials/private-text/` are tracked (`git ls-files`). Outside a git repository, or without git, it
+is skipped silently and `doctor` says why.
 
 #### Extractors — proactive for common formats, reactive for the rest
 

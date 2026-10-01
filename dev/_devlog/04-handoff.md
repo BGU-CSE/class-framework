@@ -52,8 +52,11 @@ one item at a time.**
   "fails"), F-23 (pre-flight names what changed), F-25 (after a refusal, `validate` names
   `--keep`/`--overwrite`), F-27 (note in docs: choose `--overwrite` once after F-06 is fixed).
   P-1 (a loosely worded instruction bent gate 1) stays a known limit of prompt-level gates (D-030).
-- **Then:** build D-040 and the report's fixes as one step ("2c", fresh session + review as before),
-  then step 3.
+- **Next — step 2c, in two implementation rounds and ONE review** (Avin): **2c-1** privacy and
+  `classkit doctor`, then **2c-2** everything else from the hand test (the plain fixes approved by
+  Avin, no objection). Scope is the D-040 ledger rows tagged **[2c-1]** / **[2c-2]** in
+  `../ROADMAP.md`. The independent review covers both rounds, after 2c-2. Then Avin re-tests, then
+  step 3 (which also carries D-040's `unit_map` and incremental `/plan-units`).
 
 ## State after step 2b's review — 2026-10-01 (kept for history)
 
