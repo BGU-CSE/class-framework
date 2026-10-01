@@ -49,7 +49,8 @@ course — invariant 1 says no course content in the framework repo, and the clo
   --units 13
 ```
 
-Expect **10 files created**, among them `course/syllabus/syllabus.md` and `course/course.yaml`.
+Expect **13 files created**, among them `course/syllabus/syllabus.md`, `course/course.yaml`,
+`course/LOG.md` and `course/.gitignore` (step 2c-1: it keeps private material out of git).
 
 ```bash
 .venv/bin/classkit validate
@@ -168,6 +169,72 @@ Point one study path's `ref` at a real anchor (`"M0001#slide-2"`) and one at a m
 
 ---
 
+## Step 2c-1 — private and instructor-only material; `classkit doctor`
+
+**What it should deliver:** a published book can be ingested, cited and validated without its text
+ever entering git; a solutions manual cannot be cited to students without an alert; and `doctor`
+says what this machine is missing. Work in the course you built for step 2b, or a fresh one. The
+scratch clone is already a git repository, which two of the checks need; commit the course in it
+(locally — never push) before the "second machine" part below, so there is something to clone.
+
+```bash
+.venv/bin/pip install -e .
+.venv/bin/classkit scaffold course --code X --title Y   # on a 2b course: creates only course/.gitignore
+tail -5 course/LOG.md                                  # …and logs that it did
+.venv/bin/classkit doctor                              # ok / note / ACTION lines; exit 0 or 1
+```
+
+Move (`mv`, by hand — this is the teacher's act) the textbook PDF and the solutions manual into
+`course/materials/source/private/`. Then:
+
+```bash
+.venv/bin/classkit ingest --preflight                  # "Private: 2 file(s) under private/"
+.venv/bin/classkit ingest                              # "moved … (same id)"; the committed copy becomes an index
+git status --short course/materials                    # nothing under source/private/ or private-text/
+git check-ignore -v course/materials/private-text/*    # each ignored by course/.gitignore
+head -40 course/materials/ingested/M00NN-*.md          # text: index; pages, printed labels, sections — no body text
+ls course/materials/private-text/                      # the full texts, this machine only
+```
+
+Then run **`/ingest`** again: it should start with `classkit doctor`, propose an `audience` for
+every material with a reason for each `instructor`, and flag any published book still outside
+`private/`. Confirm the manual as `instructor`. Then point one study path's `ref` at a page of the
+manual and one in-class activity's `materials` at the same page:
+
+```bash
+.venv/bin/classkit validate                            # ALERT instructor_material_cited for the study path only
+```
+
+**A second machine.** Clone the course repo next to it (`git clone <your scratch clone> ta`) — the
+clone has no `private/` and no `private-text/`:
+
+```bash
+cd ta && ../.venv/bin/classkit validate                # the same findings as on your machine
+../.venv/bin/classkit doctor                           # note: "… not on this machine — index only here"
+../.venv/bin/classkit ingest                           # nothing to do; nothing marked removed
+cp -r ../course/materials/source/private course/materials/source/
+../.venv/bin/classkit ingest                           # "full text … this machine only"
+git status --short                                     # clean: nothing committed changed, no LOG.md entry
+```
+
+Finally, by hand: `git add -f` one file under `private/` → `validate` warns
+`private_material_committed`; `git rm --cached` it again. Delete a private PDF in the TA clone and
+run `classkit material remove M00NN` there → refused while the file exists, accepted once it is gone.
+
+### What is worth your judgement here
+
+- **Is the index useful?** With a real book's bookmarks, does it let you (and an agent) find
+  "§6.2" or "printed page 45" without the text? Is a book without bookmarks still usable?
+- **Is there really no body text in it?** Read one. Titles count: a PDF's title comes from its
+  metadata or the file name, never its first line.
+- **Did the classifier get `audience` right**, with reasons you agree with — and did it flag a
+  published book outside `private/` (and nothing else)?
+- **Is `doctor`'s output clear** to a teacher who has never heard of it? Is every `ACTION` line's
+  fix something you could just run?
+- **Do the agents say "index only here"** on the TA clone instead of quoting the book from memory?
+
+---
+
 ## Expected noise — do not report these as bugs
 
 | What you will see | Why | Tracked as |
@@ -178,6 +245,8 @@ Point one study path's `ref` at a real anchor (`"M0001#slide-2"`) and one at a m
 | No `outcomes:` on unit objectives; no coverage checking | The coverage chain is step 3 | D-021, D-033 |
 | A material's `kind` is `other` right after `classkit ingest` | Kind is only guessed from the format; the classifier sets it in `/ingest` step 3 | D-035 |
 | Link titles are their URL or note | Metadata fetching is best-effort; offline, or a site that blocks it, gives no title | D-035 |
+| `doctor`: "pandoc / LibreOffice is not installed" notes | They are optional; a note, not an action, unless you want those formats read | D-035, D-040 |
+| `doctor` on a clone: "… not on this machine — index only here" | A TA's clone without the book is normal; it is a note and `doctor` still exits 0 | D-040 |
 
 Anything **else**, especially any **error** on a freshly scaffolded course, is a real finding.
 

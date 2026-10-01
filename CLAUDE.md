@@ -92,7 +92,9 @@ M0007#slide-18   a place inside it: slide-N, page-N, or a heading's slug
 | `/design-unit N` | One unit end to end — study sessions, the in-class hour, the entry quiz |
 | `/review-unit N` | An independent agent reviews what it did not write |
 
-`classkit scaffold` creates files; `classkit validate` checks that the course holds together.
+`classkit scaffold` creates files; `classkit validate` checks that the course holds together — the
+same answer on every clone; `classkit doctor` checks **this machine's** copy (private files present
+or stale, the `.gitignore`, dependencies) and says, per line, what to run to fix it.
 Scaffolding **never overwrites**, so it is safe to re-run at any time.
 
 ## Materials
@@ -114,9 +116,22 @@ Scaffolding **never overwrites**, so it is safe to re-run at any time.
   is often not the page printed "63"; a wrong page still validates, so the note is the check.
 - The teacher may correct a bad extraction in `ingested/` by hand. A later ingest asks before
   replacing the edit (it exits 3); agents never answer that question for the teacher.
-- The classifying agent only reads and **returns** each material's kind and units; `/ingest` shows
-  them to the teacher and records them (`classkit material apply`). Nobody edits the manifest's
-  bookkeeping by hand, and only the teacher confirms a merge (`classkit material merge`).
+- **Private material** — a published textbook's PDF, a solutions manual: anything that must not be
+  committed — goes in **`source/private/`**, which `course/.gitignore` keeps out of git. Its
+  committed `ingested/` file is an **index** (`text: index`: every anchor with one-line labels —
+  printed page, sections, slide titles — no body text), so its locators validate on every clone. Its
+  full text is in **`materials/private-text/`** (gitignored), only on a machine that has the source.
+  **Read the full text when it is there; where it is not, the material is index-only here — say so,
+  and never present recall of the book as a reading of it.** `classkit doctor` says which.
+  A missing private source is "not on this machine", never "removed";
+  `classkit material remove ID` removes one, only on the teacher's word. Agents never move a file
+  into or out of `private/` — they may suggest it.
+- **`audience: instructor`** in the manifest marks material students must never be pointed at — a
+  solutions manual, a past exam. Citing it from a study path raises the alert
+  `instructor_material_cited`; the in-class plan may cite it. No export will bundle it.
+- The classifying agent only reads and **returns** each material's kind, units and audience;
+  `/ingest` shows them to the teacher and records them (`classkit material apply`). Nobody edits the
+  manifest's bookkeeping by hand, and only the teacher confirms a merge (`classkit material merge`).
 - Running `classkit ingest` by hand writes a course-log entry saying what changed; add `--why` to
   say why.
 

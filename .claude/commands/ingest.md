@@ -19,7 +19,34 @@ anything is recorded.
 First read `course/course.yaml` and the recent entries in `course/LOG.md`, so you know what was
 ingested and decided last time.
 
+**Private material.** Files the teacher must not commit — a published textbook's PDF, a solutions
+manual — go in `course/materials/source/private/`, which `course/.gitignore` keeps out of git. For
+each, ingest commits only an **index** (its pages or slides with their labels, no body text) and
+writes the full text to `course/materials/private-text/`, on this machine only. Never move a file
+into or out of `private/` yourself; suggest it, and the teacher moves it.
+
 ---
+
+## Step 0 — Check this machine.
+
+```bash
+classkit doctor
+```
+
+It is read-only, and each line that needs action names the fix. Show the teacher every `ACTION`
+line — above all a missing or ineffective `.gitignore`, which would let private material be
+committed — and fix nothing yourself: anything that changes a file is the teacher's call. `note`
+lines are information. Remember which private materials are **not on this machine** ("index only
+here"): you pass that on in step 3. The pre-flight below does not repeat these checks.
+
+If doctor lists a private source as not on this machine and the teacher says it is **gone for
+good**, remove it on their confirmation (only then — on a TA's clone a missing book is normal):
+
+```bash
+classkit material remove M0005
+classkit log "/ingest, M0005 removed" --changed "M0005 marked removed" --why "<what the teacher said>" \
+  --file materials/manifest.yaml
+```
 
 ## Step 1 — Pre-flight. No processing.
 
@@ -27,7 +54,7 @@ ingested and decided last time.
 classkit ingest --preflight
 ```
 
-Show the teacher the report: files by format, slides and pages, links, exact duplicates (merged
+Show the teacher the report: files by format, slides and pages, how many are private, links, exact duplicates (merged
 automatically), suspected duplicates (they will be asked), what cannot be read and why, and the
 time estimate.
 
@@ -47,11 +74,16 @@ classkit ingest --no-log
 `--no-log` because this command writes its own, fuller log entry below; run by hand, `classkit
 ingest` logs itself. Only new or changed sources are converted; an interrupted run resumes. Show the summary: what was
 added (with ids), updated, moved (same id), removed (marked, not forgotten), and the links found.
+A private material is written twice: its index to `ingested/` and its full text to `private-text/`
+(this machine only). A `full text` line means only this machine's copy was written — nothing
+committed changed, so it is not part of the log entry.
 
-**If it exits with code 3**, some ingested files were **edited by hand** and their source has since
-changed. For each one, show the teacher their edit (`git diff` on the file, or the preview in the
-output) and ask: replace it with a fresh extraction, or keep the edit? Then run exactly what they
-chose:
+**If it exits with code 3**, some files may hold **edits made by hand** — an ingested file, or a
+private material's full text — and replacing them would lose those edits. Each refusal says why
+(edited, and its source changed; or a full text made from another version of the source). For each
+one, show the teacher their edit (`git diff` on a committed file, the preview in the output for a
+full text, which git does not track) and ask: replace it with a fresh extraction, or keep it? Then
+run exactly what they chose:
 
 ```bash
 classkit ingest --no-log --overwrite M0007    # replace the edit
@@ -76,11 +108,18 @@ classkit material duplicates
 ```
 
 Then use the **material-classifier** agent. Tell it which ids are new or updated this run, give it
-the suspected pairs, and pass on anything the teacher said they care about (`$1`). It has no tool
-that writes or runs anything: it **returns** a classification table with the same values as a YAML
-block, proposed same-material merges with its evidence, and the coverage report for step 4.
+the suspected pairs, **tell it which private materials are index-only on this machine** (from step
+0), and pass on anything the teacher said they care about (`$1`). It has no tool that writes or
+runs anything: it **returns** a classification table with the same values as a YAML block —
+including each material's `audience`, with a reason for every `instructor` — any published book it
+noticed outside `private/`, proposed same-material merges with its evidence, and the coverage
+report for step 4.
 
-Show the teacher the classification table and **ask for corrections**. Then record the block —
+Show the teacher the classification table and **ask for corrections — and ask them to confirm each
+`audience: instructor`** (a solutions manual, a past exam): that is what keeps it from being cited
+to students. If the agent flagged a published book outside `private/`, tell the teacher; moving it
+is their decision (then run `classkit ingest --no-log` again, which turns its committed copy into an
+index). Then record the block —
 with the teacher's corrections applied to it — in one call. It is all or nothing: if it is rejected,
 fix the entry it names and run it again.
 
@@ -89,6 +128,11 @@ classkit material apply <<'YAML'
 - id: M0007
   kind: slides
   units: [U03, U04]
+  audience: student
+- id: M0012
+  kind: exam
+  units: []
+  audience: instructor
 YAML
 ```
 

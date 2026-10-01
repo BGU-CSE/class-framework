@@ -65,8 +65,19 @@ If your textbook isn't a file you can drop here, record it in `course.yaml` unde
 instead. References cite it by key, e.g. `ref: "CLRS ch.3 pp.45-52"` — allowed, but the
 validator cannot check it the way it checks `M0007#page-34`.
 
-## Confidentiality
+## Confidentiality — `private/`
 
-Past exams here live in your course repo's git history permanently — and so does their ingested
-copy. If that repo is shared with anyone — a TA, a co-teacher — treat anything you add here as
-visible to them.
+Everything here is committed to your course repo — the file and its full ingested text — and stays
+in its git history even if deleted later. If the repo is shared with anyone, a TA or a co-teacher,
+treat what you add here as visible to them.
+
+**What must not be committed goes in `private/`** (create the folder): a published textbook's PDF,
+a publisher's slides, a solutions manual. `course/.gitignore` keeps it out of git. For each file
+there, `/ingest` commits only an *index* — its pages or slides with their labels and sections, no
+text — so citations to it are still checked; the full text stays on your machine, in
+`../private-text/`. A clone without the file can cite the book but not read it. `classkit doctor`
+says what this machine has.
+
+Who may *see* a material is separate from where it is: mark a solutions manual or a past exam
+`audience: instructor` (the `/ingest` agent proposes it, you confirm), and a study path that points
+students at it is flagged.

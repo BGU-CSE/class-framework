@@ -14,7 +14,7 @@ You need [Claude Code](https://claude.com/claude-code) and Python 3.10+.
 
 > **The framework is still being built.** The workflow below is the design; not all of it exists
 > yet. `classkit scaffold`, `classkit validate`, `classkit log` and the materials tools
-> (`/ingest`, `classkit ingest`, `classkit add-url`) work today. The `/` commands in step 5 are
+> (`/ingest`, `classkit ingest`, `classkit add-url`, `classkit material`, `classkit doctor`) work today. The `/` commands in step 5 are
 > being implemented one at a time — `dev/ROADMAP.md`'s ledger is the authoritative list of what is
 > actually built. Expect this document to change as they land.
 
@@ -107,11 +107,29 @@ before it reaches a student. (It cannot tell whether the answer is *on* slide 18
 human's or the reviewing agent's call.)
 
 - **Your originals are never touched.** Nothing in `materials/source/` is modified, moved or deleted.
-- **⚠ Before you commit: everything in `materials/` goes into git** — the source files *and* their
-  full extracted text in `ingested/`. A published book's PDF or a solutions manual pushed to GitHub
-  stays in the repository's history even if deleted later. A `source/private/` folder that is kept
-  out of git is designed but not built yet (D-040); until then, keep such files out of the course
-  repo, or do not commit `materials/`.
+- **Files that must not be committed go in `materials/source/private/`** — a published textbook's
+  PDF, a publisher's slides, a solutions manual. `course/.gitignore` (scaffolded) keeps that folder
+  out of git. For each file there, ingest commits only an **index** in `ingested/` — its pages or
+  slides with their labels (printed page numbers, the book's sections from its bookmarks, slide
+  titles), no body text — so a citation like `M0005#page-63` is checked on every copy of the
+  repo. The full text goes to `materials/private-text/`, also kept out of git, on your machine only;
+  the agents read it there. A TA's clone without the PDF can still cite and validate the book; to
+  let agents read it there, copy the PDF into their `private/` and run `/ingest`.
+  - Everything **outside** `private/` is committed — the source *and* its full extracted text.
+    Anything pushed to GitHub stays in the repository's history even if deleted later. If a book is
+    already committed, moving it into `private/` stops future commits but not the history;
+    `classkit validate` warns about it (`private_material_committed`), and cleaning history is up
+    to you.
+  - A private file missing from a machine is "not on this machine", never "removed" — a TA's
+    clone and a lost file look the same. If it is gone for good: `classkit material remove M0005`.
+  - Private is **where the file is**; who may *see* it is separate. Mark material students must
+    never be pointed at — a solutions manual, a past exam — as **`audience: instructor`** (the
+    `/ingest` agent proposes it, you confirm; or `classkit material set M0012 --audience
+    instructor`). A study path citing it then raises an alert; your in-class plan may cite it.
+    A textbook is private but `student`.
+- **`classkit doctor`** checks this machine's copy: that the `.gitignore` is in effect, which
+  private files are here and whether their full text is current, and that the tools are installed.
+  Each line that needs action says what to run. `/ingest` runs it first.
 - **Reorganize freely.** A renamed or moved file keeps its id, so nothing that cites it breaks.
 - **Fix a bad extraction by hand** in `ingested/`. A later ingest notices your edit and asks before
   replacing it — you choose to keep your edit or take a fresh extraction.
