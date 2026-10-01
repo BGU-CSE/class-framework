@@ -296,7 +296,7 @@ All land in **step 3**, with the coverage chain.
 | ✅ | `src/classkit/cli.py` | `classkit ingest [--preflight]`, `classkit add-url URL [--note]`. Also `--overwrite ID` / `--keep ID` (the teacher's answer to a refused hand edit) and `classkit material set\|merge\|duplicates` (how the classifier records without Write/Edit) |
 | ✅ | `schemas/manifest.schema.json` (new) | the manifest's fields (spec §8.7), plus `source_hashes`, `removed_at`, `merged_into`, `note`, `duration` (gap report 2b) |
 | ✅ | `src/classkit/validate.py` | `material_locator_resolves` (error, consistency) and `materials_not_ingested` (warn). Locators read from `LOCATOR_FIELDS`: study-path `ref`, activity `materials`; the manifest is schema-checked |
-| ⬜ | `src/classkit/validate.py` (step 4) | add the goal's `answer[].ref` (and the session-level `paths[].ref`) to `LOCATOR_FIELDS` — one line each, no rule change |
+| ⬜ | `src/classkit/validate.py` (step 4) | add the goal's `answer[].ref` to `LOCATOR_FIELDS`; and when D-020 moves study paths to the session, change `goals[].paths[].ref` (checked today) to `paths[].ref` — one line each, no rule change |
 | ✅ | `src/classkit/scaffold.py`, `templates/course/` | scaffold `materials/source/links.md` and `materials/ingested/`; update `materials-source-README.md` |
 | ✅ | `pyproject.toml` | extraction dependencies (pptx, pdf, docx readers) — `python-pptx`, `python-docx`, `pypdf` |
 | ✅ | `.claude/commands/ingest.md` | pre-flight → gate → convert → classify → confirm duplicates → report; log each approved step |
@@ -341,6 +341,20 @@ All land in **step 3**, with the coverage chain.
 | ⬜ | `src/classkit/validate.py` (step 4) | the budget rule reports a session with a missing `est_minutes` as *unverifiable* (warn), instead of requiring the field |
 | ⬜ | `schemas/assessment-item.schema.json`, `validate.py` (step 5) | move `rubric`-for-`open` from schema `required` to an advisory rule |
 
+## D-039 — Step 2b review outcomes
+
+| | Artifact | Change |
+|---|---|---|
+| ✅ | `.claude/agents/material-classifier.md` | read-only (`Read, Grep, Glob`); returns its classification as a YAML block; cites books with section / exercise / printed page |
+| ✅ | `src/classkit/ingest/core.py`, `cli.py` | `classkit material apply` — a batch of `{id, kind, units, title}`, all or nothing |
+| ✅ | `.claude/commands/ingest.md` | passes the suspected pairs to the agent; shows the classification, applies corrections, records with `material apply`; `--no-log` on its `classkit ingest` calls |
+| ✅ | `src/classkit/ingest/report.py`, `cli.py` | `classkit ingest` logs every run that changes something (`--why`, `--no-log`) |
+| ✅ | `tests/` | the agent's tools; `apply` records, is all or nothing, reads YAML; a hand run is logged, a no-op run and a `--no-log` run are not; moved/removed sources warn; locators read hand-edited anchors |
+| ✅ | `dev/FRAMEWORK-SPEC.md`, `CLAUDE.md`, `GETTING-STARTED.md`, `README.md` | §3.1, §5.1, §6, §8.2 (book citations), §8.7 (classify, logging, `units` re-map), §9 |
+| ⬜ | `.claude/commands/plan-units.md` (step 3) | a gated final step: re-map materials' `units` to the approved unit map, through `classkit material apply`; decide how a teacher's hand-corrected hint is protected |
+| ⬜ | `.claude/agents/*` that cite books (step 4) | a book citation's `note` gives section, exercise/question number, printed page |
+| ⬜ | `src/classkit/validate.py` (step 4, proposed) | advisory: a locator to a `textbook` material with no `note` → warn |
+
 ## Cross-cutting
 
 | | Artifact | Change |
@@ -349,13 +363,13 @@ All land in **step 3**, with the coverage chain.
 | ✅ | `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block was scaffolded and documented although Exports is deferred (G-16). **Removed from the template and the settings table** — shipping configuration for a feature that does not exist confuses a teacher reading their own `course.yaml`. The optional field stays in `course.schema.json`, so a course that sets it still validates |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-10-01 (after step 2b):** 15 decisions, 138 artifact changes, **45 built, 5 in
-progress, 88 not started** — counted from the table. Steps 0, 1, 2a and 2b are done (D-032 reopens
-step 1's syllabus; that lands in step 3), except the rows
-that belong to agents and commands of later steps (logging in the other five commands; agents that
-cite material prefer `M<NNNN>#anchor`). Step 2b added one row: step 4 extends `LOCATOR_FIELDS` with
-`answer`. Next: the independent review of 2b, Avin's hand test of `/ingest`, then step 3. (Previous
-count, after step 2a: 33 / 3 / 101 of 137. The count before that, "14 built, 1 in progress, 88 not
+**Count as of 2026-10-01 (after step 2b and its review, D-039):** 15 decision blocks, 147 artifact
+changes, **51 built, 5 in progress, 91 not started** — counted from the table. Steps 0, 1, 2a and 2b
+are done (D-032 reopens step 1's syllabus; that lands in step 3), except the rows that belong to
+agents and commands of later steps (logging in the other five commands; agents that cite material
+prefer `M<NNNN>#anchor`; D-039's step 3 and step 4 rows). Next: Avin's hand test of `/ingest`, then
+step 3. (Previous count, after step 2b before its review: 45 / 5 / 88 of 138, in 14 blocks — that
+line said "15 decisions". After step 2a: 33 / 3 / 101 of 137. The count before that, "14 built, 1 in progress, 88 not
 started", did not match its own table — 16/1/112 — and is superseded. D-025 refines D-020 rows and D-031 amends several — no double-counting intended;
 D-026/D-027 are documentation decisions, already executed. D-031 rows supersede the "(consider)"
 overwrite-helper row under D-030. Rows struck through ~~like this~~ were amended by D-037.)

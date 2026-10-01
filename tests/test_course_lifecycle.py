@@ -706,6 +706,55 @@ def test_a_changed_source_file_warns(course_root: Path):
     assert levels(course_root, "materials_not_ingested") == {"warn"}
 
 
+def test_a_moved_source_file_warns_until_ingested(course_root: Path):
+    from classkit import ingest
+
+    notes = course_root / "materials" / "source" / "notes.md"
+    notes.write_text("# Notes\n", encoding="utf-8")
+    ingest.run(course_root, fetch=False)
+    (course_root / "materials" / "source" / "week1").mkdir()
+    notes.rename(course_root / "materials" / "source" / "week1" / "notes.md")
+    assert levels(course_root, "materials_not_ingested") == {"warn"}
+
+    ingest.run(course_root, fetch=False)
+    assert levels(course_root, "materials_not_ingested") == set()
+
+
+def test_a_removed_source_file_warns_until_ingested(course_root: Path):
+    from classkit import ingest
+
+    notes = course_root / "materials" / "source" / "notes.md"
+    notes.write_text("# Notes\n", encoding="utf-8")
+    ingest.run(course_root, fetch=False)
+    notes.unlink()
+    assert levels(course_root, "materials_not_ingested") == {"warn"}
+
+    ingest.run(course_root, fetch=False)
+    assert levels(course_root, "materials_not_ingested") == set()
+
+
+def test_locators_read_the_ingested_file_as_it_is_now(course_root: Path):
+    """§8.7: anchors are checked against the .md with the teacher's hand edits in it — a heading
+    they add resolves, and an anchor they remove stops resolving."""
+    from classkit import ingest
+
+    (course_root / "materials" / "source" / "notes.md").write_text(
+        "# Notes\n\n## Heaps\n\ntext\n", encoding="utf-8"
+    )
+    ingest.run(course_root, fetch=False)
+    copy = ingest.ingested_file(course_root, "M0001")
+    text = copy.read_text(encoding="utf-8")
+    assert "## Heaps" in text, "fixture drifted: extraction changed"
+    copy.write_text(text.replace("## Heaps", "## Binary heaps") + "\n## Worked example\n", encoding="utf-8")
+
+    cite(course_root, "M0001#worked-example")
+    assert levels(course_root, "material_locator_resolves") == set()
+
+    cite_again = session(course_root, 1)
+    edit(cite_again, 'ref: "M0001#worked-example"', 'ref: "M0001#heaps"')
+    assert levels(course_root, "material_locator_resolves") == {"error"}
+
+
 def test_a_new_link_warns_until_ingested(course_root: Path):
     from classkit.ingest.links import add_url
 

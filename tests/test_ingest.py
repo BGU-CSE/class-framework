@@ -579,12 +579,110 @@ def test_set_rejects_an_unknown_material_or_kind(course: Path):
         ingest.set_fields(course, "M0001", kind="lecture")
 
 
-def test_the_classifying_agent_cannot_write_files():
-    """Invariant 5: an agent with Write or Edit can bypass the write path entirely."""
+def test_the_classifying_agent_cannot_write_or_run_anything():
+    """Invariant 5, and D-039: Write or Edit bypasses the write path; Bash can write anything.
+    The agent reads the most untrusted text of any agent, so it only reads and returns."""
     agent = (FRAMEWORK_ROOT / ".claude" / "agents" / "material-classifier.md").read_text(encoding="utf-8")
     front = yaml.safe_load(agent.split("---")[1])
     tools = {t.strip() for t in front["tools"].split(",")}
-    assert not tools & {"Write", "Edit", "MultiEdit", "NotebookEdit"}
+    assert tools <= {"Read", "Grep", "Glob"}
+
+
+def test_apply_records_a_batch_of_classifications(course: Path):
+    for name in ("a", "b"):
+        make_pdf(source(course) / f"{name}.pdf", [name.upper()])
+    run(course)
+
+    changes = ingest.apply(course, [
+        {"id": "M0001", "kind": "textbook", "units": ["u06"]},
+        {"id": "m0002", "kind": "exam", "units": [], "title": "Final  2024"},
+    ])
+
+    assert [mid for mid, _ in changes] == ["M0001", "M0002"]
+    assert (records(course)["M0001"]["kind"], records(course)["M0001"]["units"]) == ("textbook", ["U06"])
+    assert (records(course)["M0002"]["kind"], records(course)["M0002"]["title"]) == ("exam", "Final 2024")
+
+
+def test_apply_is_all_or_nothing(course: Path):
+    """A typo in the last entry must not leave the first ones recorded."""
+    for name in ("a", "b"):
+        make_pdf(source(course) / f"{name}.pdf", [name.upper()])
+    run(course)
+    before = (course / "materials" / "manifest.yaml").read_text(encoding="utf-8")
+
+    for bad in (
+        {"id": "M0002", "kind": "lecture"},
+        {"id": "M0099", "kind": "exam"},
+        {"id": "M0002", "units": ["week 3"]},
+        {"id": "M0002", "kinds": "exam"},
+        {"id": "M0001", "kind": "exam"},  # a duplicate id
+    ):
+        with pytest.raises(ingest.MaterialError):
+            ingest.apply(course, [{"id": "M0001", "kind": "textbook"}, bad])
+        assert (course / "materials" / "manifest.yaml").read_text(encoding="utf-8") == before
+
+
+def test_apply_reads_yaml_from_the_cli(course: Path, monkeypatch, capsys):
+    import io
+
+    make_pdf(source(course) / "a.pdf", ["A"])
+    run(course)
+    monkeypatch.setattr("sys.stdin", io.StringIO("- id: M0001\n  kind: notes\n  units: [U02]\n"))
+
+    assert main(["material", "apply", "--course", str(course)]) == 0
+    assert records(course)["M0001"]["kind"] == "notes"
+
+    monkeypatch.setattr("sys.stdin", io.StringIO("- id: M0001\n  kind: [oops\n"))
+    assert main(["material", "apply", "--course", str(course)]) == 2
+
+
+def log_text(course: Path) -> str:
+    return (course / "LOG.md").read_text(encoding="utf-8")
+
+
+def test_a_hand_run_that_changes_the_course_is_logged(course: Path):
+    """§8.8: each ingest run is an entry — including one nobody ran through /ingest (D-039)."""
+    make_pdf(source(course) / "a.pdf", ["A"])
+    before = log_text(course)
+
+    assert main(["ingest", "--no-fetch", "--course", str(course)]) == 0
+
+    added = log_text(course)[len(before):]
+    assert "classkit ingest" in added and "new M0001" in added and "run by hand" in added
+
+
+def test_a_hand_run_that_changes_nothing_is_not_logged(course: Path):
+    make_pdf(source(course) / "a.pdf", ["A"])
+    main(["ingest", "--no-fetch", "--course", str(course)])
+    before = log_text(course)
+
+    main(["ingest", "--no-fetch", "--course", str(course)])
+
+    assert log_text(course) == before
+
+
+def test_ingest_run_by_the_command_does_not_log_twice(course: Path):
+    make_pdf(source(course) / "a.pdf", ["A"])
+    before = log_text(course)
+
+    main(["ingest", "--no-fetch", "--no-log", "--course", str(course)])
+
+    assert log_text(course) == before
+
+
+def test_a_logged_run_names_removals_and_moves(course: Path):
+    make_pdf(source(course) / "a.pdf", ["A"])
+    make_pdf(source(course) / "b.pdf", ["B"])
+    main(["ingest", "--no-fetch", "--no-log", "--course", str(course)])
+    (source(course) / "a.pdf").unlink()
+    (source(course) / "sub").mkdir()
+    (source(course) / "b.pdf").rename(source(course) / "sub" / "b2.pdf")
+    before = log_text(course)
+
+    main(["ingest", "--no-fetch", "--why", "reorganized", "--course", str(course)])
+
+    added = log_text(course)[len(before):]
+    assert "removed M0001" in added and "moved M0002" in added and "reorganized" in added
 
 
 def test_installing_a_converter_later_retries_the_file(course: Path, monkeypatch):

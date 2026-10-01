@@ -135,7 +135,9 @@ with at least one deck *and* its PDF export, and one file in a format nothing re
 .venv/bin/classkit ingest --preflight            # counts, duplicates, unsupported, time — writes nothing
 ```
 
-Then run **`/ingest`** in Claude Code and follow it through its four gates. Afterwards, by hand:
+Then run **`/ingest`** in Claude Code and follow it through its four gates. At step 3 you should see
+the classification table **before** anything is recorded, and be able to correct it (D-039).
+Afterwards, by hand:
 
 ```bash
 find course/materials/source -type f -exec shasum {} + | sort > /tmp/before   # snapshot source/
@@ -144,6 +146,7 @@ mv course/materials/source/<a deck>.pptx course/materials/source/renamed.pptx
 # edit one file in course/materials/ingested/, then change its source and re-run:
 .venv/bin/classkit ingest                        # REFUSED, exit 3, your edit intact
 .venv/bin/classkit validate                      # materials_not_ingested until you answer
+tail -12 course/LOG.md                           # each hand run that changed something: "classkit ingest", "run by hand"
 ```
 
 Point one study path's `ref` at a real anchor (`"M0001#slide-2"`) and one at a made-up one
@@ -156,6 +159,9 @@ Point one study path's `ref` at a real anchor (`"M0001#slide-2"`) and one at a m
 - **Are the titles sensible?** They come from the first slide title or heading, else metadata, else
   the file name.
 - **Did the duplicate detection catch your deck/PDF pairs — and nothing else?**
+- **Are the kinds and units right?** Units are guessed before any unit map exists, from "Lecture 3"
+  and the like; how often is the guess wrong? (`/plan-units` will re-map them — D-039.)
+- **Do book citations in the report give section / exercise / printed page**, not only `page-N`?
 - **Is the coverage report true of your course?** That is the whole point of step 2b.
 - **Did anything in `source/` change?** It must not: re-run the `find … | sort` line into
   `/tmp/after` (adjusting for the file you renamed) and `diff` the two.

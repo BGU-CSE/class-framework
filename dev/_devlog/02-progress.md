@@ -1527,3 +1527,29 @@ metadata fetching, PDFs from real tools, and scale. **The classifier prompt has 
 3. **Avin hand-tests `/ingest` on real, messy materials** (`dev/MANUAL-TESTING.md`, "Step 2b").
 4. Then **step 3** (`/plan-units`, folding in D-032). It must also point `curriculum-architect` at
    `materials/ingested/` rather than `source/` (gap G-30).
+
+## Session 29 — 2026-10-01 — Step 2b reviewed and its outcomes applied (→ D-039)
+
+Read the implementer's gap report and the independent review, verified the review's claims against
+the code, and took Avin through the open items one at a time. Findings on the review: the blocking
+finding (classifier has Bash) pointed at a real hole but overstated it — invariant 5 guarantees the
+write path, not a sandbox, and four other agents have Bash; both missing-test findings were real; it
+accepted G-6 and G-7 without engaging the case against. Avin decided:
+
+- **G-1 (b)** — classifier read-only; returns YAML; new `classkit material apply`, all or nothing.
+- **G-7 (b)** — `classkit ingest` logs every run that changes something; `--why`, `--no-log`.
+- **G-3 (a)** — physical pages, plus: every book citation's `note` gives section, exercise/question
+  number and printed page.
+- **G-6 (b)** — `/plan-units` re-maps materials' `units` (step 3).
+- G-2, G-4, G-5, G-8 ratified.
+
+Built: `material apply`, ingest logging (`log_summary`), the read-only agent and the reworked
+`/ingest` step 3; the two review test gaps (moved/removed sources warn; locators read hand-edited
+anchors). Spec §3.1, §5.1, §6, §8.2, §8.7, §9; `CLAUDE.md`, `GETTING-STARTED.md`, `README.md`,
+`MANUAL-TESTING.md`; D-039 in the decisions and the ledger. 173 tests (+10).
+
+### Next
+
+1. **Avin hand-tests `/ingest`** on real, messy materials (`dev/MANUAL-TESTING.md`, "Step 2b").
+2. Then **step 3** (`/plan-units`, D-032, the `units` re-map, G-30).
+

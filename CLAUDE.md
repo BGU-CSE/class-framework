@@ -108,10 +108,17 @@ Scaffolding **never overwrites**, so it is safe to re-run at any time.
 - **Cite material by locator** — `M0007#slide-18`. `classkit validate` checks that the material and
   the anchor exist (`material_locator_resolves`, an error), though not that the answer is there.
   A textbook key (`"CLRS ch.6"`) is still allowed for what is not ingested, but cannot be checked.
+- **A book citation also gives the book's own coordinates** in its `note` — section, exercise or
+  question number where there is one, and the printed page: `ref: "M0003#page-63"`,
+  `note: "CLRS §6.2, Exercise 6.2-3 (printed p. 45)"`. `page-63` is the 63rd page of the PDF, which
+  is often not the page printed "63"; a wrong page still validates, so the note is the check.
 - The teacher may correct a bad extraction in `ingested/` by hand. A later ingest asks before
   replacing the edit (it exits 3); agents never answer that question for the teacher.
-- Agents record a material's kind and units with `classkit material set`, never by editing the
-  manifest; only the teacher confirms a merge (`classkit material merge`).
+- The classifying agent only reads and **returns** each material's kind and units; `/ingest` shows
+  them to the teacher and records them (`classkit material apply`). Nobody edits the manifest's
+  bookkeeping by hand, and only the teacher confirms a merge (`classkit material merge`).
+- Running `classkit ingest` by hand writes a course-log entry saying what changed; add `--why` to
+  say why.
 
 ## How the commands should behave
 

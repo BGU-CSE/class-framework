@@ -16,6 +16,7 @@ from .core import (
     Plan,
     Preflight,
     RunReport,
+    apply,
     merge,
     preflight,
     reconcile,
@@ -29,6 +30,6 @@ from .manifest import INGESTED_DIR, MANIFEST, SOURCE_DIR, ManifestError, ingeste
 
 __all__ = [
     "INGESTED_DIR", "MANIFEST", "SOURCE_DIR", "ManifestError", "MaterialError", "Plan",
-    "Preflight", "RunReport", "anchors", "ingested_file", "load", "merge", "preflight",
+    "Preflight", "RunReport", "anchors", "apply", "ingested_file", "load", "merge", "preflight",
     "reconcile", "run", "scan", "set_fields", "suspected_duplicates",
 ]

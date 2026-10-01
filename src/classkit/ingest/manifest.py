@@ -1,8 +1,8 @@
 """`materials/manifest.yaml` — every material the course has ingested (spec §8.7).
 
 A YAML list, one record per material. `classkit ingest` owns the bookkeeping fields; `kind`,
-`units` and `title` are set by the classifying agent through `classkit material set`, and the
-teacher may correct any of them by hand. Every save re-reads nothing and rewrites the whole
+`units` and `title` are proposed by the classifying agent and recorded by `/ingest` through
+`classkit material apply` (D-039), and the teacher may correct any of them by hand. Every save re-reads nothing and rewrites the whole
 list, so a value the teacher changed survives (it was loaded with everything else) — but a
 YAML *comment* the teacher added does not. That is the cost of a tool-owned file.
 

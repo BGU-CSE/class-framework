@@ -7,11 +7,13 @@ import datetime
 import sys
 from pathlib import Path
 
+import yaml
+
 from . import ingest, log
 from .frontmatter import FrontMatterError
 from .ingest import links as linkfile
 from .ingest.manifest import KINDS, SOURCE_DIR, ManifestError
-from .ingest.report import preflight_text, run_text
+from .ingest.report import log_summary, preflight_text, run_text
 from .mode import DEVELOPER, TEACHER, UnsafeMarker, current_mode, set_mode
 from .model import LayoutError, find_course_root, find_framework_root, load_course
 from .scaffold import (
@@ -151,6 +153,15 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="do not fetch link titles from the network",
     )
+    ingest_cmd.add_argument(
+        "--why",
+        help="why you ran it, for the course log (default: 'run by hand')",
+    )
+    ingest_cmd.add_argument(
+        "--no-log",
+        action="store_true",
+        help="do not write a course-log entry — /ingest passes this and writes its own",
+    )
     ingest_cmd.add_argument("--course", help="course directory (default: search upward)")
 
     add_url = subcommands.add_parser(
@@ -182,6 +193,14 @@ def build_parser() -> argparse.ArgumentParser:
     merge_cmd.add_argument("id", help="the duplicate, e.g. the PDF export")
     merge_cmd.add_argument("--into", required=True, help="the material to keep, e.g. the deck")
     merge_cmd.add_argument("--course", help="course directory (default: search upward)")
+    apply_cmd = actions.add_parser(
+        "apply",
+        help="record a batch of classifications (YAML list of {id, kind, units, title}); all or nothing",
+    )
+    apply_cmd.add_argument(
+        "--from", dest="source", help="read the YAML from this file (default: standard input)"
+    )
+    apply_cmd.add_argument("--course", help="course directory (default: search upward)")
     dupes = actions.add_parser("duplicates", help="list materials that look like duplicates")
     dupes.add_argument("--course", help="course directory (default: search upward)")
 
@@ -363,6 +382,17 @@ def run_ingest(args) -> int:
         fetch=not args.no_fetch,
     )
     print(run_text(report))
+    # Every run that changes the course is a log entry (§8.8, D-039). /ingest passes --no-log
+    # and writes its own entry, which knows the why.
+    summary = log_summary(report)
+    if summary and not args.no_log:
+        path = log.append(course_root, log.Entry(
+            title="classkit ingest",
+            changed=summary,
+            why=args.why or "run by hand",
+            files=["materials/manifest.yaml"],
+        ))
+        print(f"logged  {path}")
     # 3, like `classkit write`: "ask the teacher first", not "something broke".
     return 3 if report.refused else 0
 
@@ -392,6 +422,20 @@ def run_material(args) -> int:
             record = ingest.merge(course_root, args.id.upper(), args.into.upper())
             print(f"merged {args.id.upper()} into {record['id']}: sources {', '.join(record['sources'])}")
             print(f"  {args.id.upper()} is retired; anchors stay those of {record['canonical']}.")
+        elif args.action == "apply":
+            text = (Path(args.source).read_text(encoding="utf-8") if args.source
+                    else sys.stdin.read())
+            try:
+                entries = yaml.safe_load(text)
+            except yaml.YAMLError as exc:
+                raise ingest.MaterialError(f"not valid YAML: {exc}") from exc
+            changes = ingest.apply(course_root, entries or [])
+            for material_id, fields in changes:
+                shown = "  ".join(
+                    f"{k}={','.join(v) if isinstance(v, list) else v}" for k, v in fields.items()
+                )
+                print(f"{material_id}  {shown}")
+            print(f"{len(changes)} materials changed, {len(entries or []) - len(changes)} already so.")
         else:
             pairs = ingest.suspected_duplicates(course_root, ingest.load(course_root))
             if not pairs:

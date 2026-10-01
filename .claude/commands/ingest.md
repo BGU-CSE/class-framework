@@ -41,10 +41,11 @@ time estimate.
 ## Step 2 — Convert.
 
 ```bash
-classkit ingest
+classkit ingest --no-log
 ```
 
-Only new or changed sources are converted; an interrupted run resumes. Show the summary: what was
+`--no-log` because this command writes its own, fuller log entry below; run by hand, `classkit
+ingest` logs itself. Only new or changed sources are converted; an interrupted run resumes. Show the summary: what was
 added (with ids), updated, moved (same id), removed (marked, not forgotten), and the links found.
 
 **If it exits with code 3**, some ingested files were **edited by hand** and their source has since
@@ -53,8 +54,8 @@ output) and ask: replace it with a fresh extraction, or keep the edit? Then run 
 chose:
 
 ```bash
-classkit ingest --overwrite M0007    # replace the edit
-classkit ingest --keep M0007         # keep the edit; mark the changed source as seen
+classkit ingest --no-log --overwrite M0007    # replace the edit
+classkit ingest --no-log --keep M0007         # keep the edit; mark the changed source as seen
 ```
 
 Never choose for them.
@@ -68,19 +69,37 @@ classkit log "/ingest, conversion approved" --changed "M0001..M0023 ingested (�
 
 ## Step 3 — Classify, and confirm duplicates.
 
-Use the **material-classifier** agent. Tell it which ids are new or updated this run, and pass on
-anything the teacher said they care about (`$1`). It sets each material's `kind` and likely `units`
-through `classkit material set`, and returns proposed same-material merges with its evidence, plus
-the coverage report for step 4.
+First list the suspected duplicates:
 
-Show the classification table and **ask the teacher to confirm each proposed merge**. Merge only
-what they confirm, into the material whose anchors to keep (a deck over its PDF export):
+```bash
+classkit material duplicates
+```
+
+Then use the **material-classifier** agent. Tell it which ids are new or updated this run, give it
+the suspected pairs, and pass on anything the teacher said they care about (`$1`). It has no tool
+that writes or runs anything: it **returns** a classification table with the same values as a YAML
+block, proposed same-material merges with its evidence, and the coverage report for step 4.
+
+Show the teacher the classification table and **ask for corrections**. Then record the block —
+with the teacher's corrections applied to it — in one call. It is all or nothing: if it is rejected,
+fix the entry it names and run it again.
+
+```bash
+classkit material apply <<'YAML'
+- id: M0007
+  kind: slides
+  units: [U03, U04]
+YAML
+```
+
+**Ask the teacher to confirm each proposed merge.** Merge only what they confirm, into the material
+whose anchors to keep (a deck over its PDF export):
 
 ```bash
 classkit material merge M0012 --into M0007
 ```
 
-Apply any correction to a kind or unit the teacher makes (`classkit material set …`). Then log:
+Then log:
 
 ```bash
 classkit log "/ingest, classification approved" --changed "kinds and units set for M…; M0012 merged into M0007" \

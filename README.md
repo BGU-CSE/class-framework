@@ -143,7 +143,7 @@ designer, the critic and the assessment writer apply the same standard.
 | `classkit log` | Append an entry to the course log, `LOG.md` — what changed and why |
 | `classkit ingest` | Convert new or changed materials into citable Markdown (`--preflight`: report only) |
 | `classkit add-url URL` | Add a link to `materials/source/links.md` |
-| `classkit material` | Record a material's kind and units; merge a duplicate the teacher confirmed |
+| `classkit material` | Record materials' kinds and units (`apply`, a batch; `set`, one); merge a duplicate the teacher confirmed |
 
 Scaffolding **never overwrites**. Re-run it any time — you get whatever is missing and keep
 everything you wrote. Skipped files are reported.

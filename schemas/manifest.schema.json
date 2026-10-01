@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/BGU-CSE/class-framework/schemas/manifest.schema.json",
   "title": "MaterialsManifest",
-  "description": "course/materials/manifest.yaml — every material the course has ingested (D-035, spec §8.7). Written by `classkit ingest`; `kind`, `units` and `title` are set by the classifying agent through `classkit material set` and are the teacher's to correct. A material is never deleted from this list: a removed source is marked `removed_at`, a merged duplicate is marked `merged_into`, so an id is never reused and a locator pointing at either fails visibly.",
+  "description": "course/materials/manifest.yaml — every material the course has ingested (D-035, spec §8.7). Written by `classkit ingest`; `kind`, `units` and `title` are proposed by the classifying agent, recorded by `/ingest` through `classkit material apply` (D-039), and are the teacher's to correct. A material is never deleted from this list: a removed source is marked `removed_at`, a merged duplicate is marked `merged_into`, so an id is never reused and a locator pointing at either fails visibly.",
   "type": "array",
   "items": {
     "type": "object",

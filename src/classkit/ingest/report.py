@@ -117,3 +117,38 @@ def run_text(r: RunReport) -> str:
     lines += ["", f"{created} new materials, {sum(1 for c in r.converted if not c.new)} updated, "
               f"{len(r.refused)} refused."]
     return "\n".join(lines)
+
+
+def _ids(label: str, ids: list[str], limit: int = 12) -> str:
+    ids = sorted(dict.fromkeys(ids))
+    shown = ", ".join(ids[:limit]) + (f" (+{len(ids) - limit} more)" if len(ids) > limit else "")
+    return f"{label} {shown}"
+
+
+def log_summary(r: RunReport) -> str | None:
+    """What a run changed in the course, by material id — the `changed` line of its course-log
+    entry (§8.8). None when it changed nothing: a run that only reports, or only refuses, is not
+    an entry."""
+    plan = r.plan
+    parts = []
+    new = [c.id for c in r.converted if c.new] + [c.id for c in r.found_links]
+    if new:
+        parts.append(_ids("new", new))
+    updated = [c.id for c in r.converted if not c.new]
+    if updated:
+        parts.append(_ids("updated", updated))
+    if r.kept:
+        parts.append(_ids("hand edit kept", r.kept))
+    if plan.moved:
+        parts.append(_ids("moved", [mid for mid, _, _ in plan.moved]))
+    if plan.duplicates:
+        parts.append(_ids("identical copy merged into", [mid for mid, _ in plan.duplicates]))
+    if plan.detached:
+        parts.append(_ids("copy split off from", [mid for mid, _ in plan.detached]))
+    if plan.gone:
+        parts.append(_ids("copy removed from", [mid for mid, _ in plan.gone]))
+    if plan.removed:
+        parts.append(_ids("removed", plan.removed))
+    if plan.restored:
+        parts.append(_ids("restored", [mid for mid, _ in plan.restored]))
+    return "materials: " + "; ".join(parts) if parts else None

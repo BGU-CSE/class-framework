@@ -184,7 +184,7 @@ Outcomes) **(target, D-029)**, `curriculum-architect` (the unit map and unit obj
 `study-session-designer` (sessions, guiding questions, answers, `est_minutes`, the study-path pool),
 `lesson-planner` (the in-class hour), `assessment-writer` (entry-quiz items only, in Core),
 `topic-researcher` (finds real resources), `material-classifier` (classifies ingested materials,
-proposes duplicates, reports coverage — §8.7), `course-critic` (review). Commands: `/ingest`,
+proposes duplicates, reports coverage; read-only — it returns, the command records, §8.7), `course-critic` (review). Commands: `/ingest`,
 `/plan-units`, `/design-unit N`, `/review-unit N`, and **`/write-items N` scoped to entry-quiz
 items** — `/design-unit` already writes the unit's entry quiz, so `/write-items` in Core is for
 adding to or reworking it. Deferred: `gem-builder` and `/build-gem` (Exports); the homework and exam
@@ -192,7 +192,8 @@ roles of `assessment-writer` and `/write-items` (Assessment).
 
 **Tooling commands used across Core:** `classkit ingest` (the deterministic half of `/ingest`,
 §8.7), `classkit add-url` (add a link to the course's materials, §8.7), `classkit material` (record
-a material's kind, units or title; merge a confirmed duplicate, §8.7), and `classkit log` (append
+a batch of classifications, or one material's kind, units or title; merge a confirmed duplicate,
+§8.7), and `classkit log` (append
 to the course log, §8.8).
 
 ### 3.2 The shape of a flipped course
@@ -360,10 +361,11 @@ Course-level setup runs once; then units are designed one at a time.
                    2. classkit ingest converts each new or changed source into
                       materials/ingested/M<NNNN>-slug.md with addressable anchors, and
                       updates materials/manifest.yaml (incremental, resumable)
-                   3. material-classifier sets each material's kind and likely units
-                      (through `classkit material set`) and proposes same-material
-                      duplicates; the command asks the teacher to confirm each, and merges
-                      only what is confirmed (`classkit material merge`)
+                   3. material-classifier (read-only) returns each material's kind and
+                      likely units, and proposes same-material duplicates; the command shows
+                      the classification, applies the teacher's corrections, records it
+                      (`classkit material apply`), asks the teacher to confirm each merge,
+                      and merges only what is confirmed (`classkit material merge`)
                    4. report what the course actually covers and where it is thin
                    Every approved step appends to course/LOG.md (§8.8).
 /plan-units        ONE flow, two agents, sequential and file-based (D-029, D-031i):
@@ -455,7 +457,7 @@ sessions 1, 2 and 4 — and it is how a course is maintained year to year.
 | `methodologies/*.yaml` | framework (or a teacher adding one) | designer, planner, validator | Core |
 | `defaults/time-constants.yaml` | framework, overridable per course | designer, critic (advisory) | Core |
 | `materials/source/*` | teacher (and `classkit add-url` → `links.md`) | `/ingest` only | Core |
-| `materials/manifest.yaml` | `classkit ingest` (+ `classkit material`, called by material-classifier and the teacher) | every agent that cites material, validator | Core |
+| `materials/manifest.yaml` | `classkit ingest` (+ `classkit material`, run by `/ingest` and the teacher — never by an agent) | every agent that cites material, validator | Core |
 | `materials/ingested/*.md` | `classkit ingest`; the teacher may hand-edit | curriculum-architect, designer, assessment-writer, critic | Core |
 | `LOG.md` | `classkit log`, called by every command at each approved step | every agent (recent entries), the teacher | Core |
 | `unit.md` | curriculum-architect | designer, validator | Core |
@@ -632,7 +634,7 @@ Goal object (the Guiding Question):
 | `prompt` | string | ✓ | the guiding question, phrased so a student can answer and check it |
 | `objectives` | array\<`U<NN>-O<N>`\> | ✓ (≥1) | unit objectives this goal rolls up to |
 | `est_minutes` | number ≥0 | | **(target, D-020, D-038)** teacher-approved study time; the session budget sums these. **Not schema-required** — a missing estimate is pedagogy (the teacher has not estimated yet), not shape: the budget rule reports the session as *unverifiable* (warn) instead |
-| `answer` | array\<obj\> | advisory: ≥1 **unless** `defer_to_class` — not schema-required (D-037) | **(target, D-019)** precise locators of the correct answer; each `{ kind (enum), ref (string), note (opt) }`; `kind ∈ textbook \| slide \| video \| article \| web \| other`; never the answer in prose. **Prefer a material locator** — `ref: "M0007#slide-18"` — which the validator can check (D-035); a textbook key with a locator (`"CLRS §2.3.1"`) remains allowed for sources that are cited but not ingested |
+| `answer` | array\<obj\> | advisory: ≥1 **unless** `defer_to_class` — not schema-required (D-037) | **(target, D-019)** precise locators of the correct answer; each `{ kind (enum), ref (string), note (opt) }`; `kind ∈ textbook \| slide \| video \| article \| web \| other`; never the answer in prose. **Prefer a material locator** — `ref: "M0007#slide-18"` — which the validator can check (D-035); a textbook key with a locator (`"CLRS §2.3.1"`) remains allowed for sources that are cited but not ingested. **A book citation carries the book's own coordinates in `note`** — section, exercise or question number where there is one, and the printed page — because `page-N` is the physical page (§8.7, D-039): `ref: "M0003#page-63"`, `note: "CLRS §6.2, Exercise 6.2-3 (printed p. 45)"`. Applies to study paths too |
 | `defer_to_class` | boolean | | **(target, D-023)** default `false`. If `true`: no `answer`; a pre-class thinking prompt that **must** be referenced by ≥1 in-class activity |
 
 > A goal's `answer` is a **list of locators** — where the answer can be found. It is not the answer
@@ -1007,7 +1009,7 @@ its line goes; one found inside a document stays.
 | `ingested_hash` | string | | hash of the `.md` ingest last wrote — lets a hand edit be detected |
 | `status` | enum | ✓ | `ingested \| unsupported \| no-text \| media \| link` |
 | `status_reason` | string | | e.g. "install LibreOffice, or export to PDF" |
-| `units` | array\<`U<NN>`\> | | units this material appears to support — a hint, set by the agent |
+| `units` | array\<`U<NN>`\> | | units this material appears to support — a hint, proposed by the agent. Set by `/ingest` before any unit exists, from the material's own numbering; **re-mapped by `/plan-units` once the unit map is approved (target, D-039, step 3)** |
 | `found_in` | `M<NNNN>` or `M<NNNN>#anchor` | | for a link discovered inside another material: where |
 | `note` | string | | for a link: the note after it in `links.md` |
 | `duration` | string | | for a video link, when its page declares one: `12:03`, `1:02:45` |
@@ -1046,7 +1048,9 @@ renamed by hand.
   the slide title follows the heading in bold, then the text, tables and speaker notes.
 - **Pages** are physical pages, 1-based — they always exist and never repeat. Where the PDF's
   printed page label differs (front matter, a textbook's own numbering) it is noted under the
-  heading, `*(printed page 45)*`, so a teacher citing "p. 45" can find `page-63`.
+  heading, `*(printed page 45)*`, so a teacher citing "p. 45" can find `page-63`. Because a wrong
+  page still validates (page 45 exists), **every book citation also names the book's own
+  coordinates in its `note`** — section, exercise or question number, printed page (§8.2, D-039).
 - A **`no-text`** PDF still gets its page headings, with empty text: a locator to a page that exists
   resolves, and the teacher may type the text in by hand.
 - `unsupported` and `media` materials have no `.md` and no anchors; they are cited by id alone.
@@ -1076,8 +1080,10 @@ locators rot.
 #### How a run works
 
 ```
-classkit ingest [--preflight] [--overwrite ID]... [--keep ID]... [--no-fetch] [--course DIR]
+classkit ingest [--preflight] [--overwrite ID]... [--keep ID]... [--no-fetch]
+                [--why TEXT] [--no-log] [--course DIR]
 classkit add-url URL [--note TEXT] [--course DIR]
+classkit material apply [--from FILE] [--course DIR]       # YAML list of {id, kind?, units?, title?}
 classkit material set ID [--kind K] [--unit UNN]... [--no-units] [--title T] [--course DIR]
 classkit material merge ID --into ID [--course DIR]
 classkit material duplicates [--course DIR]
@@ -1094,10 +1100,15 @@ classkit material duplicates [--course DIR]
    interrupted run resumes where it stopped. If it stopped between writing a `.md` and saving the
    manifest, the next run *adopts* that orphan (same canonical path, same source hash) rather than
    minting a second id.
-3. **Classify and confirm** — the `material-classifier` agent sets `kind` and `units` through
-   `classkit material set` (it has no `Write`/`Edit`), and proposes suspected same-material
-   duplicates with its evidence. **The command asks the teacher to confirm each**, and runs
-   `classkit material merge` only on confirmation. Exact duplicates (same hash) merge without asking.
+3. **Classify and confirm** — the `material-classifier` agent is **read-only** (`Read`, `Grep`,
+   `Glob`; no `Write`, `Edit` or `Bash` — D-039: it reads more untrusted text than any other agent,
+   so it can run nothing). It **returns** `kind` and `units` for each material as a YAML block, and
+   proposes suspected same-material duplicates (passed to it by the command) with its evidence. The
+   command shows the classification, applies the teacher's corrections, and records the block with
+   `classkit material apply` — **all or nothing**: every entry is checked (known id, not merged or
+   removed, valid kind and unit ids, no unknown keys, no id twice) before any is recorded. **The
+   command asks the teacher to confirm each merge**, and runs `classkit material merge` only on
+   confirmation. Exact duplicates (same hash) merge without asking.
 4. **Report** what the course actually covers and where it is thin.
 
 **Matching** — one function (`reconcile`) shared by the pre-flight, the run, and the validator, so
@@ -1140,8 +1151,12 @@ anchor that is not a heading of the material's `.md` — read as it is now, hand
 or names any anchor of a material that has none (link, media, unsupported). A textbook-key
 citation (`"CLRS ch.6"`) is not a locator and is not checked.
 
-**Logging.** `classkit ingest` does not write the course log itself — like `validate`, it is a tool
-the teacher may also run by hand. `/ingest` logs each approved step with `classkit log` (§8.8).
+**Logging** (D-039). Ingest changes the course, so **every run that changes something is a log
+entry** (§8.8) — including a run by hand, which nothing else would record. `classkit ingest` appends
+one itself: `classkit ingest` as the title, what changed by material id (new, updated, moved,
+removed, merged copies, kept edits), and `--why` (default "run by hand"). A run that changes nothing,
+or only refuses, writes no entry. `/ingest` passes `--no-log` and logs each approved step itself with
+`classkit log`, since it knows the why. (Unlike `validate`, which changes nothing and never logs.)
 
 **A removed source** is marked in the manifest, never deleted: locators pointing at it must fail
 validation visibly rather than disappear.
@@ -1215,9 +1230,11 @@ Honest list, kept current.
 - **Some locators cannot be verified.** `material_locator_resolves` proves a slide or page exists,
   not that the answer is on it; and video timestamps and un-ingested textbook citations cannot be
   checked at all. Invariant 7 becomes *partly* mechanical — the critic still owns the rest.
-- **"No Write/Edit" is only as strong as Bash.** `material-classifier` records everything through
-  `classkit`, and has no `Write`/`Edit` — but it has `Bash`, which could write a file. The prompt
-  forbids it; nothing structural does. The same holds for every agent that runs `classkit`.
+- **"No Write/Edit" is only as strong as Bash.** An agent with `Bash` but no `Write`/`Edit` can still
+  write a file; only its prompt forbids it. `material-classifier` therefore has no `Bash` either
+  (D-039) — it returns, and the command records. The agents that still have `Bash` are reviewed as
+  each is rewritten (G-4 carry-over). The orchestrating session itself has every tool; invariant 5
+  is a guarantee of the write path, not a sandbox.
 - **`materials_not_ingested` hashes every source file on every `validate`.** Correct and simple, and
   fast for a typical course; a course with gigabytes of video in `source/` will feel it.
 - **Extraction quality varies.** Slides that are mostly images or diagrams extract to little text, and

@@ -737,21 +737,81 @@ def set_fields(course_root: Path, material_id: str, *, kind: str | None = None,
     record = by_id(records).get(material_id)
     if record is None:
         raise MaterialError(f"no material {material_id} in the manifest")
-    if kind is not None:
-        if kind not in KINDS:
-            raise MaterialError(f"kind must be one of {', '.join(KINDS)}, not {kind!r}")
-        record["kind"] = kind
-    if units is not None:
-        bad = [u for u in units if not re.fullmatch(r"U\d{2}", u)]
-        if bad:
-            raise MaterialError(f"unit ids look like U03, not {', '.join(bad)}")
-        record["units"] = sorted(set(units))
-    if title is not None:
-        if not title.strip():
-            raise MaterialError("a title cannot be empty")
-        record["title"] = " ".join(title.split())
+    _set(record, _checked(material_id, kind, units, title))
     save(course_root, records)
     return record
+
+
+def _checked(material_id: str, kind, units, title) -> dict:
+    """The fields to set, validated; raises MaterialError naming the material."""
+    fields: dict = {}
+    if kind is not None:
+        if kind not in KINDS:
+            raise MaterialError(f"{material_id}: kind must be one of {', '.join(KINDS)}, not {kind!r}")
+        fields["kind"] = kind
+    if units is not None:
+        if not isinstance(units, list):
+            raise MaterialError(f"{material_id}: units must be a list, e.g. [U03, U04]")
+        units = [str(u).upper() for u in units]
+        bad = [u for u in units if not re.fullmatch(r"U\d{2}", u)]
+        if bad:
+            raise MaterialError(f"{material_id}: unit ids look like U03, not {', '.join(bad)}")
+        fields["units"] = sorted(set(units))
+    if title is not None:
+        if not str(title).strip():
+            raise MaterialError(f"{material_id}: a title cannot be empty")
+        fields["title"] = " ".join(str(title).split())
+    return fields
+
+
+def _set(record: dict, fields: dict) -> None:
+    record.update(fields)
+
+
+APPLY_KEYS = {"id", "kind", "units", "title"}
+
+
+def apply(course_root: Path, entries) -> list[tuple[str, dict]]:
+    """Record a batch of classifications — the classifying agent's returned block, applied by
+    `/ingest` (D-039). All or nothing: every entry is checked before any is recorded, so a typo
+    in entry 40 does not leave 39 recorded and the rest not.
+
+    Each entry is `{id, kind?, units?, title?}`. Returns (id, fields that changed).
+    """
+    if not isinstance(entries, list):
+        raise MaterialError("expected a list of entries, each with an `id`")
+    records = load(course_root)
+    index = by_id(records)
+    planned: list[tuple[dict, dict]] = []
+    seen: set[str] = set()
+    for position, entry in enumerate(entries, 1):
+        if not isinstance(entry, dict) or not entry.get("id"):
+            raise MaterialError(f"entry {position}: each entry needs an `id`, e.g. id: M0007")
+        material_id = str(entry["id"]).upper()
+        unknown = set(entry) - APPLY_KEYS
+        if unknown:
+            raise MaterialError(f"{material_id}: unknown keys {', '.join(sorted(unknown))} "
+                                f"(allowed: {', '.join(sorted(APPLY_KEYS))})")
+        if material_id in seen:
+            raise MaterialError(f"{material_id} appears twice")
+        seen.add(material_id)
+        record = index.get(material_id)
+        if record is None:
+            raise MaterialError(f"no material {material_id} in the manifest")
+        if record.get("merged_into") or record.get("removed_at"):
+            raise MaterialError(f"{material_id} is merged or removed; classify the material it became")
+        fields = _checked(material_id, entry.get("kind"), entry.get("units"), entry.get("title"))
+        planned.append((record, fields))
+
+    changes = []
+    for record, fields in planned:
+        changed = {k: v for k, v in fields.items() if record.get(k) != v}
+        _set(record, fields)
+        if changed:
+            changes.append((record["id"], changed))
+    if changes:
+        save(course_root, records)
+    return changes
 
 
 def merge(course_root: Path, material_id: str, into: str) -> dict:

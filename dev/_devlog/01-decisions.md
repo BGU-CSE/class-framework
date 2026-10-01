@@ -1228,3 +1228,50 @@ reading one schema file surfaced two things it missed (findings 1–2 below).
 
 99 tests (92 + 7).
 
+## D-039 — Step 2b review outcomes: a read-only classifier; ingest logs itself; book citations
+**Date:** 2026-10-01 · **Status:** locked (design + implemented) · sources:
+`reviews/impl-gaps-step-2b.md` (implementer), `reviews/impl-review-step-2b.md` (Gemini review)
+
+Step 2b (ingest, D-035) was implemented in a fresh session and reviewed by an independent agent.
+Avin decided the open items one by one. Claude's assessment of the review: its blocking finding
+pointed at a real hole but overstated it ("breaks the entire safety model": the orchestrating
+session has every tool anyway, and four other agents have Bash, so invariant 5 guarantees the write
+path, not a sandbox). Both test gaps it named were real, and verified. It accepted G-7 and G-6
+without engaging the reasons against; Claude disagreed with both, and Avin sided with Claude.
+
+**Decided:**
+
+- **G-1 → the classifier is read-only.** `material-classifier` has `Read, Grep, Glob` only — no
+  Bash. It *returns* its classification as a YAML block; `/ingest` shows it, applies the teacher's
+  corrections, and records it with the new **`classkit material apply`** (all or nothing). Why this
+  agent first: it reads more untrusted text than any other (the teacher's files and what they
+  quote), so it is the strongest case for a structural guarantee, and the price was small. Costs: one
+  more CLI verb; the agent cannot check its own recording; the command passes it the suspected
+  pairs. Side benefit: the teacher sees the classification *before* it is recorded. The other
+  agents' Bash is decided as each is rewritten (G-4 carry-over), not now.
+- **G-7 → `classkit ingest` logs itself.** Every run that changes something appends an entry (title
+  `classkit ingest`, what changed by material id, `--why`, default "run by hand"); a run that changes
+  nothing, or only refuses, does not. `/ingest` passes `--no-log` and writes its own entries. The
+  implementer had argued by analogy with `validate` (D-038); that does not hold, since `validate`
+  changes nothing while ingest assigns ids, adds and removes materials — and §8.8 says "so is each
+  ingest run". Cost: one more flag; a forgotten `--no-log` doubles an entry (noise, not loss).
+- **G-3 → PDF anchors stay physical pages**, plus Avin's rule: **every book citation carries the
+  book's own coordinates in its `note`** — section, exercise or question number where there is one,
+  and the printed page: `ref: "M0003#page-63"`, `note: "CLRS §6.2, Exercise 6.2-3 (printed p. 45)"`.
+  Why: a wrong physical page still validates (the page exists); the note is what a student with a
+  paper copy, or a teacher checking, can verify. Cost: a prompt-level convention until step 4, where
+  an advisory rule (a locator to a `textbook` material without a `note` → warn) is proposed.
+- **G-6 → `/plan-units` re-maps the materials' `units`** once the unit map is approved — a gated
+  step, recorded through `classkit material apply`. The reviewer called this churn; Claude argued
+  that a confidently wrong hint ("Lecture 3" → U03 after units were merged) is worse than none,
+  because the designer agent trusts it. How to protect a hint the teacher corrected by hand is
+  decided in step 3.
+- **Ratified:** G-2 (five extra manifest fields), G-4 (merge keeps the target's anchors; the
+  retired `.md` stays), G-5 (a changed merged copy is split off; only an identical copy inherits a
+  deleted canonical's id), G-8 (lxml/Pillow wheels). G-22 (declined duplicates not remembered) and
+  G-26 (manifest comments lost) left as they are until the hand test shows whether they matter.
+- **Review test gaps, fixed:** `materials_not_ingested` on a moved and on a removed source; a locator
+  checked against a hand-edited `.md` (an added heading resolves, a removed one fails).
+
+173 tests (163 + 10).
+

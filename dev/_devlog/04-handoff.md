@@ -19,37 +19,42 @@ Then, for history and what is still open:
 6. `02-progress.md` (last block) — where we stopped.
 7. `03-open-questions.md` — what's unresolved.
 
-## Current state — 2026-10-01 (after step 2b)
+## Current state — 2026-10-01 (after step 2b and its review, D-039)
 
-**Steps 0, 1, 2a and 2b are built.** 2a has been independently reviewed; **2b has not yet.** Suite:
-**163 tests**, green. Ledger: 45 built, 5 in progress, 88 not started — `../ROADMAP.md` is
-authoritative.
+**Steps 0, 1, 2a and 2b are built and independently reviewed.** Suite: **173 tests**, green.
+Ledger: 51 built, 5 in progress, 91 not started — `../ROADMAP.md` is authoritative.
 
-- **Step 2b — ingest (D-035, spec §8.7).** Session 28 in `02-progress.md`; gap report
-  `../reviews/impl-gaps-step-2b.md`.
-  - `classkit ingest [--preflight]` turns `materials/source/` into `materials/ingested/M<NNNN>-slug.md`,
-    with anchors (`## Slide N`, `## Page N`, own headings), plus `materials/manifest.yaml`.
-  - Ids are stable: a renamed file keeps its id, identical copies merge, a removed source is marked.
-  - Runs are incremental and resumable. Hand edits are refused and the teacher is asked
+- **Step 2b — ingest (D-035, spec §8.7).** Session 28 built it (gap report
+  `../reviews/impl-gaps-step-2b.md`); Session 29 applied the review (`../reviews/impl-review-step-2b.md`)
+  and Avin's decisions, **D-039**:
+  - `classkit ingest [--preflight]` turns `materials/source/` into `materials/ingested/M<NNNN>-slug.md`
+    with anchors (`## Slide N`, `## Page N` — physical pages — own headings), plus
+    `materials/manifest.yaml`. Stable ids, incremental, resumable; hand edits refused and asked
     (`--overwrite` / `--keep`, exit 3).
-  - Also new: `classkit add-url`, `classkit material set|merge|duplicates`, `/ingest` rewritten in
-    four gated and logged steps, the new `material-classifier` agent (no Write/Edit), and
-    `material_locator_resolves` (error) plus `materials_not_ingested` (warn).
-- **Awaiting Avin — 8 ⚑ decisions** in the gap report. The biggest: **G-1**, how the classifier
-  records anything (a `classkit material` CLI; it proposes merges, the command performs them on
-  confirmation). Then **G-2**, five extra manifest fields; **G-3**, physical PDF pages, not printed
-  labels; and **G-5**, a changed merged copy is detached and re-asked. The spec already carries these
-  provisionally, marked in the gap report's list of spec edits.
-- **Next:** an independent review of 2b **given the same scope block as the implementer**
-  (`../reviews/impl-review-step-2b.md`). Then Avin hand-tests `/ingest` on real, messy materials
-  (`../MANUAL-TESTING.md`, "Step 2b") — the check no review can do. Then step 3 (`/plan-units`, with
-  D-032). It must also point `curriculum-architect` at `ingested/` (G-30).
+  - **`material-classifier` is read-only** (Read, Grep, Glob — no Bash). It returns a YAML block;
+    `/ingest` shows it, applies the teacher's corrections, records it with
+    **`classkit material apply`** (all or nothing). Merges only on the teacher's confirmation.
+  - **`classkit ingest` logs every run that changes something** (`--why`; `/ingest` passes
+    `--no-log` and logs its own steps).
+  - **Book citations carry the book's coordinates in `note`** — section, exercise/question number,
+    printed page — because `page-N` is the physical page.
+  - Ratified: G-2, G-4, G-5, G-8. G-22/G-26 left until the hand test.
+- **Next:** Avin hand-tests `/ingest` on real, messy materials (`../MANUAL-TESTING.md`, "Step 2b") —
+  the check no review can do; the classifier prompt has never run. Then step 3 (`/plan-units`, with
+  D-032). Step 3 must also: point `curriculum-architect` at `ingested/` (G-30); add a gated step that
+  **re-maps materials' `units`** to the approved unit map, and decide how a hand-corrected hint is
+  protected (D-039).
 - **Pre-decided for later steps — don't re-argue:**
   - a goal's `est_minutes` is optional, and a missing one makes the session budget *unverifiable*
     (step 4);
-  - step 4 adds `answer` to `LOCATOR_FIELDS` (one line);
+  - step 4 adds `answer` to `LOCATOR_FIELDS` (one line), and moves `goals[].paths[].ref` to
+    `paths[].ref` with D-020;
+  - step 4: agents citing books give section / exercise / printed page in `note`; proposed advisory
+    rule — a locator to a `textbook` material with no `note` warns;
   - an `open` item's rubric becomes an advisory rule (step 5);
-  - a unit's `objectives` stays schema-required, deliberately.
+  - a unit's `objectives` stays schema-required, deliberately;
+  - agents keep or lose `Bash` as each is rewritten (G-4) — the classifier lost it because it reads
+    the most untrusted text.
 
 ## State after step 2a — 2026-09-29 (kept for history)
 

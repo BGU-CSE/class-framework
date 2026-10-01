@@ -95,9 +95,10 @@ Then run **`/ingest`** in Claude Code. It first shows you a **pre-flight report*
 each kind, slides and pages, duplicates, links, what it can't read, roughly how long it will take —
 and waits for your go-ahead. It then turns everything into a readable, citable copy in
 `course/materials/ingested/`, one file per source with every slide and page marked, and lists them in
-`course/materials/manifest.yaml` under a stable id (`M0007`). An agent then classifies each one
-(slides, exam, textbook, …, and which units it serves), **asks you** before merging anything it
-thinks is the same material twice (a deck and its PDF export), and reports what your course actually
+`course/materials/manifest.yaml` under a stable id (`M0007`). An agent then proposes what each one is
+(slides, exam, textbook, …, and which units it serves) — **you see and correct that before it is
+recorded** — asks you before merging anything it thinks is the same material twice (a deck and its
+PDF export), and reports what your course actually
 covers and where it is thin. Each step you approve is recorded in the course log.
 
 What that buys you: an answer reference can point at **`M0007#slide-18`**, and `classkit validate`
@@ -113,6 +114,11 @@ human's or the reviewing agent's call.)
   an interrupted run picks up where it stopped. Until you do, `classkit validate` warns that some
   material is not ingested yet.
 - **A deleted file** stays in the manifest, marked removed, so anything still citing it is reported.
+- **Running `classkit ingest` yourself** is fine; it adds an entry to the course log saying what
+  changed (`--why "…"` to say why).
+- **Citing a book:** `M0003#page-63` is the 63rd page of the PDF, which may not be the page printed
+  "63". So a book citation also says, in its note, the section, the exercise or question number, and
+  the printed page — `CLRS §6.2, Exercise 6.2-3 (printed p. 45)`.
 
 If your textbook isn't a file, record it in `course/course.yaml` under `textbooks:` — study
 paths and answer references cite it by key.
