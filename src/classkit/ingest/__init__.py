@@ -6,6 +6,9 @@ agent can read and cite precisely.
     materials/ingested/    derived — one .md per material, flat, named by a stable id
     materials/manifest.yaml
 
+Private material (D-040) lives under `source/private/`: gitignored, with only an index committed
+in `ingested/` and its full text in the gitignored `materials/private-text/`.
+
 `extract` converts one file (a registry keyed by extension); `links` reads and appends to
 `links.md`; `manifest` reads and writes the manifest; `core` scans, reconciles, runs, and
 records the classifying agent's decisions.
@@ -20,6 +23,7 @@ from .core import (
     merge,
     preflight,
     reconcile,
+    remove,
     run,
     scan,
     set_fields,
@@ -31,5 +35,5 @@ from .manifest import INGESTED_DIR, MANIFEST, SOURCE_DIR, ManifestError, ingeste
 __all__ = [
     "INGESTED_DIR", "MANIFEST", "SOURCE_DIR", "ManifestError", "MaterialError", "Plan",
     "Preflight", "RunReport", "anchors", "apply", "ingested_file", "load", "merge", "preflight",
-    "reconcile", "run", "scan", "set_fields", "suspected_duplicates",
+    "reconcile", "remove", "run", "scan", "set_fields", "suspected_duplicates",
 ]

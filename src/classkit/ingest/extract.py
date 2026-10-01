@@ -56,6 +56,13 @@ class Extraction:
     #: URLs found inside the material, each with the anchor it was found under ("" if none)
     links: list[tuple[str, str]] = field(default_factory=list)
     reason: str = ""
+    #: anchor → one-line labels for a private material's index (D-040): a slide's title, a
+    #: page's printed label and the sections that start on it. Never body text.
+    labels: dict[str, list[str]] = field(default_factory=dict)
+    #: True when `title` was taken from the body text (a PDF's or a text file's first line)
+    #: rather than a heading, a slide title or metadata — so a private material does not carry
+    #: a line of its text into the committed manifest and index
+    title_from_body: bool = False
 
 
 @dataclass
@@ -186,6 +193,40 @@ def anchors(markdown: str) -> list[str]:
     return result
 
 
+#: A label in an index is one line, and short: it names a place, it does not quote it.
+LABEL_CHARS = 120
+
+
+def label(text: str) -> str:
+    """One index label: a single line, at most LABEL_CHARS, never a heading."""
+    text = _clean(text)
+    if len(text) > LABEL_CHARS:
+        text = text[:LABEL_CHARS - 1].rstrip() + "…"
+    return _escape_heading(text)
+
+
+def index_body(markdown: str, labels: dict[str, list[str]]) -> str:
+    """The index of a private material (D-040): every anchor heading the full text has, in the
+    same order and so with the same anchors, each followed only by its one-line labels. No body
+    text — this is what is committed for a file whose text may not be."""
+    lines: list[str] = []
+    seen: dict[str, int] = {}
+    for level, text in headings(markdown):
+        lines += [f"{'#' * level} {text}", ""]
+        base = slug(text)
+        if not base:
+            continue
+        if base in seen:
+            seen[base] += 1
+            anchor = f"{base}-{seen[base]}"
+        else:
+            seen[base] = 0
+            anchor = base
+        for line in labels.get(anchor, []):
+            lines += [line, ""]
+    return "\n".join(lines).rstrip() + "\n" if lines else ""
+
+
 def find_urls(text: str) -> list[str]:
     urls = []
     for match in _URL.finditer(text):
@@ -243,7 +284,7 @@ def extract_text(path: Path) -> Extraction:
                      for line in text.splitlines())
     first = next((line.strip() for line in text.splitlines() if line.strip()), "")
     return Extraction(INGESTED, body=body.rstrip() + "\n", title=first[:80],
-                      links=[(u, "") for u in find_urls(text)])
+                      links=[(u, "") for u in find_urls(text)], title_from_body=True)
 
 
 def _links_by_anchor(markdown: str) -> list[tuple[str, str]]:
@@ -293,6 +334,7 @@ def extract_pptx(path: Path) -> Extraction:
     deck = Presentation(str(path))
     lines: list[str] = []
     links: list[tuple[str, str]] = []
+    labels: dict[str, list[str]] = {}
     first_title = ""
 
     for number, slide in enumerate(deck.slides, start=1):
@@ -301,12 +343,14 @@ def extract_pptx(path: Path) -> Extraction:
         lines += [f"## Slide {number}", ""]
         if slide._element.get("show") == "0":
             lines += ["*(hidden slide)*", ""]
+            labels.setdefault(anchor, []).append("*(hidden slide)*")
 
         title_shape = slide.shapes.title
         title = _clean(title_shape.text_frame.text) if title_shape is not None and title_shape.has_text_frame else ""
         if title:
             first_title = first_title or title
             lines += [f"**{title}**", ""]
+            labels.setdefault(anchor, []).append(f"**{label(title)}**")
 
         for shape in _shapes(slide.shapes):
             if title_shape is not None and shape.shape_id == title_shape.shape_id:
@@ -340,7 +384,7 @@ def extract_pptx(path: Path) -> Extraction:
 
     title = first_title or _title_from_metadata(deck.core_properties.title)
     return Extraction(INGESTED, body="\n".join(lines).rstrip() + "\n", title=title,
-                      links=_unique(links))
+                      links=_unique(links), labels=labels)
 
 
 def _shapes(shapes):
@@ -375,7 +419,9 @@ def extract_pdf(path: Path) -> Extraction:
     lines: list[str] = []
     links: list[tuple[str, str]] = []
     characters = 0
-    labels = list(getattr(reader, "page_labels", []) or [])
+    printed = list(getattr(reader, "page_labels", []) or [])
+    sections = _outline_by_page(reader)
+    labels: dict[str, list[str]] = {}
 
     for index, page in enumerate(reader.pages):
         number = index + 1
@@ -384,9 +430,12 @@ def extract_pdf(path: Path) -> Extraction:
         # Locators use the physical page, which always exists and never repeats. A printed
         # page number that differs (front matter, a textbook's own numbering) is noted, so a
         # teacher citing "p. 45" can find page-63.
-        label = labels[index] if index < len(labels) else str(number)
-        if label and label != str(number):
-            lines += [f"*(printed page {label})*", ""]
+        page_label = printed[index] if index < len(printed) else str(number)
+        if page_label and page_label != str(number):
+            lines += [f"*(printed page {page_label})*", ""]
+            labels.setdefault(anchor, []).append(f"*(printed page {label(page_label)})*")
+        for title in sections.get(index, []):
+            labels.setdefault(anchor, []).append(f"*(section: {label(title)})*")
         try:
             text = page.extract_text() or ""
         except Exception:  # one bad page must not lose the rest of the document
@@ -413,11 +462,37 @@ def extract_pdf(path: Path) -> Extraction:
         # page that exists resolves, and the teacher may type in the text by hand.
         return Extraction(NO_TEXT, body=body, title=metadata_title, links=_unique(links),
                           reason="no text layer (a scan?) — OCR is not done in Core; "
-                                 "pages are anchored, the text is empty")
+                                 "pages are anchored, the text is empty", labels=labels)
 
     first_line = next((ln.strip() for ln in lines if ln.strip() and not ln.startswith(("## ", "*("))), "")
     return Extraction(INGESTED, body=body, title=metadata_title or first_line[:80],
-                      links=_unique(links))
+                      links=_unique(links), labels=labels, title_from_body=not metadata_title)
+
+
+def _outline_by_page(reader) -> dict[int, list[str]]:
+    """The PDF's outline (bookmarks) as page index → titles of the sections starting there, in
+    outline order. Empty for a PDF without one — a scan, some exports — or a broken one: the
+    index then has pages and printed labels only."""
+    found: dict[int, list[str]] = {}
+
+    def walk(items) -> None:
+        for item in items:
+            if isinstance(item, list):
+                walk(item)
+                continue
+            try:
+                page = reader.get_destination_page_number(item)
+            except Exception:  # a dangling or malformed bookmark names no page
+                continue
+            title = _clean(getattr(item, "title", None) or "")
+            if title and page is not None and page >= 0:
+                found.setdefault(page, []).append(title)
+
+    try:
+        walk(reader.outline or [])
+    except Exception:
+        return {}
+    return found
 
 
 # -- built in: Word -----------------------------------------------------------

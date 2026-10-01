@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/BGU-CSE/class-framework/schemas/manifest.schema.json",
   "title": "MaterialsManifest",
-  "description": "course/materials/manifest.yaml — every material the course has ingested (D-035, spec §8.7). Written by `classkit ingest`; `kind`, `units` and `title` are proposed by the classifying agent, recorded by `/ingest` through `classkit material apply` (D-039), and are the teacher's to correct. A material is never deleted from this list: a removed source is marked `removed_at`, a merged duplicate is marked `merged_into`, so an id is never reused and a locator pointing at either fails visibly.",
+  "description": "course/materials/manifest.yaml — every material the course has ingested (D-035, spec §8.7). Written by `classkit ingest`; `kind`, `units`, `title` and `audience` are proposed by the classifying agent, recorded by `/ingest` through `classkit material apply` (D-039), and are the teacher's to correct. A material is never deleted from this list: a removed source is marked `removed_at`, a merged duplicate is marked `merged_into`, so an id is never reused and a locator pointing at either fails visibly.",
   "type": "array",
   "items": {
     "type": "object",
@@ -90,6 +90,18 @@
         "type": "string",
         "pattern": "^M\\d{4}$",
         "description": "Set when the teacher confirmed this material is the same as another (a PDF export of a deck). Its sources moved to that material; this id is retired, never reused."
+      },
+      "private": {
+        "type": "boolean",
+        "description": "True when the canonical source is under materials/source/private/ (D-040), which is gitignored: the committed ingested file is then an index (its anchors and one-line labels, `text: index`) and the full text lives in the gitignored materials/private-text/. Set by ingest from the path as last converted, never by hand; recorded so a clone without the file still knows."
+      },
+      "private_text_hash": {
+        "type": "string",
+        "description": "For a private material: hash of the full text ingest last wrote to materials/private-text/. Extraction is deterministic, so it is the same on every machine; a different hash on disk means the teacher edited the full text, and re-ingest refuses to replace it without asking."
+      },
+      "audience": {
+        "enum": ["student", "instructor"],
+        "description": "Who may be pointed at this material (D-040); absent means 'student'. An 'instructor' material (a solutions manual, a past exam) cited from a student-facing place raises the alert instructor_material_cited, and no exporter may bundle it. Proposed by the classifying agent, confirmed by the teacher. Independent of `private`: a published textbook is private but 'student'."
       }
     }
   }

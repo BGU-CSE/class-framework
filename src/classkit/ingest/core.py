@@ -13,6 +13,13 @@ between writing a material's `.md` and saving the manifest, the next run finds t
 
 `materials/source/` is the teacher's. Nothing in this module writes, moves or deletes anything
 under it; every write goes through `classkit.write`.
+
+**Private material** (D-040) is anything under `source/private/`, which the course's `.gitignore`
+keeps out of git. For it, the committed `ingested/` file is an *index* — every anchor, with its
+one-line labels, no body text — and the full text goes to the gitignored `private-text/`, on this
+machine only. A private source that is missing is "not on this machine", never "removed": a TA's
+clone that never had the book and a teacher's machine that lost it look the same from inside a
+checkout. Removing one is explicit (`remove`).
 """
 
 from __future__ import annotations
@@ -32,14 +39,18 @@ from ..write import write
 from . import extract as ex
 from . import links as linkfile
 from .manifest import (
+    AUDIENCES,
     INGESTED_DIR,
     KINDS,
+    PRIVATE_TEXT_DIR,
     SOURCE_DIR,
     active,
     by_id,
     ingested_file,
+    is_private,
     load,
     next_id,
+    private_text_file,
     save,
     sha256_bytes,
     sha256_file,
@@ -147,11 +158,19 @@ class Plan:
 
 
 def reconcile(course_root: Path, records: list[dict], files: list[SourceFile],
-              links: linkfile.LinksFile, *, date: str | None = None) -> tuple[list[dict], Plan]:
+              links: linkfile.LinksFile, *, date: str | None = None,
+              local: bool = True) -> tuple[list[dict], Plan]:
     """Match what is on disk against the manifest. Pure: returns updated *copies* of the
-    records and a Plan, and touches no file."""
+    records and a Plan, and touches no file.
+
+    `local=False` is the validator's view (spec §2.2: `validate` gives the same answer on every
+    clone): what is under `source/private/` differs per machine, so private files are not looked
+    at and private materials are not judged — `classkit doctor` reports them instead.
+    """
     date = date or today()
     records = copy.deepcopy(records)
+    if not local:
+        files = [f for f in files if not is_private(f.rel)]
     plan = Plan(rejected_link_lines=list(links.rejected))
     live = [r for r in active(records) if r.get("format") != "url"]
     present = {f.rel: f for f in files}
@@ -230,14 +249,15 @@ def reconcile(course_root: Path, records: list[dict], files: list[SourceFile],
                 group.files.append(f)
 
     # 3. Sources that vanished.
+    #    A private path that is missing is "not on this machine", never gone (D-040).
     for record in list(live):
         sources = record.get("sources") or []
         canonical = record.get("canonical")
-        for path in [p for p in sources if p not in present and p != canonical]:
+        for path in [p for p in sources if p not in present and p != canonical and not is_private(p)]:
             sources.remove(path)
             record["source_hashes"].pop(path, None)
             plan.gone.append((record["id"], path))
-        if canonical in present or canonical not in sources:
+        if canonical in present or canonical not in sources or is_private(canonical):
             continue
         # The canonical source is gone. An identical copy can take its place without changing
         # a single anchor; anything else would change them, so the material is marked removed
@@ -288,16 +308,49 @@ def reconcile(course_root: Path, records: list[dict], files: list[SourceFile],
     # 5. What is due for conversion.
     for record in live:
         canonical = record.get("canonical")
+        private = is_private(canonical or "")
+        if private and not local:
+            continue
         current = record["source_hashes"].get(canonical)
         status = record.get("status")
         if current and current != record.get("source_hash"):
             plan.pending.append((record["id"], "source changed since it was last converted"))
         elif status in HAS_FILE and ingested_file(course_root, record["id"]) is None:
             plan.pending.append((record["id"], "its ingested file is missing"))
+        elif private != bool(record.get("private")):
+            plan.pending.append((record["id"], "moved into private/: its committed copy becomes an index"
+                                 if private else "moved out of private/: its committed copy becomes the full text"))
+        elif private and status in HAS_FILE and canonical in present and _full_text_due(course_root, record):
+            plan.pending.append((record["id"], "its full text is missing or stale on this machine"))
         elif status == ex.UNSUPPORTED and canonical in present and _converter_now_available(canonical):
             plan.pending.append((record["id"], "a converter for it is now available"))
 
     return records, plan
+
+
+def front_matter_of(path: Path) -> dict:
+    """The front matter of an ingested or full-text file, read without loading a book-sized
+    body — only up to the closing `---`. Empty if there is none or it cannot be read."""
+    try:
+        with path.open(encoding="utf-8") as stream:
+            if stream.readline().strip() != "---":
+                return {}
+            lines = []
+            for line in stream:
+                if line.strip() == "---":
+                    data = yaml.safe_load("".join(lines))
+                    return data if isinstance(data, dict) else {}
+                lines.append(line)
+    except (OSError, UnicodeDecodeError, yaml.YAMLError):
+        pass
+    return {}
+
+
+def _full_text_due(course_root: Path, record: dict) -> bool:
+    """A private material's full text is due when it is not on this machine, or was made from
+    another version of the source than the one last converted (stale)."""
+    path = private_text_file(course_root, record["id"])
+    return path is None or front_matter_of(path).get("source_hash") != record.get("source_hash")
 
 
 def _converter_now_available(path: str) -> bool:
@@ -330,6 +383,7 @@ class Preflight:
     suspected_duplicates: list[list[str]]
     seconds: float
     to_convert: int
+    private: int = 0  # files under source/private/
 
 
 def preflight(course_root: Path, *, fetch: bool = True) -> Preflight:
@@ -386,6 +440,7 @@ def preflight(course_root: Path, *, fetch: bool = True) -> Preflight:
         unsupported=unsupported, media=media, exact_duplicates=exact,
         suspected_duplicates=suspected, seconds=seconds,
         to_convert=len(due) + len(plan.new_links),
+        private=sum(1 for f in files if is_private(f.rel)),
     )
 
 
@@ -427,6 +482,11 @@ class Converted:
     ingested: str = ""  # the .md, relative to the course root
     reason: str = ""
     new: bool = False
+    #: a private material's full text, relative to the course root — this machine only
+    full_text: str = ""
+    #: True when only this machine's full text was written: nothing committed changed, so the
+    #: run is not a change to the course (not logged, not "updated")
+    local: bool = False
 
 
 @dataclass
@@ -434,6 +494,8 @@ class Refusal:
     id: str
     ingested: Path
     preview: str
+    #: why the file may hold the teacher's work — shown with the refusal
+    reason: str = "edited by hand, and its source has changed"
 
 
 @dataclass
@@ -567,13 +629,17 @@ def _adopt_orphan(course_root: Path, records: list[dict], group: NewMaterial) ->
         except (FrontMatterError, OSError, UnicodeDecodeError):
             continue
         if data.get("canonical") in group.paths and data.get("source_hash") == group.hash:
-            return {
+            record = {
                 "id": match.group(1), "title": str(data.get("title") or ""), "kind": "",
                 "format": ex.format_of(Path(data["canonical"])), "status": "", "sources": [],
                 "canonical": data["canonical"],
                 "source_hash": "", "source_hashes": {},
                 "ingested_hash": sha256_bytes(path.read_bytes()),
             }
+            full = private_text_file(course_root, record["id"])
+            if full is not None and front_matter_of(full).get("source_hash") == group.hash:
+                record["private_text_hash"] = sha256_bytes(full.read_bytes())
+            return record
     return None
 
 
@@ -586,7 +652,13 @@ def _default_kind(fmt: str, status: str) -> str:
     return "other"
 
 
-def render_ingested(record: dict, body: str) -> str:
+def render_ingested(record: dict, body: str, *, form: str = "text") -> str:
+    """An ingested file: front matter, a note on what it is, then the body.
+
+    `form` is "text" (the ordinary ingested copy), "index" (a private material's committed
+    index, D-040: `text: index` in the front matter) or "full" (a private material's full text,
+    written to `private-text/` on this machine only).
+    """
     front = {
         "id": record["id"],
         "title": record.get("title") or record["id"],
@@ -594,12 +666,33 @@ def render_ingested(record: dict, body: str) -> str:
         "canonical": record.get("canonical"),
         "source_hash": record.get("source_hashes", {}).get(record.get("canonical")) or record.get("source_hash"),
     }
-    note = (
-        f"<!-- Extracted by `classkit ingest` from materials/source/{record.get('canonical')}. "
-        "You may correct a bad extraction by hand: a later ingest notices the edit and asks "
-        f"before replacing it. Cite a place in this file as {record['id']}#<anchor>, where the "
-        "anchor is a heading below, e.g. slide-3, page-12. -->"
-    )
+    source = f"materials/source/{record.get('canonical')}"
+    cite = (f"Cite a place in this file as {record['id']}#<anchor>, where the anchor is a heading "
+            "below, e.g. slide-3, page-12.")
+    if form == "index":
+        front["text"] = "index"
+        note = (
+            f"<!-- The INDEX of a private material. Its source, {source}, is gitignored, so its "
+            "text is never committed: this file has every anchor of the full text, each with its "
+            "one-line labels (printed page, sections, slide titles) and no body text. On a machine "
+            "that has the source, `classkit ingest` writes the full text to materials/private-text/ "
+            "under the same file name; `classkit doctor` says whether it is here. Where it is not, "
+            f"the material is index-only: do not present recall as a reading of it. {cite} -->"
+        )
+    elif form == "full":
+        note = (
+            f"<!-- The FULL TEXT of a private material, extracted by `classkit ingest` from {source}. "
+            "This machine only: materials/private-text/ is gitignored — never commit it. The "
+            "committed copy, in materials/ingested/ under the same file name, is an index with the "
+            "same anchors. You may correct a bad extraction by hand: a later ingest notices the edit "
+            f"and asks before replacing it. {cite} -->"
+        )
+    else:
+        note = (
+            f"<!-- Extracted by `classkit ingest` from {source}. "
+            "You may correct a bad extraction by hand: a later ingest notices the edit and asks "
+            f"before replacing it. {cite} -->"
+        )
     return "---\n" + yaml.safe_dump(front, sort_keys=False, allow_unicode=True, width=100) + "---\n\n" + note + "\n\n" + body
 
 
@@ -608,8 +701,12 @@ def _convert(course_root: Path, record: dict, source: SourceFile, date: str, rep
     result = ex.extract(source.path)
     current_hash = record["source_hashes"].get(record["canonical"], source.hash)
 
+    private = is_private(source.rel)
     if not record.get("title"):
-        record["title"] = result.title or Path(source.rel).stem
+        # A private material's title is committed (manifest, index), so it is never a line of
+        # its body text: a heading, slide title or metadata title, else the file name.
+        from_body = private and result.title_from_body
+        record["title"] = (not from_body and result.title) or Path(source.rel).stem
     if not record.get("kind"):
         record["kind"] = _default_kind(record.get("format", ""), result.status)
     record["format"] = source.format
@@ -619,34 +716,89 @@ def _convert(course_root: Path, record: dict, source: SourceFile, date: str, rep
     else:
         record.pop("status_reason", None)
 
-    ingested_rel = ""
+    committed = new or record.get("source_hash") != current_hash or bool(record.get("private")) != private
+    ingested_rel = full_text_rel = ""
     if result.status in HAS_FILE:
         target = ingested_file(course_root, record["id"]) or (
             course_root / INGESTED_DIR / f"{record['id']}-{slugify(record['title'])[:60].strip('-') or 'material'}.md"
         )
-        content = render_ingested(record, result.body)
-        on_disk = sha256_bytes(target.read_bytes()) if target.is_file() else None
-        hand_edited = on_disk is not None and on_disk != record.get("ingested_hash")
+        # (file, content, the manifest field holding the hash of what ingest last wrote there)
+        if private:
+            full = private_text_file(course_root, record["id"]) or course_root / PRIVATE_TEXT_DIR / target.name
+            writes = [
+                (target, render_ingested(record, ex.index_body(result.body, result.labels), form="index"),
+                 "ingested_hash"),
+                (full, render_ingested(record, result.body, form="full"), "private_text_hash"),
+            ]
+        else:
+            writes = [(target, render_ingested(record, result.body), "ingested_hash")]
 
-        if hand_edited and keep:
+        edited = []
+        for path, _content, field_name in writes:
+            on_disk = sha256_bytes(path.read_bytes()) if path.is_file() else None
+            edited.append(on_disk is not None and on_disk != record.get(field_name))
+
+        if any(edited) and keep:
             # The teacher keeps their edit; the changed source counts as seen.
             record["source_hash"] = current_hash
             report.kept.append(record["id"])
             return None
         # Our own unmodified output may be replaced (that is what re-ingesting means); a hand
-        # edit may be replaced only on the teacher's say-so. Without it, write() refuses.
-        outcome = write(target, content, overwrite=overwrite or not hand_edited)
-        if outcome.refused:
-            report.refused.append(Refusal(record["id"], target, outcome.preview))
+        # edit may be replaced only on the teacher's say-so. Without it, write() refuses. Both
+        # files of a private material are asked first, so neither is written if one is refused —
+        # an index and a full text from different versions would disagree about their anchors.
+        refusals = [
+            Refusal(record["id"], path, outcome.preview, _refusal_reason(record, path, field_name))
+            for (path, content, field_name), was_edited in zip(writes, edited)
+            if (outcome := write(path, content, overwrite=overwrite or not was_edited, dry_run=True)).refused
+        ]
+        if refusals:
+            report.refused += refusals
             return None
-        record["ingested_hash"] = sha256_bytes(target.read_bytes())
-        ingested_rel = target.relative_to(course_root).as_posix()
+        for (path, content, field_name), was_edited in zip(writes, edited):
+            outcome = write(path, content, overwrite=overwrite or not was_edited)
+            record[field_name] = sha256_bytes(path.read_bytes())
+            if field_name == "ingested_hash":
+                committed = committed or outcome.wrote
+                ingested_rel = path.relative_to(course_root).as_posix()
+            else:
+                full_text_rel = path.relative_to(course_root).as_posix()
+
+    if private:
+        record["private"] = True
+    else:
+        record.pop("private", None)
+        _drop_full_text(course_root, record)
+    if result.status not in HAS_FILE:
+        record.pop("private_text_hash", None)
 
     record["source_hash"] = current_hash
-    record["ingested_at"] = date
-    report.embedded.append((record["id"], result.links))
+    if committed:
+        record["ingested_at"] = date
+        report.embedded.append((record["id"], result.links))
     return Converted(record["id"], record["title"], result.status, source.rel, ingested_rel,
-                     result.reason, new)
+                     result.reason, new, full_text=full_text_rel, local=not committed)
+
+
+def _refusal_reason(record: dict, path: Path, field_name: str) -> str:
+    if field_name == "private_text_hash" and front_matter_of(path).get("source_hash") != record.get("source_hash"):
+        # Typically a full text another version of the source left on this machine. Only the
+        # hash of the latest full text is recorded, so ingest cannot tell an old extraction from
+        # an edited one — and refusing is the safe direction.
+        return ("this machine's full text was made from another version of the source; it may "
+                "hold your edits, and ingest cannot tell")
+    return "edited by hand, and its source has changed"
+
+
+def _drop_full_text(course_root: Path, record: dict) -> None:
+    """A material moved out of `private/` no longer needs this machine's full text: its full
+    text is now the committed file. The local copy is deleted only if it is exactly what ingest
+    wrote (its hash proves no teacher's edit is lost); a hand-edited one is left in place, and
+    `classkit doctor` lists it."""
+    path = private_text_file(course_root, record["id"])
+    if path is not None and record.get("private_text_hash") == sha256_bytes(path.read_bytes()):
+        path.unlink()
+    record.pop("private_text_hash", None)
 
 
 def _add_link(course_root: Path, records: list[dict], url: str, *, note: str = "",
@@ -730,21 +882,27 @@ class MaterialError(ValueError):
 
 
 def set_fields(course_root: Path, material_id: str, *, kind: str | None = None,
-               units: list[str] | None = None, title: str | None = None) -> dict:
-    """Set a material's `kind`, `units` or `title` — how the classifying agent records what it
-    decided without ever editing a file itself."""
+               units: list[str] | None = None, title: str | None = None,
+               audience: str | None = None) -> dict:
+    """Set a material's `kind`, `units`, `title` or `audience` — how the classifying agent's
+    decisions, and the teacher's corrections, are recorded without editing a file by hand."""
     records = load(course_root)
     record = by_id(records).get(material_id)
     if record is None:
         raise MaterialError(f"no material {material_id} in the manifest")
-    _set(record, _checked(material_id, kind, units, title))
+    _set(record, _checked(material_id, kind, units, title, audience))
     save(course_root, records)
     return record
 
 
-def _checked(material_id: str, kind, units, title) -> dict:
+def _checked(material_id: str, kind, units, title, audience=None) -> dict:
     """The fields to set, validated; raises MaterialError naming the material."""
     fields: dict = {}
+    if audience is not None:
+        if audience not in AUDIENCES:
+            raise MaterialError(f"{material_id}: audience must be one of {', '.join(AUDIENCES)}, "
+                                f"not {audience!r}")
+        fields["audience"] = audience
     if kind is not None:
         if kind not in KINDS:
             raise MaterialError(f"{material_id}: kind must be one of {', '.join(KINDS)}, not {kind!r}")
@@ -768,7 +926,7 @@ def _set(record: dict, fields: dict) -> None:
     record.update(fields)
 
 
-APPLY_KEYS = {"id", "kind", "units", "title"}
+APPLY_KEYS = {"id", "kind", "units", "title", "audience"}
 
 
 def apply(course_root: Path, entries) -> list[tuple[str, dict]]:
@@ -776,7 +934,7 @@ def apply(course_root: Path, entries) -> list[tuple[str, dict]]:
     `/ingest` (D-039). All or nothing: every entry is checked before any is recorded, so a typo
     in entry 40 does not leave 39 recorded and the rest not.
 
-    Each entry is `{id, kind?, units?, title?}`. Returns (id, fields that changed).
+    Each entry is `{id, kind?, units?, title?, audience?}`. Returns (id, fields that changed).
     """
     if not isinstance(entries, list):
         raise MaterialError("expected a list of entries, each with an `id`")
@@ -800,7 +958,8 @@ def apply(course_root: Path, entries) -> list[tuple[str, dict]]:
             raise MaterialError(f"no material {material_id} in the manifest")
         if record.get("merged_into") or record.get("removed_at"):
             raise MaterialError(f"{material_id} is merged or removed; classify the material it became")
-        fields = _checked(material_id, entry.get("kind"), entry.get("units"), entry.get("title"))
+        fields = _checked(material_id, entry.get("kind"), entry.get("units"), entry.get("title"),
+                          entry.get("audience"))
         planned.append((record, fields))
 
     changes = []
@@ -843,3 +1002,34 @@ def merge(course_root: Path, material_id: str, into: str) -> dict:
     source["merged_into"] = into
     save(course_root, records)
     return target
+
+
+def remove(course_root: Path, material_id: str, *, date: str | None = None) -> dict:
+    """Mark a private material removed — the explicit act D-040 asks for, because ingest never
+    infers it: a private source that is missing may simply not be on this machine.
+
+    Only for a private material (any other is removed by deleting its source: ingest notices),
+    and only once its source is gone from this machine — otherwise the next ingest would find it
+    and restore it. Like every removal, the record and its index are kept, so a locator to it
+    fails visibly.
+    """
+    records = load(course_root)
+    record = by_id(records).get(material_id)
+    if record is None:
+        raise MaterialError(f"no material {material_id} in the manifest")
+    if record.get("merged_into") or record.get("removed_at"):
+        raise MaterialError(f"{material_id} is already merged or removed")
+    if not (record.get("private") or is_private(record.get("canonical") or "")):
+        raise MaterialError(
+            f"{material_id} is not private material. To remove it, delete its source from "
+            "materials/source/ and run `classkit ingest`, which marks it removed."
+        )
+    here = [p for p in record.get("sources") or [] if (course_root / SOURCE_DIR / p).is_file()]
+    if here:
+        raise MaterialError(
+            f"the source of {material_id} is still on this machine (materials/source/{here[0]}). "
+            "Delete or move it first — otherwise the next ingest finds it and restores the material."
+        )
+    record["removed_at"] = date or today()
+    save(course_root, records)
+    return record

@@ -94,3 +94,22 @@ def make_pdf(path: Path, pages: list[str]) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(bytes(out))
     return path
+
+
+def make_book(path: Path, pages: list[str], *, outline: list[tuple[str, int]] = (),
+              front_matter: int = 0) -> Path:
+    """A book-like PDF: `make_pdf`'s pages, plus an outline (bookmarks: (title, page index)) and
+    printed page labels — the first `front_matter` pages numbered i, ii, …, the rest 1, 2, … —
+    so the physical page and the printed one differ, as in a real textbook. Written with pypdf."""
+    from pypdf import PdfWriter
+
+    make_pdf(path, pages)
+    writer = PdfWriter(clone_from=str(path))
+    for title, page in outline:
+        writer.add_outline_item(title, page)
+    if front_matter:
+        writer.set_page_label(0, front_matter - 1, style="/r")
+        writer.set_page_label(front_matter, len(pages) - 1, style="/D", start=1)
+    with path.open("wb") as stream:
+        writer.write(stream)
+    return path

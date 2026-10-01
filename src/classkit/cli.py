@@ -12,7 +12,7 @@ import yaml
 from . import ingest, log
 from .frontmatter import FrontMatterError
 from .ingest import links as linkfile
-from .ingest.manifest import KINDS, SOURCE_DIR, ManifestError
+from .ingest.manifest import AUDIENCES, KINDS, SOURCE_DIR, ManifestError
 from .ingest.report import log_summary, preflight_text, run_text
 from .mode import DEVELOPER, TEACHER, UnsafeMarker, current_mode, set_mode
 from .model import LayoutError, find_course_root, find_framework_root, load_course
@@ -174,10 +174,11 @@ def build_parser() -> argparse.ArgumentParser:
     # How the classifying agent and the teacher record decisions about materials, without
     # editing the manifest by hand.
     material = subcommands.add_parser(
-        "material", help="record a material's kind, units or title; merge confirmed duplicates"
+        "material",
+        help="record a material's kind, units, title or audience; merge; remove a private one",
     )
     actions = material.add_subparsers(dest="action", required=True)
-    set_cmd = actions.add_parser("set", help="set kind, units or title of a material")
+    set_cmd = actions.add_parser("set", help="set kind, units, title or audience of a material")
     set_cmd.add_argument("id", help="material id, e.g. M0007")
     set_cmd.add_argument("--kind", choices=KINDS)
     set_cmd.add_argument(
@@ -186,6 +187,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     set_cmd.add_argument("--no-units", action="store_true", help="clear the units list")
     set_cmd.add_argument("--title")
+    set_cmd.add_argument(
+        "--audience", choices=AUDIENCES,
+        help="who may be pointed at it: student (the default) or instructor (never cited to students)",
+    )
     set_cmd.add_argument("--course", help="course directory (default: search upward)")
     merge_cmd = actions.add_parser(
         "merge", help="merge a teacher-confirmed duplicate into another material"
@@ -195,12 +200,20 @@ def build_parser() -> argparse.ArgumentParser:
     merge_cmd.add_argument("--course", help="course directory (default: search upward)")
     apply_cmd = actions.add_parser(
         "apply",
-        help="record a batch of classifications (YAML list of {id, kind, units, title}); all or nothing",
+        help="record a batch of classifications (YAML list of {id, kind, units, title, audience}); "
+             "all or nothing",
     )
     apply_cmd.add_argument(
         "--from", dest="source", help="read the YAML from this file (default: standard input)"
     )
     apply_cmd.add_argument("--course", help="course directory (default: search upward)")
+    remove_cmd = actions.add_parser(
+        "remove",
+        help="mark a private material removed — ingest never does (a missing private source may "
+             "just not be on this machine)",
+    )
+    remove_cmd.add_argument("id", help="material id, e.g. M0005")
+    remove_cmd.add_argument("--course", help="course directory (default: search upward)")
     dupes = actions.add_parser("duplicates", help="list materials that look like duplicates")
     dupes.add_argument("--course", help="course directory (default: search upward)")
 
@@ -415,13 +428,17 @@ def run_material(args) -> int:
         if args.action == "set":
             units = [] if args.no_units else ([u.upper() for u in args.units] if args.units else None)
             record = ingest.set_fields(course_root, args.id.upper(), kind=args.kind, units=units,
-                                       title=args.title)
+                                       title=args.title, audience=args.audience)
             print(f"{record['id']}  kind={record.get('kind')}  units={','.join(record.get('units') or []) or '-'}"
-                  f"  title={record.get('title')!r}")
+                  f"  audience={record.get('audience') or 'student'}  title={record.get('title')!r}")
         elif args.action == "merge":
             record = ingest.merge(course_root, args.id.upper(), args.into.upper())
             print(f"merged {args.id.upper()} into {record['id']}: sources {', '.join(record['sources'])}")
             print(f"  {args.id.upper()} is retired; anchors stay those of {record['canonical']}.")
+        elif args.action == "remove":
+            record = ingest.remove(course_root, args.id.upper())
+            print(f"removed {record['id']} ({record.get('title')}): marked removed_at {record['removed_at']}; "
+                  "its record and index are kept, so anything citing it is reported.")
         elif args.action == "apply":
             text = (Path(args.source).read_text(encoding="utf-8") if args.source
                     else sys.stdin.read())

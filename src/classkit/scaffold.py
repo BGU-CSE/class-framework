@@ -99,6 +99,13 @@ SOURCE_LINKS = "materials/source/links.md"
 # once into the reserved `syllabus/` slot and, being create-only, never touches it again.
 SYLLABUS = "syllabus/syllabus.md"
 
+# `course/.gitignore` keeps private material out of git (D-040, spec §8.7): the teacher's
+# `materials/source/private/` (a published book, a solutions manual) and the full text ingest
+# extracts from it, `materials/private-text/`. It lives in `course/`, so it belongs to the course
+# and never conflicts with a framework update. Like everything scaffold writes, create-only — and
+# so re-running `scaffold course` adds it to a course created before it existed.
+GITIGNORE = ".gitignore"
+
 
 def scaffold_course(
     course_root: Path,
@@ -112,6 +119,10 @@ def scaffold_course(
     methodology: str,
 ) -> Result:
     result = Result()
+    log_existed = (course_root / log.LOG_FILE).is_file()
+
+    # First, so the ignore rules are in place before anything private could be added.
+    write_new(course_root / GITIGNORE, _template(framework_root, "course", "gitignore"), result)
 
     for directory in COURSE_DIRECTORIES:
         write_new(course_root / directory / ".gitkeep", "", result)
@@ -157,6 +168,19 @@ def scaffold_course(
         for path in result.created
         if path.name != ".gitkeep"
     ]
+    if log_existed:
+        # Re-run on a course that already has a log: what this run added is a change to the
+        # course like any other, so it is an entry — typically `.gitignore`, added to a course
+        # scaffolded before it existed.
+        if created:
+            log.append(course_root, log.Entry(
+                title="classkit scaffold course",
+                changed=f"created {', '.join(created)}; every other file already existed",
+                why="re-run to add what a newer framework scaffolds",
+                files=created,
+            ))
+        result.skipped.append(course_root / log.LOG_FILE)
+        return result
     write_new(
         course_root / log.LOG_FILE,
         log.new_log(

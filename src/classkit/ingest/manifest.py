@@ -25,24 +25,31 @@ from ..write import WriteOutcome, write
 SOURCE_DIR = Path("materials") / "source"
 INGESTED_DIR = Path("materials") / "ingested"
 MANIFEST = Path("materials") / "manifest.yaml"
+#: Private material (D-040): the teacher's files that must not be committed live under
+#: `source/private/`; the full text extracted from them goes to `private-text/`. Both are
+#: gitignored by the scaffolded `course/.gitignore`; `ingested/` then holds only an index.
+PRIVATE = "private"
+PRIVATE_TEXT_DIR = Path("materials") / "private-text"
 
 ID = re.compile(r"^M(\d{4})$")
 KINDS = ("slides", "textbook", "notes", "exam", "exercise", "syllabus", "reading", "link",
          "video", "other")
+AUDIENCES = ("student", "instructor")
 
 #: Field order in the written file — identity first, bookkeeping last.
 FIELDS = (
     "id", "title", "kind", "format", "status", "status_reason", "units", "sources", "canonical",
     "source_hash", "source_hashes", "ingested_hash", "found_in", "note", "duration",
-    "ingested_at", "removed_at", "merged_into",
+    "ingested_at", "removed_at", "merged_into", "private", "private_text_hash", "audience",
 )
 
 HEADER = """\
 # Materials manifest — written by `classkit ingest` (spec §8.7). One record per material.
 #
-# You may correct `title`, `kind` and `units` here (or with `classkit material set`); a later
-# ingest keeps your values. Leave the ids, paths and hashes to the tool. Records are never
-# deleted: a removed source is marked `removed_at`, a merged duplicate `merged_into`.
+# You may correct `title`, `kind`, `units` and `audience` here (or with `classkit material set`);
+# a later ingest keeps your values. Leave the ids, paths, hashes and `private` to the tool.
+# Records are never deleted: a removed source is marked `removed_at`, a merged duplicate
+# `merged_into`.
 # Comments you add to this file are not preserved.
 """
 
@@ -119,6 +126,29 @@ def ingested_file(course_root: Path, material_id: str) -> Path | None:
     """The material's `.md` in `ingested/`, located by its id prefix — so the slug after the
     id may change, or be renamed by hand, without losing the file."""
     directory = course_root / INGESTED_DIR
+    if not directory.is_dir():
+        return None
+    for candidate in sorted(directory.glob(f"{material_id}*.md")):
+        if candidate.name == f"{material_id}.md" or candidate.name.startswith(f"{material_id}-"):
+            return candidate
+    return None
+
+
+def is_private(path: str) -> bool:
+    """Is this source path (relative to `source/`) private material — under `private/`?
+
+    Matched without regard to case: on macOS git ignores `Private/` too (core.ignorecase), so
+    treating it as ordinary material would commit the full text of a file whose source git
+    keeps out — the leak this exists to prevent. `classkit doctor` asks for the exact name.
+    """
+    first = path.split("/", 1)[0]
+    return "/" in path and first.lower() == PRIVATE
+
+
+def private_text_file(course_root: Path, material_id: str) -> Path | None:
+    """The material's full text in `private-text/`, located by its id prefix like
+    `ingested_file` — present only on a machine that has had the private source."""
+    directory = course_root / PRIVATE_TEXT_DIR
     if not directory.is_dir():
         return None
     for candidate in sorted(directory.glob(f"{material_id}*.md")):

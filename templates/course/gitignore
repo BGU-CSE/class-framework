@@ -1,0 +1,8 @@
+# Written by `classkit scaffold course` (spec §8.7, D-040). Yours to extend.
+#
+# Private material: files that must never be committed — a published textbook's PDF, a
+# solutions manual — and the full text `classkit ingest` extracts from them on this machine.
+# Only an index of each (its pages or slides and their labels, no body text) is committed, in
+# materials/ingested/. `classkit doctor` checks that these two rules are in effect.
+materials/source/private/
+materials/private-text/

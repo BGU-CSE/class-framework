@@ -29,6 +29,9 @@ def preflight_text(p: Preflight) -> str:
     formats = ", ".join(f"{count} {fmt}" for fmt, count in p.by_format.items()) or "none"
     lines.append(f"Files:        {len(p.files)} ({_size(p.size)}) — {formats}")
     lines.append(f"Slides/pages: {p.slides} slides, {p.pages} PDF pages")
+    if p.private:
+        lines.append(f"Private:      {p.private} file(s) under private/ — an index is committed, the full "
+                     "text stays on this machine")
     lines.append(f"Links:        {p.links_listed} in links.md, {p.embedded_links} embedded in "
                  "slides and documents (recorded during conversion)")
     for number, text in p.plan.rejected_link_lines:
@@ -86,8 +89,13 @@ def run_text(r: RunReport) -> str:
     for mid, path in plan.restored:
         lines.append(f"  restored   {mid}  {path}")
     for c in r.converted:
+        if c.local:
+            lines.append(f"  full text  {c.id}  → {c.full_text} (this machine only; nothing committed changed)")
+            continue
         label = "new" if c.new else "updated"
         where = f" → {c.ingested}" if c.ingested else ""
+        if c.full_text:
+            where += f" (index) + {c.full_text} (full text, this machine only)"
         reason = f"  ({c.reason})" if c.reason else ""
         lines.append(f"  {label:<10} {c.id}  [{c.status}] {c.path}{where}{reason}")
     for c in r.found_links:
@@ -96,9 +104,9 @@ def run_text(r: RunReport) -> str:
         lines.append(f"  kept       {mid}  your edit kept; the changed source is marked as seen")
 
     if r.refused:
-        lines += ["", "REFUSED — these ingested files were edited by hand, and their source has changed:"]
+        lines += ["", "REFUSED — replacing these files could lose edits made by hand:"]
         for refusal in r.refused:
-            lines.append(f"  {refusal.id}  {refusal.ingested}")
+            lines.append(f"  {refusal.id}  {refusal.ingested} — {refusal.reason}")
             lines += [f"      | {line}" for line in refusal.preview.splitlines()]
         lines += [
             "Ask the teacher, then re-run with either",
@@ -114,8 +122,10 @@ def run_text(r: RunReport) -> str:
                      "a deck over its PDF)")
 
     created = sum(1 for c in r.converted if c.new) + len(r.found_links)
-    lines += ["", f"{created} new materials, {sum(1 for c in r.converted if not c.new)} updated, "
-              f"{len(r.refused)} refused."]
+    updated = sum(1 for c in r.converted if not c.new and not c.local)
+    local = sum(1 for c in r.converted if c.local)
+    lines += ["", f"{created} new materials, {updated} updated, {len(r.refused)} refused."
+              + (f" {local} private full text(s) written on this machine only." if local else "")]
     return "\n".join(lines)
 
 
@@ -134,7 +144,9 @@ def log_summary(r: RunReport) -> str | None:
     new = [c.id for c in r.converted if c.new] + [c.id for c in r.found_links]
     if new:
         parts.append(_ids("new", new))
-    updated = [c.id for c in r.converted if not c.new]
+    # A private material's full text written on this machine alone changed nothing committed —
+    # it is not a change to the course, so it is not logged.
+    updated = [c.id for c in r.converted if not c.new and not c.local]
     if updated:
         parts.append(_ids("updated", updated))
     if r.kept:
