@@ -24,7 +24,7 @@ from .scaffold import (
     scaffold_unit,
 )
 from .validate import Validator
-from .write import append, write
+from .write import append, diff, write
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -99,6 +99,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--dry-run",
         action="store_true",
         help="report what would happen without writing anything",
+    )
+    put.add_argument(
+        "--diff",
+        action="store_true",
+        help="print a unified diff of exactly what --overwrite would change, writing nothing",
     )
 
     # The course log (D-036): what changed in the course and why. Append-only.
@@ -348,6 +353,14 @@ def run_write(args) -> int:
     if args.append and args.overwrite:
         print("error: --append and --overwrite are mutually exclusive", file=sys.stderr)
         return 2
+    if args.diff:
+        # Show the teacher a partial change before it is made (spec §8.6): nothing is written.
+        changes = diff(Path(args.path), content)
+        if changes:
+            sys.stdout.write(changes if changes.endswith("\n") else changes + "\n")
+        else:
+            print(f"unchanged  {args.path}  (already holds exactly this content)")
+        return 0
     if args.append:
         outcome = append(Path(args.path), content, dry_run=args.dry_run)
     else:

@@ -189,3 +189,87 @@ def test_cli_rejects_append_with_overwrite(tmp_path, capsys):
     target.write_text("keep\n", encoding="utf-8")
     assert main(["write", str(target), "--append", "--overwrite", "--from", str(target)]) == 2
     assert target.read_text(encoding="utf-8") == "keep\n"
+
+
+# -- remove (D-041): the one deletion, guarded like a replacement -------------------
+
+from classkit.write import REMOVED, content_hash, diff, remove
+
+
+def test_remove_deletes_only_what_the_caller_wrote(tmp_path):
+    target = tmp_path / "full.md"
+    target.write_text("written by ingest\n", encoding="utf-8")
+    outcome = remove(target, content_hash(b"written by ingest\n"))
+    assert outcome.status == REMOVED and not target.exists()
+
+
+def test_remove_refuses_a_changed_file(tmp_path):
+    target = tmp_path / "full.md"
+    target.write_text("written by ingest\nand fixed by the teacher\n", encoding="utf-8")
+    outcome = remove(target, content_hash(b"written by ingest\n"))
+    assert outcome.refused
+    assert target.read_text(encoding="utf-8").endswith("fixed by the teacher\n")
+
+
+def test_remove_of_a_missing_file_is_a_no_op(tmp_path):
+    assert remove(tmp_path / "gone.md", content_hash(b"")).status == "unchanged"
+
+
+def test_remove_has_no_command_line_verb():
+    """Nothing a teacher runs deletes files (spec §8.6)."""
+    with pytest.raises(SystemExit):
+        main(["remove", "x"])
+
+
+# -- permissions (D-041) ----------------------------------------------------------------
+
+def test_replacing_a_file_keeps_its_permissions(target: Path):
+    import os
+    import stat
+
+    target.parent.mkdir(parents=True)
+    target.write_text("old\n", encoding="utf-8")
+    os.chmod(target, 0o640)
+    write(target, "new\n", overwrite=True)
+    assert stat.S_IMODE(target.stat().st_mode) == 0o640
+
+
+def test_a_new_file_gets_the_umask_default_not_0600(target: Path):
+    import os
+    import stat
+
+    previous = os.umask(0o022)
+    try:
+        write(target, "new\n")
+    finally:
+        os.umask(previous)
+    assert stat.S_IMODE(target.stat().st_mode) == 0o644
+
+
+# -- --diff (D-040): show a partial change before making it ----------------------------
+
+def test_diff_shows_exactly_what_overwrite_would_change_and_writes_nothing(tmp_path, monkeypatch, capsys):
+    target = tmp_path / "course.yaml"
+    target.write_text("code: T-1\n# the teacher's comment\nunits: 13\n", encoding="utf-8")
+    monkeypatch.setattr("sys.stdin", io.StringIO("code: T-1\n# the teacher's comment\nunits: 12\n"))
+
+    assert main(["write", str(target), "--diff"]) == 0
+
+    out = capsys.readouterr().out
+    assert "-units: 13" in out and "+units: 12" in out
+    assert "the teacher's comment" in out and "-# the teacher's comment" not in out
+    assert target.read_text(encoding="utf-8").endswith("units: 13\n")
+
+
+def test_diff_of_identical_content_says_unchanged(tmp_path, monkeypatch, capsys):
+    target = tmp_path / "f.md"
+    target.write_text("same\n", encoding="utf-8")
+    monkeypatch.setattr("sys.stdin", io.StringIO("same\n"))
+    assert main(["write", str(target), "--diff"]) == 0
+    assert "unchanged" in capsys.readouterr().out
+    assert diff(target, "same\n") == ""
+
+
+def test_diff_of_a_new_file_shows_every_line_added(tmp_path):
+    out = diff(tmp_path / "new.md", "one\ntwo\n")
+    assert "+one" in out and "+two" in out and not (tmp_path / "new.md").exists()
