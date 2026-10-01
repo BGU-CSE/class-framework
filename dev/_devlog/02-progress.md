@@ -1564,4 +1564,11 @@ Decided with Avin, one at a time: `source/private/` with a committed index and a
 principle that `validate` judges the course and `doctor` the machine. Spec, D-040, ledger (11 rows),
 handoff; interim warning in `GETTING-STARTED.md`. Nothing built. The rest of the report is still to
 be gone through.
+Continued the same day: went through the rest of the report's design items with Avin — F-11/F-15
+(duplicate detection dropped), F-13 (no link harvesting), F-17 (`units: all`), F-19 (coverage report
+persisted; partial material and the `unit_map` in the syllabus), F-21 (one resource-kind vocabulary),
+F-24 (diff on refusal), F-26 (locators in prose), P-2 (invariant 5's scope; `write --diff`). All
+added to D-040, the spec and the ledger (169 changes; 51 / 5 / 113). Checked F-21's side note
+(schema errors print as warn) — does not reproduce. Remaining: Avin's go-ahead on the plain fixes,
+then step 2c.
 

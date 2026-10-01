@@ -52,7 +52,9 @@ them, so they are deliberately not duplicated here — two copies would drift.
    agent and command writes through `classkit.write.write()` / `classkit write`, which structurally
    refuses to overwrite existing content** without explicit confirmation (`--overwrite`) — see
    `FRAMEWORK-SPEC.md` §8.6 (D-030, D-031b). Silent loss of a teacher's authored work is
-   unrecoverable — this is the one place the framework does not trust a prompt.
+   unrecoverable — this is the one place the framework does not trust a prompt. **Scope (D-040):**
+   the framework's commands and agents; an edit the teacher asks for directly in conversation is
+   the teacher's own. To change part of a file, show `classkit write --diff`, then `--overwrite`.
 6. **Templates must validate.** A fresh scaffold has to produce a course with zero errors,
    or `tests/test_course_lifecycle.py` fails. Change a schema → change the template.
 

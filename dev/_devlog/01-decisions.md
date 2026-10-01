@@ -1321,3 +1321,96 @@ locally. Decided (Avin, one at a time):
 
 Meanwhile `GETTING-STARTED.md` warns teachers not to commit book PDFs until this is built.
 
+**Added to D-040 the same day — two-format duplicates are no longer detected (reverses part of
+D-035).** The hand test's 13 suspected pairs were all false (F-11): the content check compared
+vocabularies with no size limit, so any short document "duplicated" a 1312-page book. Claude first
+proposed a narrower detector plus remembered dismissals (F-15). Avin asked what a duplicate actually
+breaks. Claude's analysis: nothing — `M0007#slide-18` and `M0012#page-18` are both correct citations;
+the rest (a slightly less precise page, a stale export, a redundant study path, a bigger Gem) is
+preference, critic territory, or an exporter's concern. Claude had treated "detect duplicates" as a
+requirement because D-035 listed it, without asking what it protects. **Decided:** drop
+suspected-duplicate detection (name and content) and its gate-3 question; keep the silent merge of
+exact copies; keep `classkit material merge` as an optional, never-prompted tool; the classifier may
+*mention* a two-format relation; agents cite the deck over its PDF. F-15 and G-22 are moot. Cost: the
+manifest keeps both copies, the classifier reads both; deduplication, if ever needed, happens in the
+exporter.
+
+**Added to D-040 — links are not harvested from materials (F-13).** Ingest recorded every URL found
+inside slides and documents as a material: in the hand test, 10 of 11 came from the book's and
+manual's bibliography, two were truncated at line wraps, and the course Gem link was buried. Same
+question as for duplicates — what does harvesting protect? Little: a link inside a deck is already
+readable in its ingested text. **Decided (a):** a link becomes a material only when the teacher lists
+it (`links.md` / `add-url`); the classifier *mentions* links that look like course resources and
+suggests `add-url`. Rejected: (b) harvest only from the teacher's own materials — `kind` is not known
+at conversion time, so it needs a second pass; (c) a separate link pool — still noise nobody asked
+for. Cost: an unlisted link is not a citable material; `found_in` and the harvesting code retire.
+
+**Added to D-040 — `units: all` (F-17).** The classifier could not say "course-wide" for the textbook
+or the course Gem: `[]` reads as "no unit", and listing every unit looks per-unit and gives the D-039
+re-map twelve entries meaning one thing. Low stakes, but both readings mislead a designer filtering
+by unit. **Decided (a):** `units` is a list of units or the word `all`; `[]` keeps meaning "no
+particular unit". Rejected: (b) a separate `scope` field — two fields that can contradict; (c) a
+convention on `[]` + `kind: textbook` — fails for a course-wide item that is not a book. Cost: a
+two-shaped field every consumer must handle.
+
+**Added to D-040 — the coverage report is persisted, and planning works on partial material (F-19,
+Avin).** F-19: the coverage report existed only in chat, though `/plan-units` needs it. Decided:
+`/ingest` writes it to `materials/coverage.md` after the teacher has read it (write path; a later run
+replaces it only on confirmation; a dated snapshot, input not truth). Avin then raised the normal
+case the spec ignored: material for only some units, and wanting to start on the syllabus and the
+first unit. Decided:
+
+- The report **states its scope**: which units the material reaches; "no material yet", never
+  "thin", for the rest.
+- **The course level is always whole but needs evidence** (Avin): goal, outcomes and the **unit
+  map** come from something ingested that spans the course — an old syllabus, a book's table of
+  contents — plus the teacher; with none, `/plan-units` asks rather than drafting from memory. **The
+  unit level is incremental**: objectives come later, from each unit's own slides or the book's
+  chapters read in depth; `/plan-units 4 5` plans more units as material arrives.
+- **Where an unplanned unit lives — (ii), the syllabus.** A `unit_map` (number, title, summary,
+  evidence) in the syllabus front matter, authoritative for which units exist; a `units/NN-slug/`
+  directory only once a unit is planned. Rejected (i), a `unit.md` with no objectives: it reverses
+  D-038's deliberate "objectives required", and eleven unplanned units would each fire session and
+  in-class warnings unless those rules learned "unplanned". Cost of (ii): a unit's title lives in the
+  map and in `unit.md` (and the count in `course.yaml`) — `unit_map_mismatch` (warn) catches drift;
+  D-032's "overview derived from the units" becomes "from the map and the units".
+
+**Added to D-040 — one resource-kind vocabulary (F-21).** A study path could not be of kind `slide`;
+there were three overlapping lists (material kinds, path kinds, D-019's planned answer kinds, with
+`slide` vs `slides`). And when `ref` is a material locator, the manifest already knows the kind, so a
+`kind` there can only repeat or contradict it. **Decided:** now (2c) add `slides` and `notes` to
+path kinds; in step 4, one vocabulary (material kinds + `gem`, `web`) for paths and answers, and
+`kind` optional when `ref` is a locator. Cost: an agent reading a path must look up the manifest to
+know its kind. (F-21's side note — schema violations print as `warn` — did not reproduce: they are
+`error`.)
+
+**Added to D-040 — a refusal shows what replacing would change (F-24).** The hand-edit refusal
+previewed the file's first lines (its front matter), not the edit. The old extraction is not kept
+(only its hash), so the teacher's edit alone cannot be shown. **Decided (a):** show the diff between
+the current file and a fresh extraction of the new source, grouped by anchor — exactly what
+`--overwrite` would change. Cost: it cannot attribute differences to the teacher or the source.
+Rejected for now: (b) per-anchor hashes to label sections (extra state; 1312 hashes for one book);
+(c) keeping full copies of every extraction. (b) can be added later if this confuses.
+
+**Added to D-040 — locators in prose are checked (F-26).** `material_locator_resolves` reads only
+front matter, but locators also appear in prose — 65 in the hand test's coverage report, now a
+permanent file — and the agent once wrote shorthand (`#page-39`) that resolves against the wrong
+material. **Decided:** agents always write locators fully qualified (instruction only: `#section` is
+also an ordinary Markdown link, so code cannot catch the shorthand); and a new
+`material_locator_in_text` (**warn**) checks `M<NNNN>#anchor` in the bodies of the course's own files
+and `coverage.md`, not `LOG.md` or `ingested/`. A deliberate departure from D-037's mechanical line —
+front matter is data tools act on, prose is read by people and may be a dated snapshot that
+legitimately goes stale. Cost: a non-locator string like "M2024" warns (acceptable, and acceptable
+per file).
+
+**Added to D-040 — invariant 5's scope, and `classkit write --diff` (P-2).** In the hand test the
+agent edited `course.yaml` at the teacher's request with its own Edit tool and `sed`, outside the
+write path, because `classkit write` replaces whole files. Claude's analysis: invariant 5 protects
+against *silent loss of the teacher's work* by the framework's own writes; a targeted edit the
+teacher asked for, made with a tool that shows its diff, is not that. **Decided:** (1) invariant 5's
+scope is stated — the framework's commands and agents; a direct teacher-requested edit is the
+teacher's. (2a) `classkit write --diff` prints exactly what `--overwrite` would change; a command
+changing part of a file shows it, then writes on approval. Rejected (2b), a key-level YAML editor:
+keeping a commented `course.yaml`'s comments needs a new dependency and a path syntax. Cost: the
+invariant now openly says what it never covered.
+

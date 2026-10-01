@@ -190,7 +190,7 @@ Outcomes) **(target, D-029)**, `curriculum-architect` (the unit map and unit obj
 `study-session-designer` (sessions, guiding questions, answers, `est_minutes`, the study-path pool),
 `lesson-planner` (the in-class hour), `assessment-writer` (entry-quiz items only, in Core),
 `topic-researcher` (finds real resources), `material-classifier` (classifies ingested materials,
-proposes duplicates, reports coverage; read-only — it returns, the command records, §8.7), `course-critic` (review). Commands: `/ingest`,
+reports coverage; read-only — it returns, the command records, §8.7), `course-critic` (review). Commands: `/ingest`,
 `/plan-units`, `/design-unit N`, `/review-unit N`, and **`/write-items N` scoped to entry-quiz
 items** — `/design-unit` already writes the unit's entry quiz, so `/write-items` in Core is for
 adding to or reworking it. Deferred: `gem-builder` and `/build-gem` (Exports); the homework and exam
@@ -198,7 +198,7 @@ roles of `assessment-writer` and `/write-items` (Assessment).
 
 **Tooling commands used across Core:** `classkit ingest` (the deterministic half of `/ingest`,
 §8.7), `classkit add-url` (add a link to the course's materials, §8.7), `classkit material` (record
-a batch of classifications, or one material's kind, units or title; merge a confirmed duplicate,
+a batch of classifications, or one material's kind, units or title; optionally merge two materials,
 §8.7), `classkit log` (append
 to the course log, §8.8), and `classkit doctor` (check this machine's copy of the course, §8.7)
 **(target, D-040)**.
@@ -363,25 +363,43 @@ glossary is in `CLAUDE.md`; the identifiers are in §8.1.
 Course-level setup runs once; then units are designed one at a time.
 
 ```
-/ingest            (§8.7) 1. pre-flight scan: count files by format, slides/pages, duplicates,
+/ingest            (§8.7) 1. pre-flight scan: count files by format, slides/pages, exact copies,
                       links, unsupported files, a rough time estimate — then WAIT for approval
                    2. classkit ingest converts each new or changed source into
                       materials/ingested/M<NNNN>-slug.md with addressable anchors, and
                       updates materials/manifest.yaml (incremental, resumable)
-                   3. material-classifier (read-only) returns each material's kind and
-                      likely units, and proposes same-material duplicates; the command shows
-                      the classification, applies the teacher's corrections, records it
-                      (`classkit material apply`), asks the teacher to confirm each merge,
-                      and merges only what is confirmed (`classkit material merge`)
-                   4. report what the course actually covers and where it is thin
+                   3. material-classifier (read-only) returns each material's kind,
+                      likely units and audience; the command shows the classification,
+                      applies the teacher's corrections, and records it
+                      (`classkit material apply`). No duplicate questions (D-040)
+                   4. report what the course actually covers and where it is thin —
+                      stating its scope (which units the materials reach, and "no material
+                      yet" for the rest, never "thin"); after the teacher has read it,
+                      written to materials/coverage.md (target, D-040)
                    Every approved step appends to course/LOG.md (§8.8).
 /plan-units        ONE flow, two agents, sequential and file-based (D-029, D-031i):
                    1. syllabus-designer writes syllabus/syllabus.md — goal, Course
-                      Outcomes (CO1…), workload, prerequisites. Written to disk first.
+                      Outcomes (CO1…), workload, prerequisites, and the UNIT MAP (all
+                      units: number, title, order) (target, D-040). Written to disk first.
                    2. curriculum-architect READS that syllabus and writes units/NN-slug/
-                      unit.md, each objective referencing the outcome ids it just read.
+                      unit.md for the units the teacher chooses to plan NOW — each
+                      objective referencing the outcome ids it just read.
                    The handoff is the file, not shared memory: the architect must never
                    invent an outcome id, and either agent can be re-run alone.
+/plan-units 4 5    (target, D-040) plan more units later, as their material arrives —
+                   step 2 only, against the existing syllabus and map.
+
+                   PARTIAL MATERIAL IS THE NORMAL CASE (D-040). The course level is
+                   always whole — you cannot write outcomes for a third of a course — but
+                   it needs EVIDENCE: something ingested that spans the course (an old
+                   syllabus, a book's table of contents, a deck series), read through
+                   materials/coverage.md and the materials themselves, plus the teacher.
+                   With no such evidence the command asks the teacher; it does not draft
+                   a course from memory as though it were fact. The unit level is
+                   incremental: objectives come from that unit's own material (its
+                   slides, the book's chapters read in depth), so units without material
+                   stay on the map, unplanned, until it arrives. Completeness rules stay
+                   skipped until every unit exists (§8.4).
 
 /design-unit 3
    ├─ 1. read course.yaml → methodology name
@@ -493,6 +511,10 @@ they are repeated here with their reasons.
    create-only (`write_new()` is its only path to disk), and every agent and command writes through a
    `classkit` path that structurally refuses to overwrite existing content without explicit
    confirmation (§5.2, D-030, D-031b). Not a prompt instruction: this failure is unrecoverable.
+   **Scope (D-040):** the framework's own commands and agents. An edit the teacher asks for directly
+   in conversation is the teacher's edit, made with a tool (Claude Code shows the diff and, per its
+   permission mode, asks). The guarantee is the write path's, not a sandbox around everything an AI
+   tool can do.
 6. **Templates must validate.** A fresh scaffold produces zero errors, or the tests fail.
 7. **Agents must not fabricate resources.** A made-up URL or page number validates cleanly and fails a
    student mid-session. Applies to `answer` locators and study paths alike.
@@ -577,6 +599,7 @@ Deferred: a `gem` block (Exports phase).
 | `offered` | object | | **(target, D-032)** `{ year_of_study (number/string), semester (string) }` — when in the programme the course sits |
 | `teaching_methods` | array\<string\> | | **(target, D-032)** how the course is taught, e.g. `flipped classroom`, `weekly in-class problem solving`. Bologna expects this, and for a flipped course it is the descriptor that actually distinguishes it |
 | `reading` | object | | **(target, D-032)** `{ required: [string], recommended: [string] }`. Entries may be a `textbooks[].key` from `course.yaml` (preferred — no duplication) or free-text for anything not listed there |
+| `unit_map` | array\<obj\> | | **(target, D-040, step 3)** the whole semester's plan, written before most units exist: each `{ number (✓), title (✓), summary (opt), evidence (opt, array of material locators — what the plan for this unit rests on) }`. **Authoritative for which units the course has and their order and titles.** A `units/NN-slug/` directory is created only when a unit is *planned* in detail (§5.1); `unit_map_mismatch` warns when a unit's `unit.md` disagrees with its map entry |
 
 `bloom` enum, everywhere it appears: `remember | understand | apply | analyze | evaluate | create`.
 
@@ -587,14 +610,16 @@ skipped. Two categories are deliberately *not* fields here:
 
 - **Identity and configuration** — title, code, institution, instructors, language, textbook list —
   live in `course.yaml`, the single source of truth. Repeating them here would create drift.
-- **The unit overview / course contents** — derived from the `unit.md` files, which are authoritative.
+- **The units' detail** — objectives, sessions, the in-class hour — lives in the `unit.md` files and
+  below them. The **unit map** (which units, in what order, their titles) is authored here instead
+  (D-040): it is decided before most units exist, so it cannot be derived from them.
 
 Both are pulled in when the syllabus is rendered for people to read (deferred — see §1.1). The rule:
 **authored content is a field here; derived content is assembled at render time.**
 
 Body: prose aim and narrative. Identity fields (title, code, textbooks) are **not** repeated here —
 they live in `course.yaml`. A future rendered syllabus (Exports) pulls them in, along with a unit
-overview assembled from the units.
+overview assembled from the unit map and, where they exist, the units.
 
 #### `units/NN-slug/unit.md` — a unit
 
@@ -630,7 +655,7 @@ Session front matter:
 | `title` | string | ✓ | |
 | `duration_minutes` | integer ≥1 | ✓ | the session's time budget (≈ methodology `session_minutes`) |
 | `goals` | array\<obj\> | ✓ | count within methodology `goals_per_session` (3–5 for question-driven-25) |
-| `paths` | array\<obj\> | | **(target, session-level; D-020)** open optional resource pool; each `{ kind (enum), ref (string), note (opt) }`; `kind ∈ gem \| video \| textbook \| article \| exercise \| other`; **not** time-summed |
+| `paths` | array\<obj\> | | **(target, session-level; D-020)** open optional resource pool; each `{ kind (enum), ref (string), note (opt) }`; `kind` from **the resource-kind vocabulary** (below, D-040) — **optional when `ref` is a material locator**, whose kind the manifest already records; required otherwise; **not** time-summed |
 
 Goal object (the Guiding Question):
 
@@ -641,8 +666,16 @@ Goal object (the Guiding Question):
 | `prompt` | string | ✓ | the guiding question, phrased so a student can answer and check it |
 | `objectives` | array\<`U<NN>-O<N>`\> | ✓ (≥1) | unit objectives this goal rolls up to |
 | `est_minutes` | number ≥0 | | **(target, D-020, D-038)** teacher-approved study time; the session budget sums these. **Not schema-required** — a missing estimate is pedagogy (the teacher has not estimated yet), not shape: the budget rule reports the session as *unverifiable* (warn) instead |
-| `answer` | array\<obj\> | advisory: ≥1 **unless** `defer_to_class` — not schema-required (D-037) | **(target, D-019)** precise locators of the correct answer; each `{ kind (enum), ref (string), note (opt) }`; `kind ∈ textbook \| slide \| video \| article \| web \| other`; never the answer in prose. **Prefer a material locator** — `ref: "M0007#slide-18"` — which the validator can check (D-035); a textbook key with a locator (`"CLRS §2.3.1"`) remains allowed for sources that are cited but not ingested. **A book citation carries the book's own coordinates in `note`** — section, exercise or question number where there is one, and the printed page — because `page-N` is the physical page (§8.7, D-039): `ref: "M0003#page-63"`, `note: "CLRS §6.2, Exercise 6.2-3 (printed p. 45)"`. Applies to study paths too |
+| `answer` | array\<obj\> | advisory: ≥1 **unless** `defer_to_class` — not schema-required (D-037) | **(target, D-019)** precise locators of the correct answer; each `{ kind (enum), ref (string), note (opt) }`; `kind` from **the resource-kind vocabulary** (below, D-040), optional when `ref` is a material locator; never the answer in prose. **Prefer a material locator** — `ref: "M0007#slide-18"` — which the validator can check (D-035); a textbook key with a locator (`"CLRS §2.3.1"`) remains allowed for sources that are cited but not ingested. **A book citation carries the book's own coordinates in `note`** — section, exercise or question number where there is one, and the printed page — because `page-N` is the physical page (§8.7, D-039): `ref: "M0003#page-63"`, `note: "CLRS §6.2, Exercise 6.2-3 (printed p. 45)"`. Applies to study paths too |
 | `defer_to_class` | boolean | | **(target, D-023)** default `false`. If `true`: no `answer`; a pre-class thinking prompt that **must** be referenced by ≥1 in-class activity |
+
+> **The resource-kind vocabulary (D-040).** One list for a material's `kind`, a study path's `kind`
+> and an `answer` locator's `kind`: `slides | textbook | notes | exam | exercise | syllabus | reading |
+> link | video | other`, plus `gem` and `web` for paths and answers. Before D-040 there were three
+> overlapping lists (`slide` vs `slides`; a teacher's own deck could only be `other`). Where `ref` is
+> a material locator (`M0006#slide-2`), `kind` may be omitted — the manifest knows it, and a second
+> copy could only repeat or contradict it. *Step 2c adds `slides` and `notes` to today's per-goal path
+> kinds; the full vocabulary lands with D-019/D-020 in step 4.*
 
 > A goal's `answer` is a **list of locators** — where the answer can be found. It is not the answer
 > itself. The assessment item's model answer is a separate field named `model_answer` (D-031g), so the
@@ -814,6 +847,7 @@ Severity is the default; **(target)** means not built yet. Every rule is also a 
 | `objective_maps_to_outcome` | every unit objective names ≥1 Course Outcome | advisory | **alert** **(target, D-021/D-037)** |
 | `syllabus_missing` | the course has no `syllabus/syllabus.md` | advisory | **alert** **(target, D-033/D-037)** |
 | `unit_count` | units on disk vs `course.yaml` `units` | advisory | warn |
+| `unit_map_mismatch` | the syllabus `unit_map` and the units disagree: a unit directory whose number is not on the map or whose title differs from its entry, or a map whose length differs from `course.yaml` `units`. Consistency rule | advisory | warn **(target, D-040, step 3)** |
 | `session_count` | sessions per unit == methodology `sessions_per_unit` | advisory | warn |
 | `goal_count` | goals per session within `goals_per_session` | advisory | warn |
 | `goal_type` | `goal.type ∈ allowed_goal_types` | advisory | warn |
@@ -833,6 +867,7 @@ Severity is the default; **(target)** means not built yet. Every rule is also a 
 | `syllabus_workload_missing` | the syllabus declares no `workload` | advisory | warn |
 | `unknown_rule` | a rule code in `course.yaml` `rules:`, a methodology's `rules:`, or an `accepted:` entry names no rule — a typo that would otherwise silently do nothing | advisory | warn |
 | `accepted_without_reason` | an `accepted:` entry gives no `reason` (or a blank one). The exception still takes effect (D-038) | advisory | warn |
+| `material_locator_in_text` | a `M<NNNN>#anchor` in the Markdown body of a course file (not `LOG.md`, not `ingested/`) names a real material and anchor (§8.7) | integrity, reported as advisory (prose) | warn **(target, D-040)** |
 | `materials_not_ingested` | a source (file or `links.md` line) is new, changed, moved or gone since the last ingest — one finding, reported against `materials/manifest.yaml` (D-035). **Ignores `source/private/`** (target, D-040): what is there differs per machine, and `classkit doctor` reports it | advisory | warn |
 | `instructor_material_cited` | a student-facing locator (study path `ref`; `answer`, D-019) names a material with `audience: instructor` | advisory | **alert** **(target, D-040)** |
 | `private_material_committed` | git tracks a file under `materials/source/private/` or `materials/private-text/` — it is in the repo's history; removing it from history is the teacher's decision | advisory | warn **(target, D-040)** |
@@ -928,13 +963,17 @@ only whitespace, and a file already holding exactly the content being written �
 command is safe. Anything unreadable as text counts as content; refusing is the safe direction.
 
 ```
-classkit write PATH [--from FILE] [--overwrite | --append] [--dry-run]
+classkit write PATH [--from FILE] [--overwrite | --append] [--dry-run] [--diff]
 ```
 
 Content comes from standard input unless `--from` names a file. Exit codes: `0` written or already
 identical, `3` refused — distinct from the generic failure code `2`, so a caller can tell *"ask the
 teacher first"* apart from *"something broke"*. `--dry-run` answers "may I write here?" without
-writing, which is what a command uses to check a target before it generates anything.
+writing, which is what a command uses to check a target before it generates anything. **`--diff`
+(target, D-040)** prints a unified diff of exactly what `--overwrite` would change, without writing:
+a command that must change part of a file (one key in `course.yaml`) shows the teacher that diff,
+and writes with `--overwrite` only once it is approved. No key-level editor: preserving the comments
+in a teacher's YAML would need a new dependency and a path syntax, for a rare operation.
 
 **Appending** — `classkit.write.append()`, `classkit write --append` — adds to the end of a file and
 never rewrites existing bytes, so it needs no confirmation; a missing file is created through
@@ -971,6 +1010,7 @@ course/
     private-text/          (target, D-040) derived, gitignored, this machine only: the full
       M0005-clrs.md        text of each private material, same anchors as its index
     manifest.yaml          every material: id, kind, format, paths, hashes, status
+    coverage.md            (target, D-040) the latest coverage report, written by /ingest
 ```
 
 `ingested/` is **flat and keyed by a stable id**, not a mirror of `source/`. A file that is renamed or
@@ -1000,13 +1040,17 @@ whole identity).
 
 `classkit add-url URL [--note TEXT]` appends a line through the write path's append mode (§8.6),
 rejecting a malformed URL or one already listed (exit 2).
-`/ingest` also collects every URL it finds *inside* slides and documents, recording where it was
-found (`found_in: M0007#slide-3`). Each link becomes a material of kind `video` (a known video host
-or a video file extension) or `link`. **In Core only the link and safely fetchable metadata (title,
+**A link becomes a material only when the teacher lists it** (D-040). Ingest does **not** harvest
+URLs from inside slides and documents: in the hand test that recorded a book's whole bibliography as
+course materials, broke URLs at line wraps, and buried the one link that mattered. A link inside a
+deck is already readable in the deck's ingested text. The classifying agent *mentions* links it
+noticed that look like course resources ("the Unit 1 deck links to the course Gem — add it with
+`classkit add-url`?"); the teacher decides. Each listed link becomes a material of kind `video` (a
+known video host or a video file extension) or `link`. **In Core only the link and safely fetchable metadata (title,
 duration) are recorded — not its content.** Fetching is best-effort — 5-second timeout, HTML only,
 the first 512 KB — and a link whose metadata cannot be fetched is recorded all the same, titled by
 its note or its URL (`--no-fetch` skips it). A link listed only in `links.md` is marked removed when
-its line goes; one found inside a document stays.
+its line goes.
 
 #### The manifest
 
@@ -1025,8 +1069,8 @@ its line goes; one found inside a document stays.
 | `ingested_hash` | string | | hash of the `.md` ingest last wrote — lets a hand edit be detected |
 | `status` | enum | ✓ | `ingested \| unsupported \| no-text \| media \| link` |
 | `status_reason` | string | | e.g. "install LibreOffice, or export to PDF" |
-| `units` | array\<`U<NN>`\> | | units this material appears to support — a hint, proposed by the agent. Set by `/ingest` before any unit exists, from the material's own numbering; **re-mapped by `/plan-units` once the unit map is approved (target, D-039, step 3)** |
-| `found_in` | `M<NNNN>` or `M<NNNN>#anchor` | | for a link discovered inside another material: where |
+| `units` | array\<`U<NN>`\> or `all` | | units this material appears to support — a hint, proposed by the agent. **`all`** = course-wide (the textbook, a course Gem); `[]` = no particular unit (target, D-040). Set by `/ingest` before any unit exists, from the material's own numbering; **re-mapped by `/plan-units` once the unit map is approved (target, D-039, step 3)** |
+| `found_in` | `M<NNNN>` or `M<NNNN>#anchor` | | **retired (D-040)** — links are no longer harvested from materials; kept in the schema only so a manifest written before D-040 still validates |
 | `note` | string | | for a link: the note after it in `links.md` |
 | `duration` | string | | for a video link, when its page declares one: `12:03`, `1:02:45` |
 | `ingested_at` | date | | `YYYY-MM-DD`, stored as a string |
@@ -1163,9 +1207,8 @@ classkit ingest [--preflight] [--overwrite ID]... [--keep ID]... [--no-fetch]
                 [--why TEXT] [--no-log] [--course DIR]
 classkit add-url URL [--note TEXT] [--course DIR]
 classkit material apply [--from FILE] [--course DIR]       # YAML list of {id, kind?, units?, title?}
-classkit material set ID [--kind K] [--unit UNN]... [--no-units] [--title T] [--course DIR]
+classkit material set ID [--kind K] [--unit UNN|all]... [--no-units] [--title T] [--course DIR]
 classkit material merge ID --into ID [--course DIR]
-classkit material duplicates [--course DIR]
 classkit material remove ID [--course DIR]                 # (target, D-040) only for a private material
 classkit doctor [--course DIR]                             # (target, D-040)
 ```
@@ -1174,9 +1217,9 @@ classkit doctor [--course DIR]                             # (target, D-040)
 **(target, D-040)**.
 
 1. **Pre-flight, no processing** — `classkit ingest --preflight` writes nothing. Files found by
-   format and total size, total slides and PDF pages, links in `links.md` and embedded in documents,
-   non-link lines in `links.md`, what changed since the last ingest, exact and suspected duplicates
-   (only those this run has to decide), unsupported and media files with their hints, and a rough
+   format and total size, total slides and PDF pages, links in `links.md`,
+   non-link lines in `links.md`, what changed since the last ingest, exact copies (merged
+   silently), unsupported and media files with their hints, and a rough
    time estimate. Then the command **waits for approval** (§5.2).
 2. **Convert** — `classkit ingest` processes only materials that are new or whose source changed
    (plus one whose `.md` is missing). It first applies the bookkeeping — moves, exact duplicates,
@@ -1184,23 +1227,28 @@ classkit doctor [--course DIR]                             # (target, D-040)
    interrupted run resumes where it stopped. If it stopped between writing a `.md` and saving the
    manifest, the next run *adopts* that orphan (same canonical path, same source hash) rather than
    minting a second id.
-3. **Classify and confirm** — the `material-classifier` agent is **read-only** (`Read`, `Grep`,
+3. **Classify** — the `material-classifier` agent is **read-only** (`Read`, `Grep`,
    `Glob`; no `Write`, `Edit` or `Bash` — D-039: it reads more untrusted text than any other agent,
    so it can run nothing). It **returns** `kind`, `units` and `audience` (target, D-040) for each
    material as a YAML block — flagging any that looks like a published book outside `private/` —
-   and
-   proposes suspected same-material duplicates (passed to it by the command) with its evidence. The
-   command shows the classification, applies the teacher's corrections, and records the block with
-   `classkit material apply` — **all or nothing**: every entry is checked (known id, not merged or
-   removed, valid kind and unit ids, no unknown keys, no id twice) before any is recorded. **The
-   command asks the teacher to confirm each merge**, and runs `classkit material merge` only on
-   confirmation. Exact duplicates (same hash) merge without asking.
-4. **Report** what the course actually covers and where it is thin.
+   and may *mention*, as information, that two materials are the same content in two formats
+   ("M0012 is the PDF export of M0007 — cite the deck"). The command shows the classification,
+   applies the teacher's corrections, and records the block with `classkit material apply` — **all
+   or nothing**: every entry is checked (known id, not merged or removed, valid kind and unit ids,
+   no unknown keys, no id twice) before any is recorded.
+4. **Report** what the course actually covers and where it is thin. **(target, D-040)** The report
+   states its scope — which units the ingested material reaches — and says "no material yet", not
+   "thin", for the rest; the volume check and ordering problems apply only to what is covered. After
+   the teacher has read it, `/ingest` writes it to **`materials/coverage.md`** through the write
+   path, headed by its date and the material ids it covered. A later run replaces it only on the
+   teacher's confirmation (the write path refuses and shows what is there), so notes the teacher
+   added are never lost silently. It is a dated snapshot: `/plan-units` reads it as input, not as
+   truth.
 
 **Matching** — one function (`reconcile`) shared by the pre-flight, the run, and the validator, so
 the three never disagree about what is "not ingested". A known path with the same hash is
 unchanged; with a new hash it is *changed* (the canonical source) or *detached* (a merged copy no
-longer identical — it stands alone again, and is asked about afresh). An unknown path whose hash a
+longer identical — it stands alone again as a new material). An unknown path whose hash a
 material knows is *moved* (if that material's path with the hash is gone) or an *exact duplicate*
 (added to its `sources`); whose hash a removed material had, is *restored* under the old id; else
 *new*. Identical new files arrive as one material; its canonical path is the shallowest, then
@@ -1209,13 +1257,15 @@ if only non-identical copies remain, the material is marked removed and they sta
 private material is never marked removed this way** (target, D-040): its missing source means "not
 on this machine".
 
-**Suspected duplicates** are reported, never merged by code: in pre-flight, files whose names match
-across formats (ignoring markers such as `copy`, `final`, `export`, `(1)`); after conversion, also
-pairs where ≥80% of the shorter material's distinct words appear in the other (≥20 words). The run
-reports only pairs involving what it converted, so a pair the teacher declined is not re-asked on
-every run; `classkit material duplicates` lists them all.
+**Same material in two formats is not detected, and nobody is asked** (D-040, reversing that part
+of D-035). Only *exact* copies (same hash) are merged, silently. A deck and its PDF export stay two
+materials: both are valid to cite, nothing breaks, and asking about it at every run cost more than
+the problem it prevented — Avin's hand test produced 13 suspected pairs, all false. The one
+preference is the agents': **when the same content exists as a deck and as a PDF, cite the deck**
+(a slide is more precise, and the deck is what the teacher edits). If deduplication is ever needed —
+most likely when an exporter bundles knowledge files — it is solved there, where it bites.
 
-**Merging** (`material merge ID --into TARGET`) — the target keeps its canonical source and so its
+**Merging** is optional, never prompted (`material merge ID --into TARGET`) — the target keeps its canonical source and so its
 anchors; the merged material's sources (and their hashes) join it; the merged record is marked
 `merged_into` and its `.md` is left in place. A locator to the retired id is then an error that names
 the target. Merge into the material whose anchors you want: the deck, not its PDF export.
@@ -1224,7 +1274,11 @@ the target. Merge into the material whose anchors you want: the deck, not its PD
 source has not changed is never re-converted, so its edit is simply left alone. If the source *has*
 changed and the file's hash no longer matches `ingested_hash`, re-ingest **does not regenerate it
 silently** — it writes through the write path (§8.6) without `overwrite`, which refuses; the run
-exits `3` (as `classkit write` does) and lists the refusals with the opening of each file. The
+exits `3` (as `classkit write` does) and lists the refusals. **(target, D-040)** For each one it
+shows **what replacing would change**: the differences between the current file and a fresh
+extraction of the new source, grouped by anchor ("Slide 9: … → …"). It cannot say which differences
+are the teacher's edit and which the source's change — only a hash of the old extraction is kept —
+but it shows exactly what `--overwrite` would lose and gain, which is the decision being asked. The
 command shows the teacher the edit and asks, then re-runs with the answer: `--overwrite ID` (replace
 the edit with a fresh extraction) or `--keep ID` (keep it; the changed source is marked as seen).
 Until then the material stays outstanding (`materials_not_ingested`). Replacing ingest's *own*
@@ -1238,6 +1292,15 @@ whose id is not in the manifest (or there is no manifest), was merged or removed
 anchor that is not a heading of the material's `.md` — read as it is now, hand edits included —
 or names any anchor of a material that has none (link, media, unsupported). A textbook-key
 citation (`"CLRS ch.6"`) is not a locator and is not checked.
+
+**Locators in prose (target, D-040).** `material_locator_in_text` (warn) applies the same check to
+`M<NNNN>#anchor` found in the Markdown **bodies** of the course's own files — syllabus, units,
+sessions, in-class, items, and `materials/coverage.md` — but not `LOG.md` (history: a locator to a
+since-removed material is a true record) or `ingested/` (derived text). A warning, not an error,
+though it names something that does not exist: front matter is data that tools act on, prose is read
+by people and may be a dated snapshot that legitimately goes stale. Agents always write locators
+**fully qualified** (`M0005#page-39`, never `#page-39`); the shorthand cannot be caught by code,
+because `#section` is also an ordinary Markdown link.
 
 **Logging** (D-039). Ingest changes the course, so **every run that changes something is a log
 entry** (§8.8) — including a run by hand, which nothing else would record. `classkit ingest` appends

@@ -368,6 +368,17 @@ All land in **step 3**, with the coverage chain.
 | ⬜ | `src/classkit/doctor.py` (new), `cli.py` | `classkit doctor` — gitignore, private sources/full texts present or stale, leftovers, dependencies importable, optional converters, mode; read-only |
 | ⬜ | `.claude/agents/material-classifier.md`, `.claude/commands/ingest.md` | propose `audience` with a reason; flag a published book outside `private/`; `/ingest` runs `doctor` first; agents told when a material is index-only here |
 | ⬜ | exporters (Exports phase) | refuse, in code, to bundle or publish `audience: instructor` or private material |
+| ⬜ | `.claude/commands/ingest.md`, `material-classifier` | the coverage report states its scope ("no material yet" ≠ "thin"); `/ingest` writes it to `materials/coverage.md` after the teacher has read it, through the write path |
+| ⬜ | `src/classkit/write.py`, `cli.py` | `classkit write --diff`: a unified diff of what `--overwrite` would change, writing nothing (invariant 5's scope already written into the spec and `dev/CLAUDE.md`) |
+| ⬜ | `src/classkit/validate.py`, `CLAUDE.md`, agents | `material_locator_in_text` (warn) over Markdown bodies (not `LOG.md`, `ingested/`); locators always fully qualified |
+| ⬜ | `src/classkit/ingest/core.py`, `report.py` | a hand-edit refusal shows the diff between the current file and a fresh extraction, grouped by anchor |
+| ⬜ | `schemas/study-session.schema.json` | path kinds gain `slides` and `notes` (now); step 4: one resource-kind vocabulary for paths and `answer`, `kind` optional when `ref` is a material locator |
+| ⬜ | `schemas/syllabus.schema.json`, template (step 3) | `unit_map` (number, title, summary, evidence) |
+| ⬜ | `src/classkit/validate.py` (step 3) | `unit_map_mismatch` (warn, consistency) |
+| ⬜ | `.claude/commands/plan-units.md`, `syllabus-designer`, `curriculum-architect` (step 3) | course level whole, from evidence (asks when there is none); the unit map in the syllabus; units planned incrementally — `/plan-units 4 5`; reads `materials/coverage.md` |
+| ⬜ | `schemas/manifest.schema.json`, `ingest/core.py`, `cli.py`, agent | `units: all` (course-wide) in the schema, `apply`, `set --unit all`; the classifier uses it; consumers (designers, the D-039 re-map) treat `all` as every unit |
+| ⬜ | `src/classkit/ingest/` (extract, core, report), schema, agent | stop harvesting URLs from materials; links only from `links.md` / `add-url`; `found_in` retired (kept in the schema for old manifests); the classifier mentions links that look like course resources and suggests `add-url` |
+| ⬜ | `src/classkit/ingest/`, `cli.py`, `.claude/commands/ingest.md`, agent | drop suspected-duplicate detection (name and content), the `material duplicates` verb and the gate-3 duplicate question; exact copies still merge silently; `material merge` stays, optional; the classifier may mention a two-format relation; agents cite the deck over its PDF |
 | ⬜ | `CLAUDE.md`, `GETTING-STARTED.md`, `dev/MANUAL-TESTING.md` | private/, audience, doctor (the interim "don't commit book PDFs" warning is in `GETTING-STARTED.md` now) |
 | ⬜ | `tests/` | gitignore scaffolded; private index has no body text and its locators resolve; full text only in `private-text/`; missing private source not removed; `remove`; both rules at their severity; `doctor` reports each case |
 
@@ -379,8 +390,8 @@ All land in **step 3**, with the coverage chain.
 | ✅ | `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block was scaffolded and documented although Exports is deferred (G-16). **Removed from the template and the settings table** — shipping configuration for a feature that does not exist confuses a teacher reading their own `course.yaml`. The optional field stays in `course.schema.json`, so a course that sets it still validates |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-10-01 (after D-040, designed from Avin's hand test):** 16 decision blocks, 158
-artifact changes, **51 built, 5 in progress, 102 not started** — counted from the table. (After step
+**Count as of 2026-10-01 (after D-040, designed from Avin's hand test):** 16 decision blocks, 169
+artifact changes, **51 built, 5 in progress, 113 not started** — counted from the table. (After step
 2b's review, D-039: 147 changes, 51 / 5 / 91.) Steps 0, 1, 2a and 2b
 are done (D-032 reopens step 1's syllabus; that lands in step 3), except the rows that belong to
 agents and commands of later steps (logging in the other five commands; agents that cite material

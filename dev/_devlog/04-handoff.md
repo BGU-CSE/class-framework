@@ -33,12 +33,25 @@ one item at a time.**
   `private_material_committed` (warn); **`classkit doctor`** — `validate` judges the course (same on
   every clone), `doctor` this machine. Written into spec §2.2, §3.1, §8.4, §8.7, §9, §1.1 (Exports).
   Interim warning in `GETTING-STARTED.md`: don't commit book PDFs yet.
-- **Still to go through with Avin.** Proposed as plain fixes, unless he objects: F-01, F-02,
-  F-03/F-09/F-10 (pypdf noise; fontTools — verify), F-06 (docx text boxes + a low-yield warning),
-  F-07 (OMML equations), F-12, F-14, F-20, F-23, F-25. To discuss: F-11/F-15 (duplicate detection;
-  dismissing a pair), F-13 (links harvested from books), F-17 (course-wide `units`), F-19 (persist the
-  coverage report), F-21 (path kind `slide`), F-24 (show the edit on refusal), F-26 (locators in
-  Markdown bodies), P-2 (editing one YAML key through the write path).
+- **Also decided with Avin, all added to D-040** (spec and ledger updated):
+  - F-11/F-15 — **two-format duplicates are no longer detected** (reverses part of D-035); exact
+    copies still merge silently; `material merge` optional; agents cite the deck over its PDF.
+  - F-13 — **links are not harvested** from materials; only `links.md` / `add-url`.
+  - F-17 — `units: all` for course-wide material.
+  - F-19 — the coverage report is persisted, `materials/coverage.md`, stating its scope; **partial
+    material is the normal case**: a `unit_map` in the syllabus, units planned incrementally
+    (`/plan-units 4 5`, step 3), the course level from evidence or the teacher, never from memory.
+  - F-21 — one resource-kind vocabulary; `slides`/`notes` path kinds now, the rest in step 4.
+  - F-24 — a refusal shows the diff against a fresh extraction, by anchor.
+  - F-26 — `material_locator_in_text` (warn) over Markdown bodies; locators always fully qualified.
+  - P-2 — invariant 5's scope is the framework's commands and agents; `classkit write --diff`.
+- **Plain fixes (no design question)** — proposed to Avin; build in 2c unless he objects: F-01, F-02,
+  F-03/F-09/F-10 (pypdf noise; verify fontTools), F-06 (docx text boxes) with F-08 (a low-yield /
+  empty-slide count per material), F-07 (OMML equations), F-12 (metadata titles like `manual.dvi`),
+  F-14 (time estimate), F-18 (MANUAL-TESTING: ingest before scaffolding a unit), F-20 (template says
+  "fails"), F-23 (pre-flight names what changed), F-25 (after a refusal, `validate` names
+  `--keep`/`--overwrite`), F-27 (note in docs: choose `--overwrite` once after F-06 is fixed).
+  P-1 (a loosely worded instruction bent gate 1) stays a known limit of prompt-level gates (D-030).
 - **Then:** build D-040 and the report's fixes as one step ("2c", fresh session + review as before),
   then step 3.
 
