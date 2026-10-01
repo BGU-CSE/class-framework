@@ -1643,3 +1643,66 @@ files and the one `unlink` outside the write path all confirmed). Claude's own s
 G-5 as built; G-6 (a). Plain fixes added: `write.remove()`, kept permissions, `.DS_Store`, the mode
 check. Avin deleted `~/.gitignore_global`. Spec §8.6/§8.7/§8.4, D-041, ledger (177 changes).
 
+
+## Session 33 — 2026-10-01 — Step 2c-2 built: the rest of the hand test's fixes, and D-041
+
+Built every ledger row tagged [2c-2] (D-040 and D-041 blocks), in four groups, each its own
+commits and green. **289 tests** (+56; new `tests/test_extraction_quality.py`).
+
+- **D-041.**
+  - The private full text certifies itself: `body_hash` = the file's hash without that line. A stale
+    or other-library full text that still matches is refreshed; an edited one is refused.
+    `private_text_hash` is retired (the schema accepts it; a pre-D-041 text is judged by it once).
+  - Ingest's one deletion goes through the new `write.remove(path, expected_hash)`.
+  - Replacing a file keeps its mode; new files get `0666 & ~umask`, not `0600`.
+  - `doctor` reports a differing private copy as a note.
+  - `course_gitignore_missing` (warn, consistency).
+  - `classkit mode developer` refuses when `.gitignore` is untracked.
+  - `.DS_Store` is ignored in both `.gitignore`s.
+- **Removals (D-040).**
+  - Gone: suspected-duplicate detection (name and content), `material duplicates`, and the gate-3
+    question.
+  - Gone: link harvesting. A link harvested by an older version is marked removed by the next ingest,
+    and `add-url` restores its id.
+  - Hyperlinks stay readable in the ingested text as `[text](url)` (the spec had assumed they
+    already were).
+- **Additions (D-040).**
+  - `units: all`.
+  - The coverage report states its scope and is saved by `/ingest` to `materials/coverage.md` through
+    the write path.
+  - `material_locator_in_text` (warn) over Markdown bodies.
+  - A hand-edit refusal shows the diff by anchor.
+  - `classkit write --diff`.
+  - Path kinds `slides` and `notes`.
+  - The classifier mentions two-format relations ("cite the deck") and course-resource links.
+- **Plain fixes.**
+  - F-06: DOCX text boxes, Choice or Fallback.
+  - F-07: Office Math as linear text.
+  - F-08: empty slides/pages and low yield, under "Check these extractions".
+  - F-03/F-10: reader noise captured, reported once by name.
+  - F-09: ligatures expanded, fonttools added.
+  - F-12: file-name metadata titles rejected; no PDF first-line titles.
+  - F-14: the time estimate.
+  - F-23: the pre-flight names what changed.
+  - F-25: validate names `--keep`/`--overwrite`.
+  - F-02: plurals.
+  - F-20: template wording.
+  - Docs: F-01, F-18 and a 2c-2 section in `MANUAL-TESTING.md`; F-27 in `GETTING-STARTED.md`.
+- **Spec:** "(target …)" removed from everything built; the decided details are written into §8.4,
+  §8.6 and §8.7. **Ledger:** 76 / 6 / 95 of 177.
+
+Gap report: `reviews/impl-gaps-step-2c-2.md`. Three ⚑:
+
+- **G-1:** harvested links in an old manifest are retired on the next ingest. Avin's M0011–M0021
+  go; the Gem comes back with `add-url`.
+- **G-2:** a changed private source is now a `doctor` note, not an ACTION.
+- **G-3:** re-ingest never replaces a title, so `manual.dvi` survives in an existing course.
+
+Not verified, and only the re-test can do it: fontTools repairing CLRS's broken characters (F-09);
+the low-yield thresholds; the classifier prompt's new behaviour.
+
+### Next
+
+**One independent review of 2c-1 and 2c-2 together.** Then Avin decides the ⚑ entries of this
+report and re-tests (`MANUAL-TESTING.md`, "Step 2c-1" and "Step 2c-2"; a fresh course shows the
+extraction fixes), then step 3.

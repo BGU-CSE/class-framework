@@ -13,8 +13,8 @@ classkit mode developer     # step 1 — creates the gitignored dev/.developer m
 
 `classkit mode` shows the current hat; `classkit mode teacher` switches back. The marker is
 **gitignored on purpose** — it must never reach a teacher's clone, which is exactly what makes its
-presence a reliable signal. `classkit mode developer` **verifies that ignore rule before creating
-the file** and refuses if it is missing, because a committed marker would put every teacher's clone
+presence a reliable signal. `classkit mode developer` **verifies that ignore rule — and that
+`.gitignore` itself is tracked (D-041) — before creating the file** and refuses otherwise, because a committed marker would put every teacher's clone
 into framework-developer mode. A running Claude Code session reads the marker once at startup, so
 restart it after switching.
 
@@ -71,7 +71,7 @@ src/classkit/
   frontmatter.py          Markdown + YAML front-matter parsing
   model.py                locating and loading a course tree
   scaffold.py             create-only content generation
-  write.py                the overwrite-safe write path — every agent and command writes here
+  write.py                the overwrite-safe write path — every agent and command writes here; remove() and --diff (D-040, D-041)
   log.py                  the course log, LOG.md — `classkit log`, append-only through write.append (D-036, D-038)
   ingest/                 materials (D-035, spec §8.7): `classkit ingest`, `add-url`, `material`
     extract.py              extractors registered by extension; anchors
@@ -82,7 +82,7 @@ src/classkit/
   mode.py                 teacher / framework-developer hat: `classkit mode` (D-034)
   validate.py             schema layer + semantic rules
   cli.py                  argparse entry point
-tests/                    scaffold → validate round-trip; ingest; private material; doctor (fixtures in tmp_path)
+tests/                    scaffold → validate round-trip; ingest; extraction quality; private material; doctor (fixtures in tmp_path)
 dev/                      you are here — not part of a teacher's course
   VISION.md                 why the project exists, what it produces, how it is developed
   FRAMEWORK-SPEC.md         the spec — what the framework must contain

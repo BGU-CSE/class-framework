@@ -308,6 +308,11 @@ not tracked refuses.
 hand test) are marked removed by the next ingest, each with a line saying links now come only from
 `links.md`; `classkit add-url` for the one you want (the course Gem) brings it back **under its old
 id**. `private_text_hash` disappears from the manifest as materials are re-converted.
+The extraction fixes apply only to what is **re-converted**: an unchanged source keeps its old
+`ingested/` file (`classkit ingest --overwrite M00NN` re-converts one), and **a title is never
+replaced** — re-ingest keeps every title, the teacher's or ingest's own — so `manual.dvi` stays
+until you `classkit material set M0001 --title "…"`. To see F-06…F-12 as a new teacher would, use a
+fresh course.
 
 ### What is worth your judgement here
 

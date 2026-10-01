@@ -19,7 +19,32 @@ Then, for history and what is still open:
 6. `02-progress.md` (last block) — where we stopped.
 7. `03-open-questions.md` — what's unresolved.
 
-## Current state — 2026-10-01 (after step 2c-1)
+## Current state — 2026-10-01 (after step 2c-2)
+
+**Step 2c-2 is built** (Session 33): every ledger row tagged [2c-2] in the D-040 and D-041 blocks.
+Suite: **289 tests**, green. Ledger: 76 built, 6 in progress, 95 not started — `../ROADMAP.md` is
+authoritative. Gap report: `../reviews/impl-gaps-step-2c-2.md` (three ⚑: G-1 harvested links
+retired on the next ingest, G-2 a changed private source is a `doctor` note, G-3 titles are never
+re-derived).
+
+- **What exists now, beyond 2c-1:**
+  - **The private full text certifies itself** (`body_hash`); `private_text_hash` is retired.
+  - **The write path:** `write.remove()` (ingest's one deletion), kept permissions, and
+    `classkit write --diff`.
+  - **New rules:** `course_gitignore_missing` (warn) and `material_locator_in_text` (warn).
+  - **Removed:** duplicate detection and link harvesting. Hyperlinks are kept in the ingested text.
+  - **New in ingest and the manifest:** `units: all`; `materials/coverage.md` saved by `/ingest`;
+    the refusal diff by anchor.
+  - **Extraction:** DOCX text boxes, Office Math, empty/low-yield reporting, captured reader noise,
+    ligatures, fonttools, and file-name titles rejected.
+- **Next: ONE independent review of 2c-1 and 2c-2 together** — both gap reports
+  (`impl-gaps-step-2c-1.md`, `impl-gaps-step-2c-2.md`) and the code since `d0c9080`. Then Avin
+  decides this round's ⚑ entries and re-tests (`../MANUAL-TESTING.md`, "Step 2c-1" and
+  "Step 2c-2"): the real-textbook check of fontTools (F-09) is his — no test here can do it. Then
+  step 3.
+
+## State after step 2c-1 — 2026-10-01 (kept for history)
+
 
 **Step 2c-1 is built** (Session 31): the D-040 rows tagged [2c-1]. Suite: **233 tests**, green.
 Ledger: 61 built, 5 in progress, 104 not started — `../ROADMAP.md` is authoritative. Gap report:
