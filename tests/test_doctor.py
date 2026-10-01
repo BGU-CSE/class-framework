@@ -212,3 +212,30 @@ def test_a_missing_converter_is_a_note_naming_what_waits_for_it(course: Path, mo
 
 def test_the_working_mode_is_reported(course: Path):
     assert find(course, doctor.OK, "working mode:")
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git is not installed")
+def test_a_gitignore_that_git_itself_ignores_protects_no_clone(course: Path, tmp_path: Path, monkeypatch):
+    """Found on the developer's own machine: a global excludes file listing `.gitignore`. The
+    rules work here — and the file is never committed, so no clone has them."""
+    excludes = tmp_path / "global-excludes"
+    excludes.write_text(".gitignore\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=course.parent, check=True)
+    subprocess.run(["git", "config", "core.excludesFile", str(excludes)], cwd=course.parent, check=True)
+
+    assert find(course, doctor.OK, "course/.gitignore keeps")  # true on this machine…
+    (found,) = find(course, doctor.ACTION, "itself ignored")  # …and on no other
+    assert found.fix.startswith("git add -f course/.gitignore")
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git is not installed")
+def test_an_uncommitted_gitignore_is_a_note_until_committed(course: Path):
+    def run_git(*args):
+        subprocess.run(["git", *args], cwd=course.parent, check=True, capture_output=True)
+
+    run_git("init", "-q")
+    run_git("config", "core.excludesFile", "/dev/null")  # whatever this machine's global rules are
+    assert find(course, doctor.NOTE, "not committed yet")
+    run_git("add", "-f", "course/.gitignore")
+    run_git("-c", "user.name=t", "-c", "user.email=t@example.org", "commit", "-qm", "gitignore")
+    assert not find(course, doctor.NOTE, "not committed yet")

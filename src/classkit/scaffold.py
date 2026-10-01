@@ -179,7 +179,8 @@ def scaffold_course(
                 why="re-run to add what a newer framework scaffolds",
                 files=created,
             ))
-        result.skipped.append(course_root / log.LOG_FILE)
+        else:
+            result.skipped.append(course_root / log.LOG_FILE)
         return result
     write_new(
         course_root / log.LOG_FILE,
