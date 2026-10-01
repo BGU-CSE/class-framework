@@ -390,7 +390,8 @@ def test_validate_exits_zero_on_alerts_and_warnings(course_root: Path, capsys):
     assert run_cli(course_root) == 0
     out = capsys.readouterr().out
     assert "ALERT" in out
-    assert "1 alerts, 0 errors" in out
+    assert "1 alert, 0 errors" in out
+    assert "Test Course — 1 unit, 12 guiding questions, 0 assessment items" in out  # F-02
 
 
 def test_validate_exits_one_on_an_error(course_root: Path):
@@ -571,8 +572,8 @@ def test_validate_counts_accepted_exceptions(course_root: Path, capsys):
     run_cli(course_root)
     out = capsys.readouterr().out
 
-    assert "1 findings suppressed by 2 accepted exceptions in 2 files" in out
-    assert "(1 no longer match anything)" in out
+    assert "1 finding suppressed by 2 accepted exceptions in 2 files (1 no longer matches anything)" in out
+    assert "(1 no longer matches anything)" in out
     assert "[session_path_feasibility]" not in out
 
 

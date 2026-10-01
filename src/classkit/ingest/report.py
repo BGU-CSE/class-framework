@@ -2,7 +2,21 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from .core import Preflight, RunReport
+
+
+def plural(count: int, word: str, plural_form: str | None = None) -> str:
+    """`1 unit`, `2 units` — F-02."""
+    return f"{count} {word if count == 1 else (plural_form or word + 's')}"
+
+
+def _listed(label: str, items: list[str], limit: int = 15) -> list[str]:
+    shown = [f"  {label:<8} {item}" for item in items[:limit]]
+    if len(items) > limit:
+        shown.append(f"  {'':<8} … and {len(items) - limit} more")
+    return shown
 
 
 def _size(n: int) -> str:
@@ -43,17 +57,26 @@ def preflight_text(p: Preflight) -> str:
         f"Since the last ingest: {sum(len(n.paths) for n in plan.new)} new, "
         f"{len(plan.changed)} changed, {len(plan.moved)} moved or renamed, "
         f"{len(plan.removed)} removed, {len(plan.unchanged)} unchanged; "
-        f"{len(plan.new_links)} new links."
+        f"{plural(len(plan.new_links), 'new link')}."
     )
-    if plan.moved:
-        lines += [f"  moved    {mid}: {old} → {new}" for mid, old, new in plan.moved]
-    if plan.removed:
-        lines += [f"  removed  {mid} (kept in the manifest, marked removed)" for mid in plan.removed]
+    # By name and id, not only counted (F-23): with twenty changes, a count says nothing.
+    lines += _listed("new", [item.paths[0] + (f" (+{len(item.paths) - 1} identical)" if len(item.paths) > 1 else "")
+                             for item in plan.new])
+    lines += _listed("link", [link.url for link in plan.new_links])
+    lines += _listed("changed", [f"{mid}: {path}" + ("  — edited by hand: you will be asked" if mid in plan.awaiting else "")
+                                 for mid, path in plan.changed])
+    lines += _listed("moved", [f"{mid}: {old} → {new}" for mid, old, new in plan.moved])
+    lines += _listed("removed", [f"{mid} (kept in the manifest, marked removed)" for mid in plan.removed])
+    lines += _listed("back", [f"{mid}: {path}" for mid, path in plan.restored])
     lines.append("")
 
     if p.exact_duplicates:
         lines.append("Exact duplicates (identical files — merged automatically):")
         lines += [f"  {' = '.join(group)}" for group in p.exact_duplicates]
+        lines.append("")
+    if p.complaints:
+        lines.append("Read with warnings from the reader (the text may be degraded; reported once each):")
+        lines += [f"  {path}: {len(found)} problem(s), e.g. \"{found[0]}\"" for path, found in p.complaints]
         lines.append("")
     if p.unsupported:
         lines.append("Cannot be read — recorded as unsupported, never dropped:")
@@ -64,7 +87,8 @@ def preflight_text(p: Preflight) -> str:
         lines += [f"  {path}" for path in p.media]
         lines.append("")
 
-    lines.append(f"To convert: {p.to_convert} materials. Estimated time: {_duration(p.seconds)}.")
+    lines.append(f"To convert: {plural(p.to_convert, 'material')}. Estimated time: {_duration(p.seconds)} "
+                 "(rough).")
     return "\n".join(lines)
 
 
@@ -98,13 +122,18 @@ def run_text(r: RunReport) -> str:
             where += f" (index) + {c.full_text} (full text, this machine only)"
         reason = f"  ({c.reason})" if c.reason else ""
         lines.append(f"  {label:<10} {c.id}  [{c.status}] {c.path}{where}{reason}")
+    # Thin extraction is reported, never silent (F-06, F-08) — once per material, by id.
+    thin = [(c.id, note) for c in r.converted for note in c.quality]
+    if thin:
+        lines += ["", "Check these extractions — thin or degraded text is not thin teaching:"]
+        lines += [f"  {mid}  {note}" for mid, note in thin]
     for mid in r.kept:
         lines.append(f"  kept       {mid}  your edit kept; the changed source is marked as seen")
 
     if r.refused:
         lines += ["", "REFUSED — replacing these files could lose edits made by hand:"]
         for refusal in r.refused:
-            lines.append(f"  {refusal.id}  {refusal.ingested} — {refusal.reason}")
+            lines.append(f"  {refusal.id}  {_short(refusal.ingested)} — {refusal.reason}")
             lines.append("    What --overwrite would change (the current file → a fresh extraction of the "
                          "new source; your edit and the source's change are both in it):")
             lines += [f"      {line}" for line in (refusal.diff or refusal.preview).splitlines()]
@@ -117,9 +146,15 @@ def run_text(r: RunReport) -> str:
     created = sum(1 for c in r.converted if c.new)
     updated = sum(1 for c in r.converted if not c.new and not c.local)
     local = sum(1 for c in r.converted if c.local)
-    lines += ["", f"{created} new materials, {updated} updated, {len(r.refused)} refused."
-              + (f" {local} private full text(s) written on this machine only." if local else "")]
+    lines += ["", f"{plural(created, 'new material')}, {updated} updated, {len(r.refused)} refused."
+              + (f" {plural(local, 'private full text')} written on this machine only." if local else "")]
     return "\n".join(lines)
+
+
+def _short(path: Path) -> str:
+    """A refused file's path from `materials/` on — the course is known; the rest is noise."""
+    parts = Path(path).parts
+    return "/".join(parts[parts.index("materials"):]) if "materials" in parts else str(path)
 
 
 def _ids(label: str, ids: list[str], limit: int = 12) -> str:

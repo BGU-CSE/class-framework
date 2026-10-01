@@ -17,6 +17,9 @@ dependencies = [
     "python-pptx>=0.6.21",
     "python-docx>=1.0",
     "pypdf>=4.0",
+    # pypdf's optional font parser: without it, text in CFF/Type1-font PDFs (most textbooks)
+    # comes out with broken characters, and pypdf logs a warning per font (F-09, F-10).
+    "fonttools>=4.0",
 ]
 
 [project.optional-dependencies]

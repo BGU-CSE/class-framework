@@ -13,7 +13,7 @@ from . import doctor, ingest, log
 from .frontmatter import FrontMatterError
 from .ingest import links as linkfile
 from .ingest.manifest import AUDIENCES, KINDS, SOURCE_DIR, ManifestError
-from .ingest.report import log_summary, preflight_text, run_text
+from .ingest.report import log_summary, plural, preflight_text, run_text
 from .mode import DEVELOPER, TEACHER, UnsafeMarker, current_mode, set_mode
 from .model import LayoutError, find_course_root, find_framework_root, load_course
 from .scaffold import (
@@ -283,10 +283,11 @@ def run_validate(args, framework_root: Path) -> int:
     units = len(course.units)
     goals = sum(len(session.data.get("goals") or []) for u in course.units for session in u.sessions)
     print(
-        f"{course.config.get('title', 'course')} — {units} units, "
-        f"{goals} guiding questions, {len(course.items)} assessment items"
+        f"{course.config.get('title', 'course')} — {plural(units, 'unit')}, "
+        f"{plural(goals, 'guiding question')}, {plural(len(course.items), 'assessment item')}"
     )
-    print(f"{len(alerts)} alerts, {len(errors)} errors, {len(warnings)} warnings")
+    print(f"{plural(len(alerts), 'alert')}, {plural(len(errors), 'error')}, "
+          f"{plural(len(warnings), 'warning')}")
 
     # Accepted exceptions stop nagging, but are never invisible (spec §8.4).
     acceptances = validator.acceptances
@@ -294,11 +295,11 @@ def run_validate(args, framework_root: Path) -> int:
         files = {a.path for a in acceptances}
         unused = sum(1 for a in acceptances if not a.suppressed)
         line = (
-            f"{len(validator.suppressed)} findings suppressed by {len(acceptances)} accepted "
-            f"exceptions in {len(files)} files"
+            f"{plural(len(validator.suppressed), 'finding')} suppressed by "
+            f"{plural(len(acceptances), 'accepted exception')} in {plural(len(files), 'file')}"
         )
         if unused:
-            line += f" ({unused} no longer match anything)"
+            line += f" ({unused} no longer {'matches' if unused == 1 else 'match'} anything)"
         print(line)
 
     if errors:

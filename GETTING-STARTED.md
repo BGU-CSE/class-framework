@@ -137,7 +137,13 @@ human's or the reviewing agent's call.)
   Each line that needs action says what to run. `/ingest` runs it first.
 - **Reorganize freely.** A renamed or moved file keeps its id, so nothing that cites it breaks.
 - **Fix a bad extraction by hand** in `ingested/`. A later ingest notices your edit and asks before
-  replacing it — you choose to keep your edit or take a fresh extraction.
+  replacing it — it shows what replacing would change, slide by slide or page by page, and you
+  choose to keep your edit or take a fresh extraction. If you corrected something by hand that a
+  newer version of the framework now extracts properly (Word text boxes, equations), choose the
+  fresh extraction once; until then that file stays "edited by hand".
+- **Thin extraction is reported.** The summary lists slides and pages with no text and documents
+  that came out far smaller than their source — so a deck of pictures is not mistaken for a thin
+  week.
 - **Add material any time** and run `/ingest` again — only what's new or changed is processed, and
   an interrupted run picks up where it stopped. Until you do, `classkit validate` warns that some
   material is not ingested yet.

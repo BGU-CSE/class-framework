@@ -139,7 +139,7 @@ designer, the critic and the assessment writer apply the same standard.
 | `classkit scaffold session U05 5` | Add one more study session to a unit |
 | `classkit scaffold item U05` | Add an assessment item |
 | `classkit validate` | Check the course against its methodology and schemas |
-| `classkit write` | The write path agents use — refuses to replace existing content without explicit confirmation |
+| `classkit write` | The write path agents use — refuses to replace existing content without explicit confirmation; `--diff` shows exactly what a replacement would change |
 | `classkit log` | Append an entry to the course log, `LOG.md` — what changed and why |
 | `classkit ingest` | Convert new or changed materials into citable Markdown (`--preflight`: report only) |
 | `classkit add-url URL` | Add a link to `materials/source/links.md` |

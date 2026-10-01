@@ -46,7 +46,7 @@ IGNORED = ("materials/source/private/", "materials/private-text/")
 MODULES = {"pyyaml": "yaml", "python-pptx": "pptx", "python-docx": "docx", "fonttools": "fontTools"}
 
 #: Used only when classkit's own metadata cannot be read (run from a source tree, not installed).
-FALLBACK_REQUIREMENTS = ("PyYAML", "jsonschema", "python-pptx", "python-docx", "pypdf")
+FALLBACK_REQUIREMENTS = ("PyYAML", "jsonschema", "python-pptx", "python-docx", "pypdf", "fonttools")
 
 
 @dataclass

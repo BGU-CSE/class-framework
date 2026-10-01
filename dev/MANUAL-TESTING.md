@@ -6,7 +6,8 @@ following `README.md` gets where they expect. That needs a human running it in a
 
 This document is the procedure. It grows a section per implementation step (see `ROADMAP.md`).
 
-Every command below was run and its output captured on 2026-09-10 against commit `b01ca57`.
+Each section was checked against the step that built it. Step 1's counts and validate summary were
+re-checked on 2026-10-01, after step 2c-2 (F-01); the other sections are as their steps left them.
 
 ## Set up a clean environment
 
@@ -68,7 +69,12 @@ Then add a unit and validate again:
 ```
 
 Expect **6 files created** under `course/units/01-asymptotic-analysis/` (4 sessions + `unit.md` +
-`in-class.md`), and again **0 errors**.
+`in-class.md`), and again **0 errors** — the summary reads `1 unit, 12 guiding questions` (F-02).
+
+> **This unit is a throwaway (F-18).** A real teacher ingests their materials (step 2b) *before*
+> any unit exists, and `/plan-units` decides what unit 1 is. Here it only proves scaffolding works;
+> in the hand test, "Asymptotic analysis" was really unit 3 of that course. If you go on to step 2b
+> in the same course, expect the classifier to say so — or delete `course/units/` first.
 
 **Re-run scaffold to prove it never overwrites** (invariant 5):
 
@@ -133,7 +139,7 @@ with at least one deck *and* its PDF export, and one file in a format nothing re
 .venv/bin/pip install -e .                       # new dependencies: python-pptx, python-docx, pypdf
 .venv/bin/classkit add-url "https://www.youtube.com/watch?v=…" --note "a real video"
 .venv/bin/classkit add-url "not a url"           # rejected, exit 2
-.venv/bin/classkit ingest --preflight            # counts, duplicates, unsupported, time — writes nothing
+.venv/bin/classkit ingest --preflight            # counts, what changed by name, unsupported, time — writes nothing
 ```
 
 Then run **`/ingest`** in Claude Code and follow it through its four gates. At step 3 you should see
@@ -159,7 +165,7 @@ Point one study path's `ref` at a real anchor (`"M0001#slide-2"`) and one at a m
   be thin — is it thin enough to mislead the classifier?
 - **Are the titles sensible?** They come from the first slide title or heading, else metadata, else
   the file name.
-- **Did the duplicate detection catch your deck/PDF pairs — and nothing else?**
+- **A deck and its PDF export stay two materials** (D-040): nothing should ask you about them.
 - **Are the kinds and units right?** Units are guessed before any unit map exists, from "Lecture 3"
   and the like; how often is the guess wrong? (`/plan-units` will re-map them — D-039.)
 - **Do book citations in the report give section / exercise / printed page**, not only `page-N`?
@@ -235,6 +241,85 @@ run `classkit material remove M00NN` there → refused while the file exists, ac
 
 ---
 
+## Step 2c-2 — the rest of the hand test's fixes, and D-041
+
+**What it should deliver:** the hand test's findings fixed where it ran — run it again on **the same
+real materials** (CLRS, the instructor's manual, the text-box syllabus, the three decks). Start from
+a fresh clone and course, or re-run in the old one (then read "an old course" below first).
+
+```bash
+.venv/bin/pip install -e .                      # new dependency: fonttools (F-09)
+.venv/bin/classkit doctor                       # "dependencies import: …, fonttools"
+.venv/bin/classkit ingest --preflight 2>&1 | less
+```
+
+Expect: **no library noise** — no `fontTools is required…`, no `Previous trailer cannot be read`
+above the report; a file the reader complained about is listed once, by name, with a count (F-03,
+F-10). What changed is listed **by name and id** (F-23). No "suspected duplicates" and no
+"embedded links" lines (D-040). The time estimate for ~2000 PDF pages says about 2–3 minutes (F-14).
+
+Then `/ingest` (or `classkit ingest`) and check, in the run summary and the files:
+
+- **The text-box syllabus (F-06)** is extracted — module number, credits, lecturer — once each, not
+  twice. If you hand-corrected its `ingested/` file last time, a changed source is refused as a hand
+  edit; choose `--overwrite` for it once (F-27).
+- **"Check these extractions"** lists the picture-heavy decks ("20 of 37 slides have no text") and
+  any document that came out far smaller than its source (F-08).
+- **Equations** on the Unit 2 slides appear as linear text in backticks, or `[equation]` (F-07).
+- **CLRS page 40** (`M0005#page-40` in the hand test): `efficient`, `first` — not `efûcient`,
+  `ûrst`; dashes and quotes readable. *This is the hypothesis behind adding fontTools; the
+  automated tests can only check ligatures and silence — this check is the real one (F-09).*
+- **Titles (F-12):** the manual and the solutions are titled from their file names, not
+  `manual.dvi` / `public.dvi`; no PDF is titled by its first line.
+- **No link was harvested** from the book's bibliography (F-13); the course Gem link in the Unit 1
+  deck is visible in its ingested text as `[…](https://…)`, and the classifier **mentions** it and
+  suggests `classkit add-url`.
+- **The classifier** gives the textbook `units: all` (F-17), states the report's **scope** first
+  ("no material yet" for units nothing reaches, not "thin"), and the report is saved to
+  `course/materials/coverage.md` after you read it (F-19). Run `/ingest` again later: it asks before
+  replacing the saved report, showing a `--diff`.
+
+**Prose locators (F-26).** Put a wrong anchor in the saved report (`M0005#page-99999`):
+`classkit validate` warns `material_locator_in_text`. The same in `LOG.md` is not checked.
+
+**The refusal (F-24, F-25).** Edit one slide's text in an `ingested/` deck, then change a different
+slide in the `.pptx` and run `classkit ingest`: exit 3, and the output shows **both** changes under
+their slide numbers ("Slide 9: …"), not the front matter. Then `classkit validate`: the warning
+names `classkit ingest --keep M00NN` / `--overwrite M00NN`, not "Run /ingest".
+
+**Write path (D-041, D-040).**
+
+```bash
+ls -l course/course.yaml                         # -rw-r--r-- — not -rw------- (G-22)
+sed 's/units: 13/units: 12/' course/course.yaml | .venv/bin/classkit write course/course.yaml --diff
+# a unified diff of the one line; nothing written. Then the same with --overwrite.
+```
+
+**Private material (D-041).** In the TA clone from step 2c-1, with the book copied in: a teacher's
+newer printing on one machine and the old PDF on the other — `doctor` on each says, as a **note**,
+that its copy differs from the one the committed index was built from, and that the last machine to
+ingest wins. A full text extracted on the other machine (another pypdf) is not treated as an edit.
+
+**`.gitignore` (D-041).** Delete `course/.gitignore` → `validate` warns `course_gitignore_missing`;
+re-run `scaffold course` to get it back. `classkit mode developer` in a clone whose `.gitignore` is
+not tracked refuses.
+
+**An old course** (ingested before 2c-2): links harvested from materials last time (M0011–M0021 in the
+hand test) are marked removed by the next ingest, each with a line saying links now come only from
+`links.md`; `classkit add-url` for the one you want (the course Gem) brings it back **under its old
+id**. `private_text_hash` disappears from the manifest as materials are re-converted.
+
+### What is worth your judgement here
+
+- **Is the CLRS text now readable** where it was not (F-09)? If not, fontTools was not the cause —
+  report what you see on `M0005#page-40`.
+- **Are the low-yield lines right** — do they flag the decks you know are pictures, and nothing
+  that reads fine?
+- **Is the refusal diff enough to decide** keep or overwrite without opening the files?
+- **Does the coverage report's scope read as honest** about what is not uploaded yet?
+
+---
+
 ## Expected noise — do not report these as bugs
 
 | What you will see | Why | Tracked as |
@@ -247,6 +332,8 @@ run `classkit material remove M00NN` there → refused while the file exists, ac
 | Link titles are their URL or note | Metadata fetching is best-effort; offline, or a site that blocks it, gives no title | D-035 |
 | `doctor`: "pandoc / LibreOffice is not installed" notes | They are optional; a note, not an action, unless you want those formats read | D-035, D-040 |
 | `doctor` on a clone: "… not on this machine — index only here" | A TA's clone without the book is normal; it is a note and `doctor` still exits 0 | D-040 |
+| "Check these extractions": "N of M slides have no text" for decks made of pictures | Text in images is not read without OCR; the line is there so thin extraction is not mistaken for thin teaching | D-040, F-08 |
+| `doctor` note: "this machine's copy … differs from the one the committed index was built from" | Two machines with different copies of a private book; the last to ingest rebuilds the index | D-041 |
 
 Anything **else**, especially any **error** on a freshly scaffolded course, is a real finding.
 

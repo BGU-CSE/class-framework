@@ -953,8 +953,8 @@ class Validator:
         self.report(
             "materials_not_ingested",
             self.course.root / "materials" / "manifest.yaml",
-            f"{len(outstanding)} change(s) in materials/source/ since the last ingest — {shown}. "
-            "Run /ingest (or `classkit ingest`).",
+            f"{len(outstanding)} change(s) in materials/source/ since the last ingest — {shown}."
+            + (" Run /ingest (or `classkit ingest`)." if plan.needs_ingest() else ""),
         )
 
 

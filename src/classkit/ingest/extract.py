@@ -19,10 +19,13 @@ not pay for them.
 
 from __future__ import annotations
 
+import logging
 import re
 import shutil
 import subprocess
 import tempfile
+import warnings
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
@@ -36,6 +39,20 @@ LINK = "link"
 #: Below this many non-blank characters per page on average, a PDF is treated as having no
 #: text layer (a scan). A scan often carries a few stray characters — page numbers, a stamp.
 NO_TEXT_CHARS_PER_PAGE = 10
+
+#: A zip-based document (DOCX, PPTX) whose text is under this many characters per byte of its
+#: document XML came out "far smaller than its source" — text boxes, pictures, objects not read.
+#: Ordinary documents run 0.02–0.1; the hand test's text-box syllabus was 13 characters (F-06).
+LOW_YIELD_RATIO = 0.005
+#: Below this much document XML, a short document is simply short.
+LOW_YIELD_MIN_XML = 20_000
+
+#: The third-party loggers whose warnings are captured, never printed (F-03, F-10).
+NOISY_LOGGERS = ("pypdf", "PyPDF2", "pptx", "docx", "fontTools")
+
+#: Typographic ligatures a PDF's text layer often carries as single characters (F-09).
+LIGATURES = str.maketrans({"\ufb00": "ff", "\ufb01": "fi", "\ufb02": "fl", "\ufb03": "ffi",
+                           "\ufb04": "ffl", "\ufb05": "st", "\ufb06": "st"})
 
 MEDIA_EXTENSIONS = {
     ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".wmv",
@@ -54,10 +71,32 @@ class Extraction:
     #: anchor → one-line labels for a private material's index (D-040): a slide's title, a
     #: page's printed label and the sections that start on it. Never body text.
     labels: dict[str, list[str]] = field(default_factory=dict)
-    #: True when `title` was taken from the body text (a PDF's or a text file's first line)
-    #: rather than a heading, a slide title or metadata — so a private material does not carry
-    #: a line of its text into the committed manifest and index
+    #: True when `title` was taken from the body text (a text file's first line) rather than a
+    #: heading, a slide title or metadata — so a private material does not carry a line of its
+    #: text into the committed manifest and index. A PDF's first line is never a title (F-12).
     title_from_body: bool = False
+    #: what the third-party reader complained about while reading it — captured, not printed
+    warnings: list[str] = field(default_factory=list)
+    #: (empty, total, "slides" | "pages") — how many slides or pages came out with no text (F-08)
+    empty: tuple[int, int, str] | None = None
+    #: set when the text is far smaller than the source (F-06): what to tell the teacher
+    low_yield: str = ""
+
+    def quality(self) -> list[str]:
+        """One line per thing the teacher should know about this extraction — low yield, empty
+        slides or pages, a reader that complained — so thin extraction is not mistaken for thin
+        teaching. Empty when there is nothing to say."""
+        notes = []
+        if self.low_yield:
+            notes.append(self.low_yield)
+        if self.empty and self.empty[0]:
+            empty, total, unit = self.empty
+            notes.append(f"{empty} of {total} {unit} have no text (pictures? OCR is not done in Core)")
+        if self.warnings:
+            first = self.warnings[0]
+            notes.append(f"the reader reported {len(self.warnings)} problem(s), e.g. \"{first}\" — "
+                         "the text may be degraded")
+        return notes
 
 
 @dataclass
@@ -68,6 +107,8 @@ class Probe:
     pages: int = 0
     status: str = INGESTED  # the status conversion is expected to produce
     reason: str = ""
+    #: what the reader complained about while probing — captured, reported once by name
+    warnings: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -97,22 +138,68 @@ def format_of(path: Path) -> str:
     return path.suffix.lower().lstrip(".") or "none"
 
 
+def title_from_name(path: Path | str) -> str:
+    """A title from a file name: the stem, `_` read as a space — `Unit_2_Heaps.pptx` → `Unit 2 Heaps`."""
+    return _clean(Path(path).stem.replace("_", " ")) or Path(path).stem
+
+
+class _Collect(logging.Handler):
+    def __init__(self, messages: list[str]):
+        super().__init__(logging.WARNING)
+        self.messages = messages
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.messages.append(_one_line(record.getMessage()))
+
+
+def _one_line(message: str, limit: int = 120) -> str:
+    """A library's message, first line only and short — pypdf's can dump a whole font dictionary."""
+    text = _clean(str(message).splitlines()[0] if str(message).strip() else "")
+    return text if len(text) <= limit else text[:limit - 1].rstrip() + "…"
+
+
+@contextmanager
+def quiet(messages: list[str]):
+    """Capture what the third-party readers log or warn while reading a file, instead of letting
+    it reach the teacher's terminal (F-03, F-10): 180 lines of font warnings buried the summary.
+    What was captured is reported once, by file name, in the summary."""
+    handler = _Collect(messages)
+    saved = []
+    for name in NOISY_LOGGERS:
+        logger = logging.getLogger(name)
+        saved.append((logger, logger.propagate))
+        logger.addHandler(handler)
+        logger.propagate = False
+    try:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            yield
+        messages += [_one_line(str(w.message)) for w in caught]
+    finally:
+        for logger, propagate in saved:
+            logger.removeHandler(handler)
+            logger.propagate = propagate
+
+
 def extract(path: Path) -> Extraction:
     """Convert one file. Never raises for a bad file: an unreadable one is `unsupported`."""
     extension = path.suffix.lower()
     if extension in MEDIA_EXTENSIONS:
-        return Extraction(MEDIA, title=path.stem,
+        return Extraction(MEDIA, title=title_from_name(path),
                           reason="audio/video: recorded, content not extracted in Core")
     extractor = EXTRACTORS.get(extension)
     if extractor is None:
-        return Extraction(UNSUPPORTED, title=path.stem, reason=_unsupported_hint(extension))
+        return Extraction(UNSUPPORTED, title=title_from_name(path), reason=_unsupported_hint(extension))
+    captured: list[str] = []
     try:
-        result = extractor.extract(path)
+        with quiet(captured):
+            result = extractor.extract(path)
     except Exception as exc:  # a corrupt or password-protected file must not stop the run
-        return Extraction(UNSUPPORTED, title=path.stem,
-                          reason=f"could not be read ({type(exc).__name__}: {exc}); "
-                                 "try exporting it to PDF")
-    result.title = _clean(result.title) or path.stem
+        return Extraction(UNSUPPORTED, title=title_from_name(path),
+                          reason=f"could not be read ({type(exc).__name__}: {_one_line(str(exc))}); "
+                                 "try exporting it to PDF", warnings=captured)
+    result.warnings = result.warnings + captured
+    result.title = _clean(result.title) or title_from_name(path)
     return result
 
 
@@ -124,8 +211,12 @@ def probe(path: Path) -> Probe:
     extractor = EXTRACTORS.get(extension)
     if extractor is None:
         return Probe(status=UNSUPPORTED, reason=_unsupported_hint(extension))
+    captured: list[str] = []
     try:
-        return extractor.probe(path)
+        with quiet(captured):
+            found = extractor.probe(path)
+        found.warnings = found.warnings + captured
+        return found
     except Exception as exc:
         return Probe(status=UNSUPPORTED, reason=f"could not be read ({type(exc).__name__})")
 
@@ -228,11 +319,18 @@ def _clean(text: str | None) -> str:
 # Metadata titles that are really the authoring tool talking, not the author.
 _JUNK_TITLE = re.compile(r"^(powerpoint presentation|presentation\d*|untitled.*|slide \d+|"
                          r"microsoft (word|powerpoint) - .*|document\d*)$", re.I)
+# …or a file name the tool recorded (`manual.dvi`, `chapter3.tex`, `C:\\notes\\x.doc`) — F-12.
+_FILE_NAME_TITLE = re.compile(r"^\S+\.(dvi|tex|ps|eps|pdf|docx?|pptx?|odt|odp|rtf|txt|md|html?|"
+                              r"indd|qxd|key|pages)$", re.I)
 
 
 def _title_from_metadata(value: str | None) -> str:
     value = _clean(value)
-    return "" if not value or _JUNK_TITLE.match(value) else value
+    if not value or _JUNK_TITLE.match(value) or _FILE_NAME_TITLE.match(value):
+        return ""
+    if "\\" in value or value.startswith("/"):  # a path, not a title
+        return ""
+    return value
 
 
 # -- built in: Markdown and plain text ----------------------------------------
@@ -285,16 +383,19 @@ def extract_pptx(path: Path) -> Extraction:
     lines: list[str] = []
     labels: dict[str, list[str]] = {}
     first_title = ""
+    empty = 0
 
     for number, slide in enumerate(deck.slides, start=1):
         anchor = f"slide-{number}"
         lines += [f"## Slide {number}", ""]
+        start = len(lines)
         if slide._element.get("show") == "0":
             lines += ["*(hidden slide)*", ""]
             labels.setdefault(anchor, []).append("*(hidden slide)*")
 
         title_shape = slide.shapes.title
-        title = _clean(title_shape.text_frame.text) if title_shape is not None and title_shape.has_text_frame else ""
+        title = (_clean(" ".join(_pptx_paragraph_text(p) for p in title_shape.text_frame.paragraphs))
+                 if title_shape is not None and title_shape.has_text_frame else "")
         if title:
             first_title = first_title or title
             lines += [f"**{title}**", ""]
@@ -305,10 +406,7 @@ def extract_pptx(path: Path) -> Extraction:
                 continue
             if getattr(shape, "has_text_frame", False) and shape.has_text_frame:
                 for paragraph in shape.text_frame.paragraphs:
-                    # A hyperlink is kept as a Markdown link, so its URL is readable in the
-                    # ingested text — links are no longer harvested as materials (D-040).
-                    text = _clean("".join(_linked(run.text, run.hyperlink.address if run.hyperlink is not None else None)
-                                          for run in paragraph.runs))
+                    text = _clean(_pptx_paragraph_text(paragraph))
                     if text:
                         lines.append(("  " * paragraph.level) + f"- {_escape_heading(text)}")
                 lines.append("")
@@ -326,8 +424,146 @@ def extract_pptx(path: Path) -> Extraction:
                 lines.append("> **Notes:** " + " ".join(notes.split()))
                 lines.append("")
 
+        if not any(line.strip() and line != "*(hidden slide)*" for line in lines[start:]):
+            empty += 1
+
     title = first_title or _title_from_metadata(deck.core_properties.title)
-    return Extraction(INGESTED, body="\n".join(lines).rstrip() + "\n", title=title, labels=labels)
+    body = "\n".join(lines).rstrip() + "\n"
+    return Extraction(INGESTED, body=body, title=title, labels=labels,
+                      empty=(empty, len(deck.slides), "slides"),
+                      low_yield=_low_yield(path, body, r"ppt/slides/slide\d+\.xml", "deck"))
+
+
+def _pptx_paragraph_text(paragraph) -> str:
+    """A slide paragraph's text, in order: runs (a hyperlink kept as a Markdown link, so its URL is
+    readable in the ingested text — links are not harvested as materials, D-040), fields, line
+    breaks, and Office Math equations (F-07), which python-pptx's `runs` leaves out."""
+    from pptx.text.text import _Run  # noqa: PLC0415
+
+    parts: list[str] = []
+    for child in paragraph._p.iterchildren():
+        tag = child.tag
+        if tag == f"{_A}r":
+            run = _Run(child, paragraph)
+            parts.append(_linked(run.text, run.hyperlink.address if run.hyperlink is not None else None))
+        elif tag == f"{_A}fld":
+            parts.append("".join(t.text or "" for t in child.iter(f"{_A}t")))
+        elif tag == f"{_A}br":
+            parts.append(" ")
+        elif tag == f"{_MC}AlternateContent":
+            parts.append(_alternate_text(child))
+    return "".join(parts)
+
+
+def _alternate_text(alternate) -> str:
+    """`mc:AlternateContent` in a slide: an equation in its `Choice` (PowerPoint's Office Math),
+    else whatever text its `Fallback` has — never both, they are the same content twice."""
+    choice = alternate.find(f"{_MC}Choice")
+    if choice is not None:
+        math = next((e for e in choice.iter() if e.tag in (f"{_M}oMathPara", f"{_M}oMath")), None)
+        if math is not None:
+            return f" {equation(math)} "
+        text = "".join(t.text or "" for t in choice.iter(f"{_A}t"))
+        if text:
+            return text
+    fallback = alternate.find(f"{_MC}Fallback")
+    return "".join(t.text or "" for t in fallback.iter(f"{_A}t")) if fallback is not None else ""
+
+
+def _low_yield(path: Path, body: str, parts: str, what: str) -> str:
+    """The low-yield note (F-06), or "": text far smaller than the document XML it came from."""
+    import zipfile  # noqa: PLC0415
+
+    try:
+        with zipfile.ZipFile(path) as archive:
+            xml = sum(info.file_size for info in archive.infolist() if re.fullmatch(parts, info.filename))
+    except (OSError, zipfile.BadZipFile):
+        return ""
+    text = "".join(line for line in body.splitlines()
+                   if not line.startswith("## ") and line.strip() != "*(hidden slide)*")
+    characters = len("".join(text.split()))
+    if xml < LOW_YIELD_MIN_XML or characters >= LOW_YIELD_RATIO * xml:
+        return ""
+    return (f"only {characters} characters of text from a {_kb(path.stat().st_size)} {what} — text "
+            "boxes, pictures or embedded objects may not have been read; check the ingested file")
+
+
+def _kb(size: int) -> str:
+    return f"{size / 1024:.0f} KB" if size < 1024 * 1024 else f"{size / 1024 / 1024:.1f} MB"
+
+
+# -- Office Math (OMML) as linear text — F-07 ----------------------------------
+
+_A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+_M = "{http://schemas.openxmlformats.org/officeDocument/2006/math}"
+_MC = "{http://schemas.openxmlformats.org/markup-compatibility/2006}"
+_W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+
+
+def equation(element) -> str:
+    """An Office Math equation (`m:oMath`, `m:oMathPara`) as linear text in a code span —
+    `(a)/(b)`, `x^(2)`, `∑_(i=1)^(n) i` — or `[equation]` when nothing can be read from it, so a
+    reader knows something is there. For an algorithms course the equations are the content."""
+    text = _clean(_omml(element))
+    return f"`{text.replace('`', chr(39))}`" if text else "[equation]"
+
+
+def _omml(element) -> str:
+    tag = element.tag
+    if not isinstance(tag, str) or not tag.startswith(_M):
+        # Office Math may hold a word-processing run (w:r → w:t) or a drawing run (a:t)
+        if tag in (f"{_W}t", f"{_A}t"):
+            return element.text or ""
+        return "".join(_omml(child) for child in element)
+    name = tag[len(_M):]
+
+    def part(child: str) -> str:
+        found = element.find(f"{_M}{child}")
+        return _clean(_omml(found)) if found is not None else ""
+
+    def prop(path: str, default: str) -> str:
+        found = element.find(path)
+        return found.get(f"{_M}val", default) if found is not None else default
+
+    if name == "t":
+        return element.text or ""
+    if name.endswith("Pr") or name == "ctrlPr":
+        return ""
+    if name == "f":
+        return f"({part('num')})/({part('den')})"
+    if name == "sSup":
+        return f"{part('e')}^({part('sup')})"
+    if name == "sSub":
+        return f"{part('e')}_({part('sub')})"
+    if name == "sSubSup":
+        return f"{part('e')}_({part('sub')})^({part('sup')})"
+    if name == "sPre":
+        return f"_({part('sub')})^({part('sup')}){part('e')}"
+    if name == "rad":
+        degree = part("deg")
+        return f"root({degree})({part('e')})" if degree else f"√({part('e')})"
+    if name == "nary":
+        symbol = prop(f"{_M}naryPr/{_M}chr", "∫")
+        low, high = part("sub"), part("sup")
+        return symbol + (f"_({low})" if low else "") + (f"^({high})" if high else "") + " " + part("e")
+    if name == "d":
+        begin = prop(f"{_M}dPr/{_M}begChr", "(")
+        end = prop(f"{_M}dPr/{_M}endChr", ")")
+        separator = prop(f"{_M}dPr/{_M}sepChr", "|")
+        return begin + f" {separator} ".join(_clean(_omml(e)) for e in element.findall(f"{_M}e")) + end
+    if name == "func":
+        return f"{part('fName')} {part('e')}"
+    if name in ("limLow", "limUpp"):
+        return f"{part('e')}{'_' if name == 'limLow' else '^'}({part('lim')})"
+    if name in ("acc", "bar"):
+        mark = prop(f"{_M}accPr/{_M}chr", "̂") if name == "acc" else "‾"
+        return f"{part('e')}{mark}"
+    if name == "m":
+        rows = ["; ".join(_clean(_omml(e)) for e in row.findall(f"{_M}e")) for row in element.findall(f"{_M}mr")]
+        return "[" + " | ".join(rows) + "]"
+    if name in ("eqArr", "oMathPara"):
+        return "; ".join(_clean(_omml(child)) for child in element if not child.tag.endswith("Pr"))
+    return "".join(_omml(child) for child in element)
 
 
 def _linked(text: str, address: str | None) -> str:
@@ -366,6 +602,7 @@ def extract_pdf(path: Path) -> Extraction:
     sections = _outline_by_page(reader)
     labels: dict[str, list[str]] = {}
 
+    empty = 0
     for index, page in enumerate(reader.pages):
         number = index + 1
         anchor = f"page-{number}"
@@ -378,12 +615,14 @@ def extract_pdf(path: Path) -> Extraction:
             lines += [f"*(printed page {page_label})*", ""]
             labels.setdefault(anchor, []).append(f"*(printed page {label(page_label)})*")
         for title in sections.get(index, []):
-            labels.setdefault(anchor, []).append(f"*(section: {label(title)})*")
+            labels.setdefault(anchor, []).append(f"*(section: {label(title.translate(LIGATURES))})*")
         try:
-            text = page.extract_text() or ""
+            text = (page.extract_text() or "").translate(LIGATURES)
         except Exception:  # one bad page must not lose the rest of the document
             text = ""
-        characters += len("".join(text.split()))
+        page_characters = len("".join(text.split()))
+        characters += page_characters
+        empty += page_characters == 0
         for line in text.splitlines():
             line = line.rstrip()
             lines.append(_escape_heading(line) if line else "")
@@ -395,6 +634,8 @@ def extract_pdf(path: Path) -> Extraction:
                 lines += [f"*(link: {uri})*", ""]
 
     pages = len(reader.pages)
+    # A PDF's title is its metadata title, else the file name — never its first line of text,
+    # which is a running head, a copyright line or a page number as often as a title (F-12).
     metadata_title = _title_from_metadata((reader.metadata or {}).get("/Title"))
     body = "\n".join(lines).rstrip() + "\n"
 
@@ -405,9 +646,8 @@ def extract_pdf(path: Path) -> Extraction:
                           reason="no text layer (a scan?) — OCR is not done in Core; "
                                  "pages are anchored, the text is empty", labels=labels)
 
-    first_line = next((ln.strip() for ln in lines if ln.strip() and not ln.startswith(("## ", "*("))), "")
-    return Extraction(INGESTED, body=body, title=metadata_title or first_line[:80],
-                      labels=labels, title_from_body=not metadata_title)
+    return Extraction(INGESTED, body=body, title=metadata_title, labels=labels,
+                      empty=(empty, pages, "pages"))
 
 
 def _link_annotations(page) -> list[str]:
@@ -463,46 +703,83 @@ def extract_docx(path: Path) -> Extraction:
 
     document = docx.Document(str(path))
     lines: list[str] = []
-    first_heading = ""
+    headings_found: list[str] = []
 
-    body = document.element.body
-    for child in body.iterchildren():
-        if child.tag == qn("w:p"):
-            paragraph = Paragraph(child, document)
-            text = _clean(_paragraph_text(paragraph))
-            if not text:
-                continue
-            level = _heading_level(paragraph.style.name if paragraph.style is not None else "")
-            if level:
-                first_heading = first_heading or text
-                lines += ["", f"{'#' * level} {text}", ""]
-            elif (paragraph.style is not None and "List" in paragraph.style.name):
-                lines.append(f"- {_escape_heading(text)}")
-            else:
-                lines += [_escape_heading(text), ""]
-        elif child.tag == qn("w:tbl"):
-            table = Table(child, document)
-            lines += [""] + _table_rows([[cell.text for cell in row.cells] for row in table.rows]) + [""]
+    def blocks(container) -> None:
+        """Paragraphs and tables in order — and after each paragraph, the text boxes anchored in
+        it (F-06: an official syllabus made of text boxes came out as 13 characters)."""
+        for child in container.iterchildren():
+            if child.tag == qn("w:p"):
+                paragraph = Paragraph(child, document)
+                text = _clean(_docx_paragraph_text(child, paragraph))
+                if text:
+                    level = _heading_level(paragraph.style.name if paragraph.style is not None else "")
+                    if level:
+                        headings_found.append(text)
+                        lines.extend(["", f"{'#' * level} {text}", ""])
+                    elif paragraph.style is not None and "List" in paragraph.style.name:
+                        lines.append(f"- {_escape_heading(text)}")
+                    else:
+                        lines.extend([_escape_heading(text), ""])
+                for box in _text_boxes(child):
+                    blocks(box)
+            elif child.tag == qn("w:tbl"):
+                table = Table(child, document)
+                lines.extend([""] + _table_rows([[cell.text for cell in row.cells] for row in table.rows]) + [""])
 
+    blocks(document.element.body)
     markdown = "\n".join(lines).strip() + "\n"
     markdown = re.sub(r"\n{3,}", "\n\n", markdown)
 
-    title = first_heading or _title_from_metadata(document.core_properties.title)
-    return Extraction(INGESTED, body=markdown, title=title)
+    title = (headings_found[0] if headings_found else "") or _title_from_metadata(document.core_properties.title)
+    return Extraction(INGESTED, body=markdown, title=title,
+                      low_yield=_low_yield(path, markdown, r"word/document\.xml", "document"))
 
 
-def _paragraph_text(paragraph) -> str:
-    """A paragraph's text with its hyperlinks kept as Markdown links (D-040: a link inside a
-    document is readable in its ingested text, not harvested as a material)."""
+def _docx_paragraph_text(element, paragraph) -> str:
+    """A paragraph's text, in order: runs; hyperlinks kept as Markdown links (D-040: a link inside
+    a document is readable in its ingested text, not harvested as a material); Office Math as
+    linear text (F-07); and the runs inside tracked insertions, smart tags and content controls.
+    Text boxes are not here — `_text_boxes` reads them, once."""
     from docx.text.hyperlink import Hyperlink  # noqa: PLC0415
+    from docx.text.run import Run  # noqa: PLC0415
 
-    parts = []
-    for item in paragraph.iter_inner_content():
-        if isinstance(item, Hyperlink):
-            parts.append(_linked(item.text, item.address))
-        else:
-            parts.append(item.text)
+    parts: list[str] = []
+    for child in element.iterchildren():
+        tag = child.tag
+        if tag == f"{_W}r":
+            parts.append(Run(child, paragraph).text)
+        elif tag == f"{_W}hyperlink":
+            link = Hyperlink(child, paragraph)
+            parts.append(_linked(link.text, link.address))
+        elif tag in (f"{_M}oMath", f"{_M}oMathPara"):
+            parts.append(f" {equation(child)} ")
+        elif tag in (f"{_W}ins", f"{_W}smartTag", f"{_W}sdt", f"{_W}sdtContent", f"{_W}fldSimple",
+                     f"{_W}customXml"):
+            parts.append(_docx_paragraph_text(child, paragraph))
     return "".join(parts)
+
+
+def _text_boxes(element) -> list:
+    """The text boxes (`w:txbxContent`) anchored in a paragraph — the outermost ones only (a box
+    in a box is read with its parent), and from `mc:AlternateContent` the `Choice` or the
+    `Fallback`, never both: Word writes the same box twice, as DrawingML and as VML."""
+    boxes = []
+    for box in element.iter(f"{_W}txbxContent"):
+        ancestor, keep = box.getparent(), True
+        while ancestor is not None and ancestor is not element:
+            if ancestor.tag == f"{_W}txbxContent":
+                keep = False
+                break
+            if ancestor.tag == f"{_MC}Fallback":
+                choice = ancestor.getparent().find(f"{_MC}Choice")
+                if choice is not None and next(choice.iter(f"{_W}txbxContent"), None) is not None:
+                    keep = False
+                    break
+            ancestor = ancestor.getparent()
+        if keep:
+            boxes.append(box)
+    return boxes
 
 
 def _heading_level(style: str) -> int:

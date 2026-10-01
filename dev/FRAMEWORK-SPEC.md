@@ -873,7 +873,7 @@ Severity is the default; **(target)** means not built yet. Every rule is also a 
 | `unknown_rule` | a rule code in `course.yaml` `rules:`, a methodology's `rules:`, or an `accepted:` entry names no rule — a typo that would otherwise silently do nothing | advisory | warn |
 | `accepted_without_reason` | an `accepted:` entry gives no `reason` (or a blank one). The exception still takes effect (D-038) | advisory | warn |
 | `material_locator_in_text` | a `M<NNNN>#anchor` in the Markdown body of a course file (not `LOG.md`, not `ingested/`) names a real material and anchor (§8.7). Consistency rule | integrity, reported as advisory (prose) | warn |
-| `materials_not_ingested` | a source (file or `links.md` line) is new, changed, moved or gone since the last ingest — one finding, reported against `materials/manifest.yaml` (D-035). **Ignores `source/private/`** (D-040): its files are not looked at and private materials are not judged — what is there differs per machine, and `classkit doctor` reports it. For a material whose hand-edit refusal awaits the teacher, the message says so and names `classkit ingest --keep ID` / `--overwrite ID`, not "run /ingest" (target, F-25) | advisory | warn |
+| `materials_not_ingested` | a source (file or `links.md` line) is new, changed, moved or gone since the last ingest — one finding, reported against `materials/manifest.yaml` (D-035). **Ignores `source/private/`** (D-040): its files are not looked at and private materials are not judged — what is there differs per machine, and `classkit doctor` reports it. For a material whose hand-edit refusal awaits the teacher, the message says so and names `classkit ingest --keep ID` / `--overwrite ID`, not "run /ingest" (F-25): its source changed and its ingested file differs from `ingested_hash` | advisory | warn |
 | `course_gitignore_missing` | `course/.gitignore` is absent or does not list `materials/source/private/` and `materials/private-text/` (§8.7). Reported against `course/.gitignore`. Consistency rule | advisory | warn |
 | `instructor_material_cited` | a student-facing locator (today a study path's `ref`; step 4 adds `answer`, D-019) names a material with `audience: instructor` (D-040). Consistency rule | advisory | **alert** |
 | `private_material_committed` | git tracks a file under `materials/source/private/` or `materials/private-text/` (any case) — it is in the repo's history; removing it from history is the teacher's decision. One finding, reported against `materials/manifest.yaml`; skipped silently outside git (D-040). Consistency rule | advisory | warn |
@@ -1076,7 +1076,7 @@ unless `links.md` lists it, and listing it restores its old id, so a locator to 
 | Field | Type | Req | Notes |
 |---|---|---|---|
 | `id` | `M<NNNN>` | ✓ | assigned once, never reused |
-| `title` | string | ✓ | the first slide title or heading, else the file's metadata title — unless it is tool boilerplate ("PowerPoint Presentation", "Microsoft Word - …") **or looks like a file name** (`manual.dvi`, `*.tex`, `*.pdf`; target, D-040/F-12) — else the file name, cleaned of `_` and extension. **Never a PDF's first line of text** (target, D-040/F-12; already so for private material, G-9). A link's fetched title, else its note, else its URL. Editable; re-ingest keeps it |
+| `title` | string | ✓ | the first slide title or heading, else the file's metadata title — unless it is tool boilerplate ("PowerPoint Presentation", "Microsoft Word - …") **or looks like a file name or a path** (`manual.dvi`, `*.tex`, `*.pdf`, `C:\…`; D-040/F-12) — else the file name, cleaned of `_` and extension. **Never a PDF's first line of text** (D-040/F-12). A plain-text file, which has nothing else, is still titled by its first line — except a private one (G-9). A link's fetched title, else its note, else its URL. Editable; re-ingest keeps it |
 | `format` | string | ✓ | `pptx`, `pdf`, `docx`, `md`, `odt`, `url`, … |
 | `kind` | enum | ✓ | `slides \| textbook \| notes \| exam \| exercise \| syllabus \| reading \| link \| video \| other` — set by the classifying agent, correctable by the teacher |
 | `sources` | array\<string\> | ✓ | paths under `source/` (or the URL); **more than one when duplicates were merged** |
@@ -1283,11 +1283,12 @@ locators rot.
   The teacher can export it to PDF and re-ingest.
 - **Flagged, not handled in Core:** scanned PDFs with no text layer (`no-text` — would need OCR) and
   audio/video files (`media` — recorded, content not extracted).
-- **Extraction quality (target, D-040 — the hand test's F-03, F-06–F-10).**
+- **Extraction quality (D-040 — the hand test's F-03, F-06–F-10).**
   - **DOCX text boxes** (`w:txbxContent`, including inside `mc:AlternateContent` — read the
     `Choice` or the `Fallback`, never both) are extracted with the body. An official syllabus made of
     text boxes came out as 13 characters.
-  - **Equations** in slides and documents (Office Math, `m:oMath`) are extracted as linear text where
+  - **Equations** in slides and documents (Office Math, `m:oMath`; in a deck, inside
+    `mc:AlternateContent`) are extracted as linear text in a code span — `` `(n)/(2)+x^(2)` `` — where
     possible, else as an `[equation]` placeholder, so a reader knows something is there.
   - **PDF text** is normalised: ligatures (`ﬁ`, `ﬂ`, …) expanded; the extractor's optional
     font-parsing dependency (fontTools, for `pypdf`) is installed, which fixes most broken
@@ -1295,8 +1296,12 @@ locators rot.
   - **Low yield is reported, never silent.** Per material, the run summary flags an extraction far
     smaller than its source (e.g. a few characters from a 45 KB document) and counts empty slides
     and pages ("20 of 37 slides have no text"), so thin extraction is not mistaken for thin teaching.
-  - **Library noise is captured**: third-party warnings are not printed; a degraded file is reported
-    once, by name, in the summary.
+    "Far smaller" is measured for DOCX and PPTX against the document's own XML (its pictures do not
+    count): under 0.005 characters per byte, once the XML is over 20 KB. A PDF's measure is its empty
+    pages (and `no-text` for a scan). `/ingest` passes these lines to the classifier.
+  - **Library noise is captured**: what the readers log or warn (pypdf, python-pptx, python-docx,
+    fontTools) is not printed; a file that drew complaints is reported once, by name, with the count
+    and the first message — in the pre-flight and in the run summary.
 - **Adding a format** is one extractor registered by file extension — an extension point like adding a
   methodology (§2.5). In code: `@register(".ext")` in `src/classkit/ingest/extract.py`, a function
   from a path to the extracted Markdown, its title, and a status (and, for a private material's index,
@@ -1324,7 +1329,8 @@ classkit doctor [--course DIR]
 
 1. **Pre-flight, no processing** — `classkit ingest --preflight` writes nothing. Files found by
    format and total size, total slides and PDF pages, links in `links.md`,
-   non-link lines in `links.md`, what changed since the last ingest — **by name and id**, not only counted (target, F-23) —, exact copies (merged
+   non-link lines in `links.md`, what changed since the last ingest — **by name and id**, not only counted (F-23; up to 15 per kind) —, files the
+   reader complained about (once each), exact copies (merged
    silently), unsupported and media files with their hints, and a rough
    time estimate. Then the command **waits for approval** (§5.2).
 2. **Convert** — `classkit ingest` processes only materials that are new or whose source changed

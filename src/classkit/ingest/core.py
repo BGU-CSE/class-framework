@@ -155,6 +155,9 @@ class Plan:
     #: (id, why) — materials whose conversion is due: changed, file missing, refused last time,
     #: or a converter that is now available
     pending: list[tuple[str, str]] = field(default_factory=list)
+    #: ids whose source changed while their ingested file holds a hand edit: the next run will
+    #: refuse until the teacher answers `--keep ID` or `--overwrite ID` (F-25)
+    awaiting: list[str] = field(default_factory=list)
     rejected_link_lines: list[tuple[int, str]] = field(default_factory=list)
 
     def outstanding(self) -> list[str]:
@@ -164,7 +167,10 @@ class Plan:
         for item in self.new:
             lines.append(f"new: {item.paths[0]}" + (f" (+{len(item.paths) - 1} identical)" if len(item.paths) > 1 else ""))
         lines += [f"new link: {link.url}" for link in self.new_links]
-        lines += [f"changed: {path} ({mid})" for mid, path in self.changed]
+        lines += [f"changed: {path} ({mid})" for mid, path in self.changed if mid not in self.awaiting]
+        lines += [f"awaiting your decision on {mid}: its ingested file was edited by hand and its "
+                  f"source has changed — `classkit ingest --keep {mid}` keeps your edit, "
+                  f"`--overwrite {mid}` replaces it" for mid in self.awaiting]
         lines += [f"moved: {old} → {new} ({mid})" for mid, old, new in self.moved]
         lines += [f"duplicate of {mid}: {path}" for mid, path in self.duplicates]
         lines += [f"copy no longer identical: {path} (was part of {mid})" for mid, path in self.detached]
@@ -174,8 +180,14 @@ class Plan:
         lines += [f"link found inside a material, not in links.md — no longer recorded: {mid}"
                   for mid in self.unharvested]
         changed_ids = {mid for mid, _ in self.changed}
-        lines += [f"not converted: {mid} — {why}" for mid, why in self.pending if mid not in changed_ids]
+        lines += [f"not converted: {mid} — {why}" for mid, why in self.pending
+                  if mid not in changed_ids and mid not in self.awaiting]
         return lines
+
+    def needs_ingest(self) -> bool:
+        """Is there anything a plain `classkit ingest` would settle? Not true of a refusal awaiting
+        the teacher's answer, which the same run would only refuse again."""
+        return any(not line.startswith("awaiting your decision") for line in self.outstanding())
 
 
 def reconcile(course_root: Path, records: list[dict], files: list[SourceFile],
@@ -340,6 +352,8 @@ def reconcile(course_root: Path, records: list[dict], files: list[SourceFile],
         status = record.get("status")
         if current and current != record.get("source_hash"):
             plan.pending.append((record["id"], "source changed since it was last converted"))
+            if not private and _hand_edited(course_root, record):
+                plan.awaiting.append(record["id"])
         elif status in HAS_FILE and ingested_file(course_root, record["id"]) is None:
             plan.pending.append((record["id"], "its ingested file is missing"))
         elif private != bool(record.get("private")):
@@ -369,6 +383,13 @@ def front_matter_of(path: Path) -> dict:
     except (OSError, UnicodeDecodeError, yaml.YAMLError):
         pass
     return {}
+
+
+def _hand_edited(course_root: Path, record: dict) -> bool:
+    """Its ingested file differs from what ingest last wrote — the teacher's edit."""
+    path = ingested_file(course_root, record["id"])
+    return (path is not None and bool(record.get("ingested_hash"))
+            and sha256_bytes(path.read_bytes()) != record["ingested_hash"])
 
 
 def _full_text_due(course_root: Path, record: dict) -> bool:
@@ -407,6 +428,14 @@ class Preflight:
     seconds: float
     to_convert: int
     private: int = 0  # files under source/private/
+    #: (path, what the reader logged) — files a third-party reader complained about, once each
+    complaints: list[tuple[str, list[str]]] = field(default_factory=list)
+
+
+#: Rough conversion cost for the pre-flight estimate. Calibrated on the hand test (F-14): 2141 PDF
+#: pages took 126 s of CPU, ~0.06 s a page, before fontTools; it parses fonts too, so a little more.
+SECONDS_PER_PAGE = 0.07
+SECONDS_PER_SLIDE = 0.03
 
 
 def preflight(course_root: Path, *, fetch: bool = True) -> Preflight:
@@ -420,11 +449,15 @@ def preflight(course_root: Path, *, fetch: bool = True) -> Preflight:
     slides = pages = 0
     unsupported: list[tuple[str, str]] = []
     media: list[str] = []
+    complaints: list[tuple[str, list[str]]] = []
+    probes: dict[str, ex.Probe] = {}
     for f in files:
         by_format[f.format] += 1
-        probe = ex.probe(f.path)
+        probe = probes[f.rel] = ex.probe(f.path)
         slides += probe.slides
         pages += probe.pages
+        if probe.warnings:
+            complaints.append((f.rel, probe.warnings))
         if probe.status == ex.UNSUPPORTED:
             unsupported.append((f.rel, probe.reason))
         elif probe.status == ex.MEDIA:
@@ -449,14 +482,15 @@ def preflight(course_root: Path, *, fetch: bool = True) -> Preflight:
     seconds = 0.0
     for f in files:
         if f.rel in due:
-            probe = ex.probe(f.path)
-            seconds += ex.seconds_for(f.path) + 0.04 * probe.pages + 0.02 * probe.slides
+            probe = probes[f.rel]
+            seconds += ex.seconds_for(f.path) + SECONDS_PER_PAGE * probe.pages + SECONDS_PER_SLIDE * probe.slides
     seconds += (1.5 if fetch else 0.0) * len(plan.new_links)
 
     return Preflight(
         files=files, plan=plan, links_listed=len(links.links), by_format=dict(sorted(by_format.items())),
         size=sum(f.size for f in files), slides=slides, pages=pages,
         unsupported=unsupported, media=media, exact_duplicates=exact, seconds=seconds,
+        complaints=complaints,
         to_convert=len(due) + len(plan.new_links),
         private=sum(1 for f in files if is_private(f.rel)),
     )
@@ -478,6 +512,9 @@ class Converted:
     #: True when only this machine's full text was written: nothing committed changed, so the
     #: run is not a change to the course (not logged, not "updated")
     local: bool = False
+    #: what the teacher should know about the extraction — low yield, empty slides or pages, a
+    #: reader that complained (F-06, F-08, F-03/F-10); reported once, by id, in the summary
+    quality: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -786,7 +823,7 @@ def _convert(course_root: Path, record: dict, source: SourceFile, date: str, rep
         # A private material's title is committed (manifest, index), so it is never a line of
         # its body text: a heading, slide title or metadata title, else the file name.
         from_body = private and result.title_from_body
-        record["title"] = (not from_body and result.title) or Path(source.rel).stem
+        record["title"] = (not from_body and result.title) or ex.title_from_name(source.rel)
     if not record.get("kind"):
         record["kind"] = _default_kind(record.get("format", ""), result.status)
     record["format"] = source.format
@@ -863,7 +900,8 @@ def _convert(course_root: Path, record: dict, source: SourceFile, date: str, rep
     if committed:
         record["ingested_at"] = date
     return Converted(record["id"], record["title"], result.status, source.rel, ingested_rel,
-                     result.reason, new, full_text=full_text_rel, local=not committed)
+                     result.reason, new, full_text=full_text_rel, local=not committed,
+                     quality=result.quality())
 
 
 def _refusal_reason(record: dict, path: Path, field_name: str | None) -> str:

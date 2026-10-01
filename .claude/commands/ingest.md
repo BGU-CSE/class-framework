@@ -75,15 +75,21 @@ classkit ingest --no-log
 ingest` logs itself. Only new or changed sources are converted; an interrupted run resumes. Show the summary: what was
 added (with ids), updated, moved (same id), and removed (marked, not forgotten). Links are recorded
 only from `links.md` — nothing is harvested from inside slides or documents.
+**Show every line under "Check these extractions"** — a document that came out far smaller than
+its source, slides or pages with no text, a file the reader complained about — and pass them to the
+classifier in step 3: thin extraction is not thin teaching. Where a teacher had corrected a bad
+extraction by hand and a newer framework version now extracts it properly (Word text boxes, for
+one), they may prefer `--overwrite` for it once.
 A private material is written twice: its index to `ingested/` and its full text to `private-text/`
 (this machine only). A `full text` line means only this machine's copy was written — nothing
 committed changed, so it is not part of the log entry.
 
 **If it exits with code 3**, some files may hold **edits made by hand** — an ingested file, or a
 private material's full text — and replacing them would lose those edits. Each refusal says why
-(edited, and its source changed; or a full text made from another version of the source). For each
-one, show the teacher their edit (`git diff` on a committed file, the preview in the output for a
-full text, which git does not track) and ask: replace it with a fresh extraction, or keep it? Then
+(edited by hand, and its source changed). For each one the output shows **what `--overwrite` would
+change**, anchor by anchor ("Slide 9: …") — the current file against a fresh extraction of the new
+source; it holds both the teacher's edit and the source's change. Show the teacher that (and
+`git diff` on a committed file, if it helps) and ask: replace it with a fresh extraction, or keep it? Then
 run exactly what they chose:
 
 ```bash
@@ -102,7 +108,8 @@ classkit log "/ingest, conversion approved" --changed "M0001..M0023 ingested (�
 
 ## Step 3 — Classify.
 
-Use the **material-classifier** agent. Tell it which ids are new or updated this run, **tell it which private materials are index-only on this machine** (from step
+Use the **material-classifier** agent. Tell it which ids are new or updated this run, give it the "Check these extractions" lines
+from step 2, **tell it which private materials are index-only on this machine** (from step
 0), and pass on anything the teacher said they care about (`$1`). It has no tool that writes or
 runs anything: it **returns** a classification table with the same values as a YAML block —
 including each material's `audience`, with a reason for every `instructor` — any published book it
