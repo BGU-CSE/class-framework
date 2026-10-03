@@ -32,7 +32,7 @@ Show it to the teacher. Then read `course/course.yaml` and the recent entries in
 - **The syllabus is already a draft or approved:** this run is a **revision** (§5.2 rule 3) — go to
   step 3 with what the teacher wants changed (`$1`, if given; otherwise ask). Re-drafting from
   scratch is only on the teacher's explicit word, and still goes through step 2's diff.
-- **Not started** (the scaffolded placeholders): steps 1 → 4.
+- **Not started** (the scaffolded placeholders): steps 1 → 4, then the optional step 5.
 
 Run `classkit doctor` and note which private materials are **index-only on this machine** — the
 agent must be told (a book's table of contents is in its index, so this is rarely a problem).
@@ -147,7 +147,7 @@ formality: say what is still TBD, so they approve knowingly.
 classkit approve syllabus --why "<in a line: what was approved, and what is knowingly still TBD>"
 ```
 
-It records `approved: {on, hash}` in the syllabus's front matter through the write path and logs
+It records `approved: {date, hash}` in the syllabus's front matter through the write path and logs
 the approval itself — no separate `classkit log`. `classkit approve syllabus --diff` shows the change
 first, if the teacher wants to see it. Show `classkit status` afterwards: the syllabus now reads
 "approved".
@@ -157,9 +157,48 @@ Tell the teacher:
 - **Edits after approval are normal.** Nothing un-approves; `classkit status` will say "edited
   since", and approving again records the new version.
 - **Next:** `/plan-units N…` plans unit objectives for the units named, against this syllabus — the
-  units with material first.
+  units with material first. Before that, step 5 (optional) brings the materials' unit hints into
+  line with the approved map.
 - **Uploading to the university:** for now, copy from `syllabus.md` — the body is written for that.
   A formatted document is a later export.
+
+## Step 5 — Optional: update the materials' unit hints to the approved map.
+
+Each material's `units` in `materials/manifest.yaml` is a hint — which units it supports — that
+`/plan-units` reads to find a unit's material. The classifier guessed those hints at `/ingest`,
+**before any unit map existed** (D-039), so they may point at the wrong numbers now. Offer this step
+once the map is approved, and again whenever the map changes; the teacher may skip it.
+
+1. **Propose corrections — yourself, in this conversation.** Read the manifest (each material's
+   `id`, `title`, `kind`, `units`), the approved `unit_map` — above all each entry's `evidence`, which
+   names exactly which materials the plan for that unit rests on — and `materials/coverage.md`. Open
+   an ingested file (its title slide, its headings) only where the title leaves it unclear. Do not
+   propose a change you cannot justify from those; leave the hint as it is and say so.
+2. **Keep what the teacher set.** The manifest does not record who set a hint, and the log may
+   not either. Look in `course/LOG.md` for hints the teacher set or corrected (`/ingest`'s
+   classification entry, an entry about `classkit material set`); where it does not say, **ask the
+   teacher** whether they set any hints themselves before proposing. Those are **kept unless the
+   teacher agrees** to change them: mark them "you set this" in the table.
+3. **Show a table** — material, title, units now → units proposed, why (a map entry's evidence, the
+   deck's title slide) — only the rows that would change. Course-wide material (`all`: the
+   textbook, the course Gem) stays `all`. **Wait** for the teacher's confirmation, row by row or all.
+4. **Record what was confirmed**, all in one batch (all or nothing):
+
+   ```bash
+   classkit material apply <<'YAML'
+   - {id: M0007, units: [U03]}
+   - {id: M0012, units: [U05, U06]}
+   YAML
+   ```
+
+   Then log:
+
+   ```bash
+   classkit log "/plan-syllabus, step 5 — unit hints updated to the approved map" \
+     --changed "units re-mapped: M0007 → U03; M0012 → U05, U06" \
+     --why "the hints were guessed at /ingest, before the map existed; checked against the map's evidence" \
+     --file materials/manifest.yaml
+   ```
 
 ---
 
