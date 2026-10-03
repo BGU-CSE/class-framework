@@ -1577,3 +1577,25 @@ faithfully" rule); the first `git clone` stays outside. **Decided (Avin):**
 4. **`dev/MANUAL-TESTING.md`**: a "work in the chat" convention for every section; the syllabus
    section rewritten that way (and its stale "nothing checks the evidence locators" corrected, D-044).
 
+## D-046 — The units increment: what a planned unit holds; unit states
+**Date:** 2026-10-03 · **Status:** locked (design) — spec §3.1, §5.1, §8.2, §8.4, §8.9; ledger D-046
+
+The second increment of the re-oriented Core (D-043). Decided with Avin:
+1. **`difficulties`, optional** — what students find hard in the unit. Avin: in a newly flipped
+   course the teacher may not know them yet; planning continues without. The agent may **propose**
+   classic ones for a well-known subject, recorded only if the teacher accepts and marked
+   `origin: proposed` (vs `teacher`), so the quiz and class-hour agents know which are guesses.
+2. **Two unit states, the syllabus's mechanism:** *planned* (objectives approved at `/plan-units`)
+   and *designed* (the whole unit approved at the end of `/design-unit`, the hash over unit.md,
+   sessions, in-class and entry-quiz items). *Not started* = on the map, no directory. Review is not
+   a state; nothing is blocked by state. One approval per milestone, over per-part approvals.
+3. **Re-mapping the materials' unit hints (D-039) moves to `/plan-syllabus`**, an optional step
+   after the map is approved — the map now lives in the syllabus.
+4. **`unit_map_mismatch` (warn) is built now** — a unit's number and title live in the map and in
+   `unit.md`; the one place duplication makes drift likely. A map entry with no directory is *not
+   started*, not a mismatch.
+5. **`planning-units` skill** (D-044): objectives, sequencing, load, difficulties; loaded by
+   `curriculum-architect` (rewritten read-only, reading `ingested/` and `coverage.md`), the chat
+   revising, and the critic.
+Also: retiring `/write-items` and `/design-unit N [part]` move to the design increments.
+

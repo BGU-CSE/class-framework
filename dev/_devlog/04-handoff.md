@@ -38,7 +38,13 @@ approve syllabus` (`approved: {date, hash}`), `classkit status`. Suite: **320 te
   materials (this is also step 2's re-test — CLRS readability, F-09); `/plan-syllabus` through to
   approval; `/review-syllabus`; `classkit status`. `dev/MANUAL-TESTING.md` has the section. Known
   staging gap: `/plan-units` still behaves the old way until the units increment (G-11).
-- **Then** the units increment's spec (`/plan-units N…`, unit states), applying D-044.
+- **The units increment is specified** (D-046; ledger rows **[units]**): optional `difficulties`
+  (origin teacher/proposed); unit states *planned* / *designed* with the syllabus's approval
+  mechanism (`classkit approve unit N`); the materials' unit-hint re-map moved to `/plan-syllabus`
+  step 5; `unit_map_mismatch` (warn); the `planning-units` skill and a read-only
+  `curriculum-architect`. Ready to build. Open: whether the coverage alerts
+  (`objective_maps_to_outcome`, `outcome_coverage`) are built now or parked.
+- **Then** the home-study and class-hour increments ([design]) — the heart of Core.
 
 ## Current state — 2026-10-03 (the syllabus increment built)
 

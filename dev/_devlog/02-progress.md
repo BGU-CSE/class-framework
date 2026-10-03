@@ -1777,3 +1777,10 @@ Avin preferred working only in the chat UI. Agreed the chat runs `classkit`; mad
 §5.2 principle, root `CLAUDE.md` instructions (how to run it, report faithfully), read-only commands
 pre-allowed in `.claude/settings.json`, `GETTING-STARTED.md` and `MANUAL-TESTING.md` chat-first.
 
+## Session 39 — 2026-10-03 — The units increment specified (→ D-046)
+
+Remaining Core increments laid out (units, home study, class hour with entry quiz, review). Units
+decided with Avin: optional `difficulties` with origin; *planned*/*designed* states; the materials
+re-map moved to `/plan-syllabus`; `unit_map_mismatch` built now; `planning-units` skill. Spec §3.1,
+§5.1, §8.2, §8.4, §8.9; D-046; ledger (219 changes).
+
