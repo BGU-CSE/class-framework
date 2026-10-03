@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(classkit validate:*)",
+      "Bash(.venv/bin/classkit validate:*)",
+      "Bash(classkit status:*)",
+      "Bash(.venv/bin/classkit status:*)",
+      "Bash(classkit doctor:*)",
+      "Bash(.venv/bin/classkit doctor:*)",
+      "Bash(classkit ingest --preflight:*)",
+      "Bash(.venv/bin/classkit ingest --preflight:*)",
+      "Bash(classkit mode)",
+      "Bash(.venv/bin/classkit mode)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {

@@ -9,6 +9,19 @@ This document is the procedure. It grows a section per implementation step (see 
 Each section was checked against the step that built it. Step 1's counts and validate summary were
 re-checked on 2026-10-01, after step 2c-2 (F-01); the other sections are as their steps left them.
 
+## Work in the chat, as a teacher would (D-045)
+
+A teacher never needs the terminal, so **test the way a teacher works: in the Claude Code chat.**
+Every `classkit …` line in this document is something to **ask the chat for in plain words** — "check
+the course", "show me the status", "approve the syllabus", "what does doctor say?". The command is
+shown so you can see that the chat ran the right thing, and what output to expect. Two things to
+check every time:
+
+- **Did it report faithfully?** Every alert and error, the warnings counted — not "a few minor
+  warnings". Ask for the full output when in doubt.
+- **Did a write ask you first?** `validate`, `status`, `doctor` and `ingest --preflight` run without
+  asking; anything that writes should ask.
+
 ## Set up a clean environment
 
 The framework **is** the working environment: a course repo is a clone of the framework with
@@ -336,43 +349,40 @@ your real materials, with nothing invented — revised with you, and approved. *
 the thing under test**; the tooling around it is small. Use the real course: a fresh clone and course
 (Steps 2c-1/2c-2 for ingest), with the old syllabus, the textbook (in `private/`), and the decks.
 
-```bash
-.venv/bin/classkit status
-# Syllabus  NOT STARTED: the scaffolded placeholders — run /plan-syllabus
-# Units     13 in course.yaml / no unit map yet; Materials: none ingested yet
+Ask the chat **"where does the course stand?"** It runs `classkit status`:
+
+```
+Syllabus  NOT STARTED: the scaffolded placeholders — run /plan-syllabus
+Units     13 in course.yaml / no unit map yet; Materials: none ingested yet
 ```
 
 Run `/ingest` first (status then shows the materials and "coverage report: materials/coverage.md"),
 then `/plan-syllabus`. Check, step by step:
 
-- **Step 0** shows `classkit status`, and `/ingest` now shows it too, before `doctor`.
+- **Step 0** shows the status, and `/ingest` now shows it too, before `doctor`.
 - **Step 1 — evidence.** It names the old syllabus, the book's index and the decks by id, says how
   far each reaches, which form it will mirror (your old syllabus's sections), and asks **only** what
   the evidence does not answer — credits if the old syllabus lacks them, grading, office hours.
   Each question says what the draft will do if you leave it unanswered. It waits.
-- **Step 2 — the draft** is written through the write path: the first write is refused (exit 3 —
-  the placeholders are there); it tells you so and asks before `--overwrite`. Then `classkit
-  validate` — no errors; `syllabus_workload_missing` only if workload is TBD.
+- **Step 2 — the draft** is written through the write path: the first write is refused (the
+  placeholders are there); it tells you so and asks before replacing them. Then it checks the
+  course — no errors; `syllabus_workload_missing` only if workload is TBD.
 - **The report** says where each part came from, gives the outcomes-against-units table, and lists
   every **TBD** and guess.
-- **Step 3 — revise.** Ask for one change ("CO2 too broad — split it"): you see a `--diff` touching
-  only that (and its prose in the body), nothing else; write on your OK; a log entry follows. Edit
-  the file by hand between rounds — the next round keeps your edit.
-- **Step 4 — approve.** Say "approve":
-
-```bash
-.venv/bin/classkit approve syllabus --diff      # the record it would add; nothing written
-.venv/bin/classkit approve syllabus --why "first approval"
-.venv/bin/classkit status                       # Syllabus  APPROVED: approved 2026-…
-# edit one word in the body, then:
-.venv/bin/classkit status                       # APPROVED, EDITED SINCE: … — edited since
-# reword a YAML comment only: still APPROVED (comments are not part of the hash)
-.venv/bin/classkit approve syllabus             # re-approves; the record is replaced in place
-tail -5 course/LOG.md                           # "classkit approve syllabus … re-approved …"
-```
+- **Step 3 — revise, in the chat** (D-044). Ask for one change ("CO2 is too broad — split it"):
+  the chat makes it itself, shows a diff touching only that (and its prose in the body), and writes
+  on your OK; a log entry follows. Edit the file by hand between rounds — the next round keeps your
+  edit. Ask for something structural ("reorder the map around graphs first") and it should send
+  `syllabus-designer` off for a **rework** instead.
+- **Step 4 — approve.** Say "approve". Then, in the chat:
+  - "show me the status" → `Syllabus  APPROVED: approved 2026-…`
+  - edit one word in the body yourself, then "show me the status" → `APPROVED, EDITED SINCE`
+  - reword only a YAML comment → still `APPROVED` (comments are not part of the hash)
+  - "approve the syllabus again" → re-approved; the record replaced in place
+  - "show me the last log entries" → `classkit approve syllabus … re-approved …`
 
   By hand: replace the block with `approved: {date: 2026-10-05}` → status says "edits since
-  cannot be tracked", and `validate` has no error.
+  cannot be tracked", and checking the course gives no error.
 - **`/review-syllabus`** (optional): the critic's findings, ordered by damage, broken vs. taste;
   nothing written; fixes go back through `/plan-syllabus`.
 
@@ -384,10 +394,11 @@ tail -5 course/LOG.md                           # "classkit approve syllabus …
   the old syllabus does not have. This is the failure that matters most.
 - **Are the outcomes outcomes** — assessable capabilities, a handful, each spanning units — not
   topic labels or one per unit?
-- **Is the unit map right**, and are its `evidence` locators the right slides and pages? Nothing
-  checks them (gap report G-2) — open a few.
+- **Is the unit map right**, and are its `evidence` locators the right slides and pages? A locator
+  that does not exist is warned about (`material_locator_in_text`, D-044); one that exists but is the
+  wrong slide is not — open a few.
 - **The AI-use policy** — proposed, concrete, and marked as a proposal?
-- **Did it quote the private book?** `classkit doctor` after the draft — any ACTION is a D-042
+- **Did it quote the private book?** Ask "what does doctor say?" after the draft — any ACTION is a D-042
   breach. Read the Reading and Course description sections yourself too.
 - **Did the gates hold** — one step at a time, nothing written before you saw it (except the draft,
   which is written to be read, and shown at once)?

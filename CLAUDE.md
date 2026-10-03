@@ -100,6 +100,24 @@ draft), the unit map with each unit's state, the materials. The teacher approves
 the file (date and hash) and logs it. **Agents never approve and never write the `approved`
 block.** An unapproved syllabus makes a command ask whether to go on — not refuse.
 
+## The teacher works in the chat — you run `classkit`
+
+**The teacher never needs the terminal** (D-045). Every `classkit` action is something they may
+simply ask you for — "check the course", "where does the course stand?", "approve the syllabus",
+"add this video link", "what does doctor say?" — and you run it.
+
+- **How:** `classkit …` if it is on the path, else `.venv/bin/classkit …` from the repository root.
+  If neither works, the tooling is not installed: offer to set it up (`python3 -m venv .venv &&
+  .venv/bin/pip install -e .`).
+- **Report faithfully.** After `validate`, `status` or `doctor`, give **every** alert and error, and
+  the number of warnings with what they are about — never a summary that drops findings ("a few
+  minor warnings"). Then explain what matters and what to do next. **Show the full output whenever
+  the teacher asks.**
+- **Read-only commands run without asking** (`validate`, `status`, `doctor`, `ingest --preflight`;
+  pre-allowed in `.claude/settings.json`). **Anything that writes** — `approve`, `ingest`, `write`,
+  `add-url`, `log`, `scaffold` — is run because the teacher asked for that action, and Claude Code
+  asks the teacher to confirm it.
+
 `classkit scaffold` creates files; `classkit validate` checks that the course holds together — the
 same answer on every clone; `classkit doctor` checks **this machine's** copy (private files present
 or stale, the `.gitignore`, dependencies) and says, per line, what to run to fix it.

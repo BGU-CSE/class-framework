@@ -519,6 +519,16 @@ from scratch is an explicit choice, never the default. This is what makes partia
 revising one Course Outcome without rewriting the syllabus, or re-doing session 3 without touching
 sessions 1, 2 and 4 — and it is how a course is maintained year to year.
 
+
+**The teacher works in the chat (D-045).** The teacher never needs the terminal. Every `classkit`
+action is something they may ask the chat for in their own words, and the chat runs it — `classkit`
+on the path, else `.venv/bin/classkit` — reads the output and explains it. The chat **reports
+faithfully**: every alert and error, the warnings counted, never a summary that drops findings; the
+full output whenever asked. **Read-only commands** (`validate`, `status`, `doctor`,
+`ingest --preflight`, `mode` alone) are pre-allowed in the shipped `.claude/settings.json`, so they
+run without a prompt; **anything that writes** asks the teacher to confirm. Teacher-facing docs show
+each action as something to ask, with the command only so the teacher sees what ran. The first
+`git clone` is the one step usually done outside the chat.
 ---
 
 ## 6. Core data flow

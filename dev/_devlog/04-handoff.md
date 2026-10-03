@@ -31,6 +31,9 @@ approve syllabus` (`approved: {date, hash}`), `classkit status`. Suite: **320 te
   writing, logging, revisions with the teacher); agent = fresh context or independence, returns;
   skill = craft loaded by chat and agents; descriptions name their command. **The agent drafts, the
   chat revises.** To be applied to every other agent as it is rewritten.
+- **D-045 — the teacher works in the chat**: the chat runs `classkit` (root `CLAUDE.md` says how and
+  to report every finding); read-only commands pre-allowed in `.claude/settings.json`; docs
+  chat-first (`GETTING-STARTED.md`; `MANUAL-TESTING.md`'s convention and syllabus section).
 - **Next — Avin checks the syllabus increment on a real course:** a fresh clone; `/ingest` the real
   materials (this is also step 2's re-test — CLRS readability, F-09); `/plan-syllabus` through to
   approval; `/review-syllabus`; `classkit status`. `dev/MANUAL-TESTING.md` has the section. Known

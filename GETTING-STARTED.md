@@ -21,6 +21,22 @@ You need [Claude Code](https://claude.com/claude-code) and Python 3.10+.
 
 ---
 
+## You work in the chat
+
+**You never need the terminal.** Once the course repo is open in Claude Code, everything below is
+something you **ask the chat** for, in your own words — "create the course tree for 202-1-2051,
+Introduction to Data Structures", "check the course", "where does the course stand?", "approve the
+syllabus", "add this video link". The chat runs the `classkit` command for you, reads its output,
+and tells you what matters. The commands are shown in this guide so you know what is happening, not
+because you must type them.
+
+- Checks that only read (`classkit validate`, `status`, `doctor`) run without asking you.
+- Anything that writes asks you to confirm first.
+- The chat reports every alert and error it sees. If you want the raw output, ask for it.
+
+The one step that usually happens outside the chat is the very first `git clone` below. After that,
+open the folder in Claude Code and ask it to finish the setup.
+
 ## 1. Make your course repo
 
 Your course lives in **its own private repo**, created by cloning the framework. Keeping the
@@ -36,14 +52,17 @@ cd my-course
 git remote rename origin framework
 git remote add origin https://github.com/<owner>/my-course.git   # your private course repo
 git push -u origin main
-
-pip install -e .
 ```
+
+Then open `my-course` in Claude Code and ask: **"set up the classkit tooling"**. The chat runs
+`python3 -m venv .venv && .venv/bin/pip install -e .`.
 
 Your course repo stays private; the framework it came from is public. Pulling framework updates
 later works exactly the same either way.
 
 ## 2. Create the course tree
+
+Ask the chat: **"create the course tree for 202-1-2051, Introduction to Data Structures"**. It runs:
 
 ```bash
 classkit scaffold course --code "202-1-2051" --title "Introduction to Data Structures"
@@ -59,7 +78,8 @@ It also starts **`course/LOG.md`, the course log**: what changed in the course a
 git's history does not record. The commands add an entry at each step you approve, and the agents
 read the recent entries before they start work, so next year's revision knows what this year's
 decided. Add your own entries by hand whenever something worth remembering happens ("taught U03 —
-students found S02 too long"), or with `classkit log "taught U03" --changed "…" --why "…"`.
+students found S02 too long"), or ask the chat to log it ("log that I taught U03 and students found
+S02 too long").
 
 The syllabus is **where your course descriptor lives** — everything the university's form asks for,
 so you never keep syllabus information anywhere else. Its **front matter** holds what tools and

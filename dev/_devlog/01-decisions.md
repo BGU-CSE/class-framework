@@ -1559,3 +1559,21 @@ Decided (Avin):
 
 320 tests (+2).
 
+## D-045 — The teacher works in the chat; the chat runs `classkit`
+**Date:** 2026-10-03 · **Status:** locked (design + implemented)
+
+Avin asked whether every `classkit` command must be run in a terminal: in his hand tests he preferred
+to work only in the chat. Claude's view: the chat can run any of them (its Bash tool), and should be
+the default — it reads the output and explains it, which is the framework's premise. Found: the docs
+were terminal-first, nothing told the chat how to run `classkit` (`.venv`), and no permission rules
+existed, so every check prompted. Costs named: the chat may summarise findings away (→ a "report
+faithfully" rule); the first `git clone` stays outside. **Decided (Avin):**
+1. **Principle: the teacher never needs the terminal** — spec §5.2, the root `CLAUDE.md`,
+   `GETTING-STARTED.md` (a "You work in the chat" section; setup and scaffold as requests).
+2. **The root `CLAUDE.md` tells the chat** how to run `classkit`, to report every alert and error
+   and count the warnings, and to show the full output on request.
+3. **`.claude/settings.json` pre-allows read-only commands** — `validate`, `status`, `doctor`,
+   `ingest --preflight`, `mode` alone; anything that writes still asks.
+4. **`dev/MANUAL-TESTING.md`**: a "work in the chat" convention for every section; the syllabus
+   section rewritten that way (and its stale "nothing checks the evidence locators" corrected, D-044).
+

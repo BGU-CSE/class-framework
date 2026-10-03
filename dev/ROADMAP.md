@@ -443,6 +443,17 @@ checks it on a real course) · **[units]** the next increment.
 | ✅ | `tests/` | `date` written and read, `on:` still read; an invented evidence locator warns |
 | ⬜ | every other agent and command, as each is rewritten (units increment onwards) | apply §2.1: craft into skills, agents return, the chat revises, descriptions name their command |
 
+## D-045 — The teacher works in the chat
+
+| | Artifact | Change |
+|---|---|---|
+| ✅ | `.claude/settings.json` | pre-allow read-only `classkit` commands (both `classkit` and `.venv/bin/classkit`) |
+| ✅ | `CLAUDE.md` | "The teacher works in the chat — you run `classkit`": how, report faithfully, reads vs writes |
+| ✅ | `GETTING-STARTED.md` | "You work in the chat"; setup and scaffold as requests to the chat |
+| ✅ | `dev/MANUAL-TESTING.md` | the chat convention; the syllabus section in chat style |
+| ✅ | `dev/FRAMEWORK-SPEC.md` §5.2 | the principle |
+| ⬜ | `dev/MANUAL-TESTING.md`, `GETTING-STARTED.md` (remaining sections) | rewritten in chat style as each is next touched |
+
 ## Cross-cutting
 
 | | Artifact | Change |
@@ -451,8 +462,8 @@ checks it on a real course) · **[units]** the next increment.
 | ✅ | `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block was scaffolded and documented although Exports is deferred (G-16). **Removed from the template and the settings table** — shipping configuration for a feature that does not exist confuses a teacher reading their own `course.yaml`. The optional field stays in `course.schema.json`, so a course that sets it still validates |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-10-03 (after D-044, Session 38):** 20 decision blocks, 204 artifact changes,
-**106 built, 6 in progress, 92 not started** — counted from the table. Every [3-syllabus] row is
+**Count as of 2026-10-03 (after D-045):** 21 decision blocks, 210 artifact changes,
+**111 built, 6 in progress, 93 not started** — counted from the table. Every [3-syllabus] row is
 built, and adjusted to D-044; next, Avin checks it on a real course. (After the syllabus build,
 Session 37: 195; 98 / 6 / 91.) (After D-043 was designed:
 80 / 6 / 109.) Step 2 is built and

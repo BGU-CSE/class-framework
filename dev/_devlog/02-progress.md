@@ -1771,3 +1771,9 @@ drafts, the chat revises. The syllabus build (Session 37) predated it, so Claude
 `/plan-syllabus` step 3 revises in the chat. Gap report ⚑: `approved.on` → `date` (Claude's YAML-1.1
 trap, again), unit-map evidence locators warn. Spec §2.1, §5.1, §8.4; D-044; ledger; 320 tests.
 
+## Session 38b — 2026-10-03 — The teacher works in the chat (→ D-045)
+
+Avin preferred working only in the chat UI. Agreed the chat runs `classkit`; made it explicit: spec
+§5.2 principle, root `CLAUDE.md` instructions (how to run it, report faithfully), read-only commands
+pre-allowed in `.claude/settings.json`, `GETTING-STARTED.md` and `MANUAL-TESTING.md` chat-first.
+
