@@ -422,6 +422,7 @@ checks it on a real course) · **[units]** the next increment.
 | ⬜ | `templates/course/syllabus.md` | **[3-syllabus]** front matter: `unit_map`, `reading`, grading (commented); a default body skeleton of descriptor sections — description, aim, outcomes prose, teaching methods, level/type/when offered, schedule (from the map), workload, grading, reading, policies incl. AI use, staff and office hours |
 | ⬜ | `src/classkit/approve.py` (new), `cli.py` | **[3-syllabus]** `classkit approve syllabus` — writes `approved {on, hash}` through the write path, logs it |
 | ⬜ | `src/classkit/status.py` (new), `cli.py` | **[3-syllabus]** `classkit status` — read-only overview: syllabus approved / edited since / draft; the unit map with each unit's state (units: present or not, until the units increment defines states); materials ingested / outstanding |
+| ⬜ | `.claude/agents/curriculum-architect.md` | **[3-syllabus]** narrow its `description` only — "unit objectives for the units named, under `/plan-units`; the unit map belongs to the syllabus (D-043)" — so Claude Code does not pick it for semester planning; the rewrite is the [units] increment |
 | ⬜ | `.claude/commands/ingest.md` | **[3-syllabus]** shows `classkit status` first (the other commands as each is rewritten) |
 | ⬜ | `CLAUDE.md`, `GETTING-STARTED.md`, `README.md`, `dev/MANUAL-TESTING.md` | **[3-syllabus]** `/plan-syllabus`, `/review-syllabus`, approval and status; a hand-test section |
 | ⬜ | `tests/` | **[3-syllabus]** approve writes on/hash and logs; status reads approved / edited since / no-hash; schema accepts the new fields; a fresh scaffold still validates with 0 errors |
@@ -436,8 +437,8 @@ checks it on a real course) · **[units]** the next increment.
 | ✅ | `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block was scaffolded and documented although Exports is deferred (G-16). **Removed from the template and the settings table** — shipping configuration for a feature that does not exist confuses a teacher reading their own `course.yaml`. The optional field stays in `course.schema.json`, so a course that sets it still validates |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-10-03 (after D-043, the syllabus increment designed):** 19 decision blocks, 194 artifact
-changes, **80 built, 6 in progress, 108 not started** — counted from the table. Step 2 is built and
+**Count as of 2026-10-03 (after D-043, the syllabus increment designed):** 19 decision blocks, 195 artifact
+changes, **80 built, 6 in progress, 109 not started** — counted from the table. Step 2 is built and
 reviewed; it closes after Avin's re-test with a fresh course. (After step 2c-2: 177; 76 / 6 / 95.) Step 2c-2 (every [2c-2] row in
 the D-040 and D-041 blocks) is built; the path-kinds row is 🔨 because its step-4 half remains. Next:
 one independent review of 2c-1 and 2c-2 together. (After step 2c-1 and D-041: 61 / 5 / 111 of 177.
