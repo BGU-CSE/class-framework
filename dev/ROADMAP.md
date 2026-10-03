@@ -451,9 +451,10 @@ checks it on a real course) · **[units]** the next increment.
 | ✅ | `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block was scaffolded and documented although Exports is deferred (G-16). **Removed from the template and the settings table** — shipping configuration for a feature that does not exist confuses a teacher reading their own `course.yaml`. The optional field stays in `course.schema.json`, so a course that sets it still validates |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-10-03 (after the syllabus increment was built, Session 37):** 19 decision blocks,
-195 artifact changes, **98 built, 6 in progress, 91 not started** — counted from the table. Every
-[3-syllabus] row is built (18); next, Avin checks it on a real course. (After D-043 was designed:
+**Count as of 2026-10-03 (after D-044, Session 38):** 20 decision blocks, 204 artifact changes,
+**106 built, 6 in progress, 92 not started** — counted from the table. Every [3-syllabus] row is
+built, and adjusted to D-044; next, Avin checks it on a real course. (After the syllabus build,
+Session 37: 195; 98 / 6 / 91.) (After D-043 was designed:
 80 / 6 / 109.) Step 2 is built and
 reviewed; it closes after Avin's re-test with a fresh course. (After step 2c-2: 177; 76 / 6 / 95.) Step 2c-2 (every [2c-2] row in
 the D-040 and D-041 blocks) is built; the path-kinds row is 🔨 because its step-4 half remains. Next:
