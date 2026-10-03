@@ -1598,4 +1598,9 @@ The second increment of the re-oriented Core (D-043). Decided with Avin:
    `curriculum-architect` (rewritten read-only, reading `ingested/` and `coverage.md`), the chat
    revising, and the critic.
 Also: retiring `/write-items` and `/design-unit N [part]` move to the design increments.
+6. **Coverage alerts (Avin):** `objective_maps_to_outcome` (alert) is built with this increment — it
+   fires exactly when `/plan-units` writes objectives; `outcome_coverage` stays **parked** — a
+   completeness rule that can say nothing until every unit is planned, and it needs D-033's
+   completeness mechanism first. Then: the units build, one independent review of the syllabus and
+   units builds together, then Avin tests both on a real course (syllabus; planning the first units).
 

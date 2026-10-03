@@ -172,14 +172,14 @@ is calibrated rather than pure vibes.
 | ✅ | `schemas/unit.schema.json` | `outcomes: [CO1…]` on each Unit Objective — **optional**, per D-037; landed in step 2a because `outcome_reference` needs it. The template does not set it yet (step 3) |
 | ✅ | `src/classkit/model.py` | load `syllabus/syllabus.md` into the course model — `Course.syllabus` and `Course.outcomes` |
 | ✅ | `src/classkit/validate.py` | `SCHEMA_FOR` entry so the syllabus is schema-checked |
-| ⬜ | `src/classkit/validate.py` | two rules: `outcome_coverage` (no orphan Course Outcome) and `objective_maps_to_outcome` (no orphan objective) — both **alert** (D-037). The integrity half, `outcome_reference`, landed in step 2a |
+| ⬜ | `src/classkit/validate.py` | **[units]** `objective_maps_to_outcome` (alert, consistency): an objective naming no Course Outcome. **Parked** (D-046): `outcome_coverage` — a completeness rule, useful only once every unit exists, and it needs the completeness mechanism (D-033) first. The integrity half, `outcome_reference`, landed in step 2a |
 | ✅ | `templates/course/syllabus.md` | **new** — Bologna-style default, generic (ECTS is one instantiation, not hardcoded — invariant 2). Scaffolds `CO1`/`CO2` to match a scaffolded unit's two objectives, so the step-3 coverage rules land on a clean skeleton |
 | ✅ | `src/classkit/scaffold.py` | write the syllabus into the reserved `syllabus/` slot, create-only (the `syllabus/.gitkeep` it replaced is gone) |
 | ✅ | `CLAUDE.md` | `CO1` ID convention; glossary entries for Syllabus and Course Outcome |
 | ⬜ | `.claude/agents/curriculum-architect.md` | **[units]** sets `outcomes` on the objectives it writes. ~~authors the syllabus~~ — superseded by D-043 (syllabus-designer) |
 | ⬜ | `.claude/commands/plan-units.md` | ~~the syllabus is part of planning the semester~~ — **superseded by D-043**: `/plan-syllabus` |
 | ✅ | `GETTING-STARTED.md` | the syllabus is a thing teachers edit; the settings section names only `course.yaml` |
-| 🔨 | `tests/test_course_lifecycle.py` | scaffold produces a valid syllabus ✅; both coverage rules fire when broken ⬜ (step 3) |
+| 🔨 | `tests/test_course_lifecycle.py` | scaffold produces a valid syllabus ✅; **[units]** `objective_maps_to_outcome` fires when broken; `outcome_coverage` parked |
 
 **Later, not now:** `workload.total_hours` enables a course-scope workload check — all home-study
 `est_minutes` + in-class + homework against the declared workload. It needs homework (Q-026) first.

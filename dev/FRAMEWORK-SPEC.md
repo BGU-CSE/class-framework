@@ -935,9 +935,9 @@ Severity is the default; **(target)** means not built yet. Every rule is also a 
 | `activity_item_reference` | every id in an activity's `items` resolves to an existing item | integrity | error **(target, D-031a)** |
 | `item_reference` | an item's `unit` and `guiding_questions` exist | integrity | error |
 | `material_locator_resolves` | every `M<NNNN>` / `M<NNNN>#anchor` locator names a real material and anchor (D-035; which fields are read: §8.7) | integrity | error |
-| `outcome_coverage` | every Course Outcome is covered by ≥1 unit objective. Completeness rule | advisory | **alert** **(target, D-021/D-033/D-037)** |
+| `outcome_coverage` | every Course Outcome is covered by ≥1 unit objective. Completeness rule | advisory | **alert** **(target, D-021/D-033/D-037 — parked, D-046: useful only once every unit exists; needs the completeness mechanism)** |
 | `objective_coverage` | every unit objective is addressed by ≥1 guiding question | advisory | **alert** |
-| `objective_maps_to_outcome` | every unit objective names ≥1 Course Outcome | advisory | **alert** **(target, D-021/D-037)** |
+| `objective_maps_to_outcome` | every unit objective names ≥1 Course Outcome | advisory | **alert** **(target, D-021/D-037; built with the units increment, D-046)** |
 | `syllabus_missing` | the course has no `syllabus/syllabus.md` | advisory | **alert** **(target, D-033/D-037)** |
 | `unit_count` | units on disk vs `course.yaml` `units` | advisory | warn |
 | `unit_map_mismatch` | the syllabus `unit_map` and the units disagree: a unit directory whose number is not on the map or whose title differs from its entry, or a map whose length differs from `course.yaml` `units`. A map entry with no directory yet is *not started*, not a mismatch. Consistency rule | advisory | warn **(target, D-040, D-046)** |
