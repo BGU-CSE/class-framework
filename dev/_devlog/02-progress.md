@@ -1725,3 +1725,15 @@ Two test-expectation errors of Claude's own were caught by running the tests (a 
 shared exactly 12 words; a sentence miscounted as 25 words). 294 tests. Step 2 marked built and
 reviewed in the ROADMAP, closing after Avin's re-test.
 
+## Session 36 — 2026-10-02/03 — Core re-oriented; the syllabus increment specified (→ D-043)
+
+Avin proposed moving on from tooling and corner cases to the agents, finishing Core's spec in
+increments he can check on a real course. Claude agreed, with evidence (the classifier was the
+strongest part of the hand test; the class-hour agents have never run) and with its own share of the
+drift named. Found: no syllabus agent or command exists (D-029/D-032 designed, never built). Decided
+with Avin (D-043): `/plan-syllabus` as its own milestone (supersedes D-029's one flow), grading
+draftable, approvals recorded in the file with a hash + `classkit status` (over a progress file),
+one verb per meaning (`/write-items` retired), best effort over completeness, the front-matter/body
+rule, four gated steps. Also fixed a stale order in §5.2 (quiz before the class hour, D-031a). Spec,
+D-043, ledger (rows [3-syllabus], [units]; 194 changes).
+

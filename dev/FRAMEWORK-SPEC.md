@@ -185,16 +185,28 @@ activities; and the **entry quiz** — its assessment items and their answer key
 **Not in Core** (named in §1.1, specified in later phases): homework and programming assignments,
 exams, grading weights, the Gem builder, PPTX export, metrics, and course lifecycle.
 
-**Agents and commands active in Core.** Agents: `syllabus-designer` (the syllabus and its Course
-Outcomes) **(target, D-029)**, `curriculum-architect` (the unit map and unit objectives),
+**Agents and commands active in Core.** Agents: `syllabus-designer` (the whole syllabus: goal,
+Course Outcomes, the unit map, grading, the descriptor) **(target, D-029, D-043)**,
+`curriculum-architect` (unit objectives, against the approved syllabus),
 `study-session-designer` (sessions, guiding questions, answers, `est_minutes`, the study-path pool),
 `lesson-planner` (the in-class hour), `assessment-writer` (entry-quiz items only, in Core),
 `topic-researcher` (finds real resources), `material-classifier` (classifies ingested materials,
-reports coverage; read-only — it returns, the command records, §8.7), `course-critic` (review). Commands: `/ingest`,
-`/plan-units`, `/design-unit N`, `/review-unit N`, and **`/write-items N` scoped to entry-quiz
-items** — `/design-unit` already writes the unit's entry quiz, so `/write-items` in Core is for
-adding to or reworking it. Deferred: `gem-builder` and `/build-gem` (Exports); the homework and exam
-roles of `assessment-writer` and `/write-items` (Assessment).
+reports coverage; read-only — it returns, the command records, §8.7), `course-critic` (review).
+
+**Commands — one meaning per verb (D-043):**
+
+| Verb | Means | Commands |
+|---|---|---|
+| *ingest* | read the teacher's materials | `/ingest` |
+| *plan* | **what** is taught, in what order | `/plan-syllabus` **(target, D-043)**; `/plan-units N…` |
+| *design* | **how** students learn it | `/design-unit N [session K \| quiz \| class]` — a part names what to revise alone **(target, D-043)** |
+| *review* | an independent agent critiques what it did not write | `/review-syllabus` **(target, D-043)**; `/review-unit N` |
+| *build* | something produced for others | Exports: `/build-gem`, later the syllabus document and slides |
+
+`/write-items` is **retired from Core** (D-043): the entry quiz is `/design-unit N quiz`; writing
+homework and exam items returns with the Assessment phase. A study session has no command of its
+own — it is always designed in the context of its unit. Deferred: `gem-builder` and `/build-gem`
+(Exports); the homework and exam roles of `assessment-writer` (Assessment).
 
 **Tooling commands used across Core:** `classkit ingest` (the deterministic half of `/ingest`,
 §8.7), `classkit add-url` (add a link to the course's materials, §8.7), `classkit material` (record
@@ -376,17 +388,29 @@ Course-level setup runs once; then units are designed one at a time.
                       yet" for the rest, never "thin"); after the teacher has read it,
                       written to materials/coverage.md (D-040)
                    Every approved step appends to course/LOG.md (§8.8).
-/plan-units        ONE flow, two agents, sequential and file-based (D-029, D-031i):
-                   1. syllabus-designer writes syllabus/syllabus.md — goal, Course
-                      Outcomes (CO1…), workload, prerequisites, and the UNIT MAP (all
-                      units: number, title, order) (target, D-040). Written to disk first.
-                   2. curriculum-architect READS that syllabus and writes units/NN-slug/
-                      unit.md for the units the teacher chooses to plan NOW — each
-                      objective referencing the outcome ids it just read.
-                   The handoff is the file, not shared memory: the architect must never
-                   invent an outcome id, and either agent can be re-run alone.
-/plan-units 4 5    (target, D-040) plan more units later, as their material arrives —
-                   step 2 only, against the existing syllabus and map.
+/plan-syllabus     (target, D-043) syllabus-designer, BEST EFFORT, four gated steps:
+                   1. EVIDENCE — what it found (an old syllabus, materials/coverage.md,
+                      a book's table of contents, course.yaml) and the questions the
+                      evidence cannot answer (credits, grading, policies) → WAIT
+                   2. A FULL DRAFT of syllabus/syllabus.md through the write path: goal,
+                      Course Outcomes (CO1…), the UNIT MAP (all units: number, title,
+                      order, D-040), workload, prerequisites, reading, grading, and the
+                      descriptor sections → WAIT. What the evidence does not support is
+                      asked or left out, never invented.
+                   3. REVISION IN CONVERSATION, as many rounds as the teacher wants —
+                      change what was asked, leave the rest (§5.2 rule 3)
+                   4. APPROVAL, when the teacher says so — recorded with its hash (§8.9);
+                      /review-syllabus offered, optional
+                   The milestone: an APPROVED syllabus, which unit work then builds on.
+                   It may keep changing all semester; the overview shows "edited since".
+/plan-units 1 2    curriculum-architect READS the approved syllabus and writes
+                   units/NN-slug/unit.md for the units named — objectives referencing the
+                   outcome ids it read. More units later, as their material arrives. The
+                   handoff is the file: the architect never invents an outcome id. If the
+                   syllabus is not approved, the command says so and asks whether to go
+                   on — it does not refuse (D-043). (Before D-043 this was one flow with
+                   the syllabus, D-029; the syllabus became its own milestone once D-040
+                   put the unit map in it and made unit objectives incremental.)
 
                    PARTIAL MATERIAL IS THE NORMAL CASE (D-040). The course level is
                    always whole — you cannot write outcomes for a third of a course — but
@@ -421,8 +445,10 @@ Course-level setup runs once; then units are designed one at a time.
 
 Three orderings are load-bearing rather than stylistic:
 
-- **`/plan-units` precedes `/design-unit`.** Session goals map to unit objectives, which map to
-  Course Outcomes; the roof must exist first.
+- **`/plan-syllabus` precedes `/plan-units`, which precedes `/design-unit`.** Session goals map to
+  unit objectives, which map to Course Outcomes; the roof must exist first. "Exist" means
+  *approved*, not *perfect*: downstream works with what the teacher approved, even if it is not
+  fully consistent — `validate` reports inconsistencies; nothing waits for them (D-043).
 - **The lesson planner runs after the session designer *and* the assessment writer.** The hour is
   built from the week's guiding questions, so it cannot be planned before they exist; and its quiz
   activity lists real item ids in `items`, so those items must exist first. Planning the hour before
@@ -441,11 +467,15 @@ command in every phase (D-030).
 **1. Stepwise, with approval gates.** A command does not run start to finish and present a finished
 result. For each step it: says what it is about to do → produces that step → shows the result →
 **waits for approval or correction** before starting the next. `/design-unit 3` is therefore: study
-sessions → *approve* → the in-class hour → *approve* → entry-quiz items → *approve* → validate and
-report. A correction at a gate is applied before moving on, not deferred to the end.
+sessions → *approve* → entry-quiz items → *approve* → the in-class hour → *approve* → validate and
+report (the hour comes last because it lists the quiz's real item ids, §5.1, D-031a). A correction at a gate is applied before moving on, not deferred to the end.
 
 Why: an agent that designs a whole unit before the teacher sees anything compounds a wrong
 assumption across four sessions, an hour, and a quiz. Gates keep the blast radius one step wide.
+
+**Every command starts by showing where the course stands** — the overview from `classkit status`
+(§8.9): what is approved, what is approved but edited since, what is not started **(target,
+D-043)**.
 
 **Where the gate lives.** A gate is *conversational* — the command states what it produced and waits
 for the teacher's reply. It must therefore sit in the **orchestrating command, between agent
@@ -597,20 +627,33 @@ Deferred: a `gem` block (Exports phase).
 | `outcomes` | array\<obj\> | ✓ (≥1) | each `{ id (`CO<N>`, ✓), statement (✓), bloom (enum, opt) }` — the coverage roof |
 | `workload` | object | | `{ credits (✓), credit_system (✓; string — ECTS is one instantiation, never hardcoded), total_hours (number, opt) }`. Optional so a teacher can draft and validate a syllabus before credits are settled; `syllabus_workload_missing` warns while it is absent (D-031d) |
 | `prerequisites` | array\<string\> | | course-level prerequisites (free text or course codes) |
-| `assessment` | array\<obj\> | | **reserved** grading scheme, e.g. `{ type, weight }` — specified in the Assessment phase; may be empty in Core. Its item shape is **deliberately left open** (`additionalProperties` *not* false), unlike every other object in `schemas/`: closing a shape we have not designed would invalidate a course that fills the block early. Do not "fix" this before the Assessment phase specifies it (G-11) |
-| `level` | string | | **(target, D-032)** e.g. `undergraduate`, `graduate`. Free string, not an enum — degree structures differ by institution |
-| `course_type` | string | | **(target, D-032)** e.g. `compulsory`, `elective`, `elective in track X` |
-| `offered` | object | | **(target, D-032)** `{ year_of_study (number/string), semester (string) }` — when in the programme the course sits |
-| `teaching_methods` | array\<string\> | | **(target, D-032)** how the course is taught, e.g. `flipped classroom`, `weekly in-class problem solving`. Bologna expects this, and for a flipped course it is the descriptor that actually distinguishes it |
+| `assessment` | array\<obj\> | | the grading scheme, e.g. `{ type, weight }`. **The agent may draft it** (from an old syllabus, or by asking); nothing validates its content — approving or editing it is the teacher's responsibility **(D-043; it was "reserved, empty in Core")**. Its item shape is **deliberately left open** (`additionalProperties` *not* false): the Assessment phase will give grading real structure, and may then ask for what was written freely to be converted (G-11) |
 | `reading` | object | | **(target, D-032)** `{ required: [string], recommended: [string] }`. Entries may be a `textbooks[].key` from `course.yaml` (preferred — no duplication) or free-text for anything not listed there |
+| `approved` | object | | **(target, D-043)** `{ on (date, ✓), hash (opt) }` — the teacher's approval of this syllabus, the milestone unit work builds on (§8.9). Written by `classkit approve syllabus`, or by hand (then without `hash`) |
 | `unit_map` | array\<obj\> | | **(target, D-040, step 3)** the whole semester's plan, written before most units exist: each `{ number (✓), title (✓), summary (opt), evidence (opt, array of material locators — what the plan for this unit rests on) }`. **Authoritative for which units the course has and their order and titles.** A `units/NN-slug/` directory is created only when a unit is *planned* in detail (§5.1); `unit_map_mismatch` warns when a unit's `unit.md` disagrees with its map entry |
 
 `bloom` enum, everywhere it appears: `remember | understand | apply | analyze | evaluate | create`.
 
-**Completeness (D-032).** The syllabus front matter is intended to carry **everything a Bologna-style
-course descriptor needs**, so that a teacher never has to keep syllabus information somewhere else.
-Only `goal` and `outcomes` are required; everything else may be filled in stages, or deliberately
-skipped. Two categories are deliberately *not* fields here:
+**Best effort, not a form to complete (D-043).** The syllabus carries **everything a course
+descriptor needs** — Bologna's, or the teacher's own institution's — so a teacher never keeps
+syllabus information somewhere else (D-032). But only `goal` and `outcomes` are required; the agent
+fills what the evidence supports, asks about the rest, and leaves out what nobody knows yet. The
+teacher keeps editing — in conversation or by hand — all semester.
+
+**Front matter or body: front matter holds what tools or agents *use*; body sections hold what only
+people *read* (D-043).** Used: `goal`, `outcomes`, `unit_map` (the coverage chain; `/plan-units`),
+`workload`, `prerequisites`, `reading`, `assessment`, `approved`. Read only by people — the
+catalogue description, the aim in prose, **teaching methods**, **level**, **course type**, **when it
+is offered**, office hours, attendance and academic-integrity policies, **an AI-use policy**, and
+anything else the institution's form asks for — are **body sections**. (`level`, `course_type`,
+`offered` and `teaching_methods` were front-matter fields under D-032; nothing used them, none was
+built, and they moved to the body.) **The agent mirrors the institution's form**: it takes the body's
+section structure from the teacher's old syllabus when one is ingested, else from the template's
+default skeleton — which is how the framework stays general without one schema per university.
+For a course that uses AI study paths (a Gem), the agent **always proposes an AI-use policy**
+section: the framework itself creates the need for one.
+
+Two categories are deliberately *not* in the syllabus at all:
 
 - **Identity and configuration** — title, code, institution, instructors, language, textbook list —
   live in `course.yaml`, the single source of truth. Repeating them here would create drift.
@@ -621,8 +664,8 @@ skipped. Two categories are deliberately *not* fields here:
 Both are pulled in when the syllabus is rendered for people to read (deferred — see §1.1). The rule:
 **authored content is a field here; derived content is assembled at render time.**
 
-Body: prose aim and narrative. Identity fields (title, code, textbooks) are **not** repeated here —
-they live in `course.yaml`. A future rendered syllabus (Exports) pulls them in, along with a unit
+Body: the descriptor sections above, in the institution's order. Identity fields (title, code,
+textbooks) are **not** repeated here — they live in `course.yaml`. A future rendered syllabus (Exports) pulls them in, along with a unit
 overview assembled from the unit map and, where they exist, the units.
 
 #### `units/NN-slug/unit.md` — a unit
@@ -1484,6 +1527,33 @@ Append-only. One entry per non-trivial change:
 - **Agents read the recent entries before starting work**, so they know what was done last time and
   why — which is what makes year-to-year revision possible without re-deriving intent.
 - The teacher may add entries by hand ("taught U03 — students found S02 too long").
+
+### 8.9 Approval and the course's status **(target, D-043)**
+
+A milestone the teacher reaches — "the syllabus is approved", later "unit 3 is designed" — is a
+teacher's act, so it is **recorded**, not derived. It is recorded **in the approved file itself**,
+never in a separate progress file, which would duplicate state and drift (a deleted unit still
+"designed").
+
+- **The record:** `approved: { on: <date>, hash: <sha256 of the file without its own approved
+  block> }` in the file's front matter. Today: `syllabus.md`. The units' states (planned,
+  designed, reviewed…) are specified with the unit steps and use the same mechanism in `unit.md`.
+- **Three routes, one record.** The teacher approves at a command's gate ("approve"), in
+  conversation ("approve the syllabus" — the chat runs it), or by hand. The first two run
+  **`classkit approve syllabus`**, which writes the record through the write path (`--diff`, then
+  `--overwrite`; §8.6) and appends a course-log entry. By hand, the teacher may write
+  `approved: {on: 2026-10-05}` without a hash.
+- **Editing after approval is normal** — the syllabus keeps changing during the semester. Nothing
+  is un-approved. The hash only lets the overview say **"approved 5 Oct — edited since"**; without
+  a hash it says "approved 5 Oct (edits since cannot be tracked)". Approving again records a new
+  date and hash.
+- **Approved, not perfect.** Downstream work uses what the teacher approved, even if it is not fully
+  consistent; `validate` reports inconsistencies and nothing waits on them. A command that finds the
+  syllabus unapproved says so and asks whether to go on; it does not refuse.
+- **`classkit status`** — read-only — assembles the overview from the records: the syllabus
+  (approved / approved, edited since / draft), the unit map with each unit's state, the materials
+  (ingested, outstanding). Every command shows it first (§5.2). It reads committed files only, so it
+  gives the same answer on every clone (§2.2).
 
 ---
 

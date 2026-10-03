@@ -1478,3 +1478,55 @@ Cost: catches verbatim copying only; 12 is a first guess; a few seconds and ~150
 text. 294 tests (+5). Review nits: (1) the deletion is already through `write.remove()`; (2) a
 globally-ignored `.gitignore` is caught only by `doctor` — the stated cost of D-041.
 
+## D-043 — The syllabus is its own milestone; approvals; one verb scheme for commands
+**Date:** 2026-10-03 · **Status:** locked (design) — spec §3.1, §5.1, §5.2, §8.2, §8.9; ledger D-043
+
+Context: Avin re-oriented Core (2026-10-02): finish the spec incrementally **in the order a teacher
+can check it**, stopping to build and test on a real course; agents are the point, scripts and
+corner cases are not; the teacher manages consistency, as before the framework. Claude agreed, and
+named its own share of the drift (turning each finding into a mechanism). First increment: the
+syllabus, because it is established — and often uploaded to the university — before any unit.
+
+Decided so far (Avin):
+1. **A separate command for the syllabus, `/plan-syllabus`.** It drafts, revises and approves the
+   whole syllabus: goal, Course Outcomes, the unit map (D-040), every descriptor field.
+   `/plan-units N…` then plans unit objectives against it. **Supersedes D-029's "one flow"**: its
+   reason (outcomes and objectives drifting apart) no longer holds once D-040 put the unit map in
+   the syllabus and made unit objectives incremental.
+2. **Grading may be drafted by the agent.** `assessment` is no longer "reserved, leave empty in
+   Core": the agent proposes a grading scheme (from the old syllabus, or by asking); nothing
+   validates its content; approving or editing it is the teacher's responsibility. Cost: the
+   Assessment phase's later structure may require converting what was written freely.
+3. **Approval is recorded in the approved file itself** — a status, the date and a hash of the
+   content at approval — and **`classkit status`** assembles the course's overview from those;
+   every command shows it at start. Chosen over a separate progress file (b over a/c), which would
+   duplicate state and drift. The hash lets the overview say "approved 5 Oct — edited since"
+   instead of un-approving behind the teacher's back. Unit states are decided with the unit steps.
+4. **One meaning per verb.** *ingest* — read the materials; *plan* — what is taught and in what
+   order (`/plan-syllabus`, `/plan-units N…`); *design* — how students learn it
+   (`/design-unit N [session K | quiz | class]`, a part revisable alone); *review* — an independent
+   critique (`/review-syllabus`, `/review-unit N`); *build* — something produced for others
+   (Exports: `/build-gem`, later the syllabus PDF and slides). **`/write-items` is retired from
+   Core** (the entry quiz is `/design-unit N quiz`); writing homework and exam items returns with
+   the Assessment phase. A study session has no command of its own.
+5. **Best effort, not a form (Avin).** The agent drafts as well as the evidence allows; the teacher
+   edits in conversation or by hand; approval may come by hand, in conversation or at a command's
+   gate; **downstream works with what is approved, even if not 100% consistent** — `validate`
+   reports, nothing waits; an unapproved syllabus makes a command ask, not refuse.
+6. **Front matter holds what tools or agents use; body sections what only people read.** D-032's
+   `level`, `course_type`, `offered`, `teaching_methods` move to body sections (unbuilt, unused);
+   the agent mirrors the institution's form (old syllabus, else a default skeleton); it always
+   proposes an AI-use policy where AI study paths are used. Cost: body sections are unchecked; a
+   future PDF export works from Markdown sections.
+7. **`/plan-syllabus` runs in four gated steps:** evidence and open questions → a full draft →
+   revision rounds in conversation → approval (`classkit approve syllabus`, hash recorded);
+   `/review-syllabus` optional. **Uploading to the university**: copy from `syllabus.md` for now;
+   a formatted document stays in Exports.
+
+**The re-oriented process (Avin, 2026-10-02/03):** the remaining Core spec is written in increments,
+in the order a teacher can check them — syllabus, then units, then the unit's design — each one
+specified, built in a fresh session, and checked by Avin **on a real course**, the agents' output
+judged by him and the prompts revised. New validation rules only where the real course shows a
+need; already-designed unbuilt rules are parked, not cut. One independent review at the end of Core,
+not per increment.
+

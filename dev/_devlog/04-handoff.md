@@ -19,7 +19,27 @@ Then, for history and what is still open:
 6. `02-progress.md` (last block) — where we stopped.
 7. `03-open-questions.md` — what's unresolved.
 
-## Current state — 2026-10-01 (step 2 built and reviewed; awaiting Avin's re-test)
+## Current state — 2026-10-03 (Core re-oriented; the syllabus increment designed)
+
+**Step 2 is built and reviewed**; its re-test folds into the real-course checks below. Suite: 294
+tests, green.
+
+- **Re-orientation (Avin, D-043):** finish Core's spec **in increments a teacher can check** —
+  syllabus → units → the unit's design (sessions, entry quiz, class hour) → review — each specified,
+  built in a fresh session, then **checked by Avin on a real course** (agents' output judged, prompts
+  revised). Agents are the point; no new validation rules unless the real course shows a need. One
+  independent review at the end of Core, not per increment.
+- **Increment 1 — the syllabus — is specified** (D-043; spec §3.1, §5.1, §5.2, §8.2, §8.9): a separate
+  `/plan-syllabus` (syllabus-designer, best effort, four gated steps), `/review-syllabus`, grading
+  draftable, the unit map in the syllabus (D-040), front matter = what tools use / body = what people
+  read (mirroring the institution's form; an AI-use policy proposed), approval recorded in the file
+  with a hash (`classkit approve syllabus`), `classkit status`. One verb per meaning: ingest / plan /
+  design / review / build; `/write-items` retired from Core.
+- **Next:** the build of the rows tagged **[3-syllabus]** in `../ROADMAP.md` (a fresh session; prompt
+  from Claude), then Avin runs `/ingest` + `/plan-syllabus` on a real course. Meanwhile, the spec of
+  the **units** increment (`/plan-units N…`, unit states).
+
+## State after step 2 — 2026-10-01 (kept for history)
 
 **Step 2 (ingest, the course log, validation re-founding, privacy, `doctor`, the hand test's fixes)
 is built and independently reviewed.** Suite: **294 tests**, green. Ledger: 80 built, 6 in progress,
