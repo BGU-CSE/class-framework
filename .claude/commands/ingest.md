@@ -16,7 +16,13 @@ one. The gates live here, between steps — a subagent cannot ask the teacher an
 step is logged with `classkit log`. Never write a file directly: the tools below are the only way
 anything is recorded.
 
-First read `course/course.yaml` and the recent entries in `course/LOG.md`, so you know what was
+First show where the course stands — read-only, the same overview every command starts with:
+
+```bash
+classkit status
+```
+
+Then read `course/course.yaml` and the recent entries in `course/LOG.md`, so you know what was
 ingested and decided last time.
 
 **Private material.** Files the teacher must not commit — a published textbook's PDF, a solutions
@@ -157,14 +163,15 @@ classkit log "/ingest, classification approved" --changed "kinds, units and audi
 Present the agent's report: **its scope first** — which units the ingested material reaches, and
 "no material yet" (not "thin") for the rest; what the course covers, in the order taught, with its
 weight; where it is thin; the volume reality check and ordering problems (only over what is
-covered); what you need from the teacher; and a proposed unit map for `/plan-units`, clearly marked
+covered); what you need from the teacher; and a proposed unit map for `/plan-syllabus`, clearly marked
 as a proposal. Cite materials by locator, **always in full** (`M0007#slide-3`, never `#slide-3`),
 never by a page or slide you have not seen in the ingested file.
 
 Run `classkit validate`. Nothing should cite materials yet, but `materials_not_ingested` must now be
 silent; if it is not, say why.
 
-**When the teacher has read the report, save it** — `/plan-units` reads it as input. Write it to
+**When the teacher has read the report, save it** — `/plan-syllabus` and `/plan-units` read it as
+input. Write it to
 `course/materials/coverage.md` through the write path, headed by today's date and the material ids
 it covered:
 
@@ -172,8 +179,8 @@ it covered:
 classkit write course/materials/coverage.md <<'MD'
 # Coverage report — 2026-10-01
 
-Written by /ingest after the teacher read it. A dated snapshot: /plan-units reads it as input, not
-as truth. Materials covered: M0001–M0021.
+Written by /ingest after the teacher read it. A dated snapshot: /plan-syllabus and /plan-units read
+it as input, not as truth. Materials covered: M0001–M0021.
 
 ## Scope
 …the report, as the teacher approved it, with the teacher's corrections…
@@ -204,6 +211,9 @@ classkit log "/ingest, coverage report saved" --changed "materials/coverage.md (
 ```
 
 ---
+
+**Next:** `/plan-syllabus` drafts the syllabus — goal, outcomes, the unit map — from this
+evidence.
 
 **Later runs.** Run `/ingest` again whenever material is added or changed. Only what is new or
 changed is converted; a renamed or moved file keeps its id, so nothing that cites it breaks.

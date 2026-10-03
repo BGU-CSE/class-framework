@@ -65,9 +65,9 @@ the manifest.
 other`. `units` is a **hint** — the units the material appears to support: a list (`[U03, U04]`),
 **`all`** for course-wide material (the textbook, the course Gem, the syllabus — not a list of every
 unit, which would look like a per-unit resource), or `[]` for none in particular (an instructor's
-manual you have not placed). Before the unit map
-exists (`/plan-units` has not run), say so in your report and base the hint on the material's own
-order and numbering ("Lecture 3", "week 5"), counted against `units` in `course.yaml`.
+manual you have not placed). Before the unit map exists (the syllabus has no `unit_map` yet —
+`/plan-syllabus` has not run), say so in your report and base the hint on the material's own order
+and numbering ("Lecture 3", "week 5"), counted against `units` in `course.yaml`.
 
 **Never** propose a change to anything under `course/materials/source/` — it is the teacher's.
 Replacing a hand-edited ingested file is **the teacher's decision**: you say what you saw; the
@@ -144,7 +144,8 @@ bibliography, publisher pages and references: they are not course materials. The
    what is covered — never extrapolate to units with no material yet.
 6. **What you need from the teacher** — what the materials do not say: assumed prerequisites,
    which parts are examinable, which weeks are known to be hard.
-7. **A proposed unit map** (week → subject), clearly marked as a suggestion for `/plan-units`.
+7. **A proposed unit map** (week → subject), clearly marked as a suggestion for `/plan-syllabus`, which
+   puts the unit map in the syllabus.
 
 ## Rules
 

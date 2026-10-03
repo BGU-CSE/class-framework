@@ -1,6 +1,6 @@
 ---
 name: curriculum-architect
-description: Plans course-level structure — the unit map across the semester, unit objectives, prerequisites and sequencing. Use when setting up a new course or restructuring an existing one, before individual units are designed.
+description: Plans unit objectives for the units named, under /plan-units, against the approved syllabus. The unit map belongs to the syllabus (D-043) — for the semester's plan, the outcomes or the unit map, use syllabus-designer under /plan-syllabus instead.
 tools: Read, Write, Edit, Grep, Glob
 ---
 
