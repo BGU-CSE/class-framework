@@ -78,11 +78,13 @@ src/classkit/
     links.py                links.md — parse, `add-url`, best-effort metadata
     manifest.py             materials/manifest.yaml — load, save, ids
     core.py                 scan → reconcile (shared with the validator) → convert; private material
+  approve.py              `classkit approve syllabus`: the teacher's approval recorded in the file (on, hash) (D-043)
+  status.py               `classkit status`: read-only overview — syllabus state, unit map, materials (D-043)
   doctor.py               `classkit doctor`: this machine's copy — private files, .gitignore, deps (D-040)
   mode.py                 teacher / framework-developer hat: `classkit mode` (D-034)
   validate.py             schema layer + semantic rules
   cli.py                  argparse entry point
-tests/                    scaffold → validate round-trip; ingest; extraction quality; private material; doctor (fixtures in tmp_path)
+tests/                    scaffold → validate round-trip; approve and status; ingest; extraction quality; private material; doctor (fixtures in tmp_path)
 dev/                      you are here — not part of a teacher's course
   VISION.md                 why the project exists, what it produces, how it is developed
   FRAMEWORK-SPEC.md         the spec — what the framework must contain
@@ -144,11 +146,12 @@ course repo. They ship to course repos through the clone (D-009), so an agent im
 reaches every course on the next `git merge framework/main`.
 
 ```
-.claude/agents/     curriculum-architect, study-session-designer, lesson-planner,
-                    assessment-writer, topic-researcher, gem-builder, course-critic,
-                    material-classifier
+.claude/agents/     syllabus-designer, curriculum-architect, study-session-designer,
+                    lesson-planner, assessment-writer, topic-researcher, gem-builder,
+                    course-critic, material-classifier
 .claude/skills/     writing-guiding-questions, estimating-study-time
-.claude/commands/   /ingest /plan-units /design-unit /write-items /review-unit /build-gem
+.claude/commands/   /ingest /plan-syllabus /review-syllabus /plan-units /design-unit /write-items
+                    /review-unit /build-gem
 ```
 
 When editing agents:

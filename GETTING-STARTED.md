@@ -14,7 +14,8 @@ You need [Claude Code](https://claude.com/claude-code) and Python 3.10+.
 
 > **The framework is still being built.** The workflow below is the design; not all of it exists
 > yet. `classkit scaffold`, `classkit validate`, `classkit log` and the materials tools
-> (`/ingest`, `classkit ingest`, `classkit add-url`, `classkit material`, `classkit doctor`) work today. The `/` commands in step 5 are
+> (`/ingest`, `classkit ingest`, `classkit add-url`, `classkit material`, `classkit doctor`) and the
+> syllabus (`/plan-syllabus`, `/review-syllabus`, `classkit approve syllabus`, `classkit status`) work today. The `/` commands in step 5 are
 > being implemented one at a time — `dev/ROADMAP.md`'s ledger is the authoritative list of what is
 > actually built. Expect this document to change as they land.
 
@@ -60,13 +61,17 @@ read the recent entries before they start work, so next year's revision knows wh
 decided. Add your own entries by hand whenever something worth remembering happens ("taught U03 —
 students found S02 too long"), or with `classkit log "taught U03" --changed "…" --why "…"`.
 
-The syllabus is a **Bologna-style course descriptor**: alongside the goal and outcomes it has room
-for level, course type, when it is offered, teaching methods, reading, workload and the assessment
-scheme. Fill it in over time, or leave parts out — only the goal and the outcomes are required.
+The syllabus is **where your course descriptor lives** — everything the university's form asks for,
+so you never keep syllabus information anywhere else. Its **front matter** holds what tools and
+agents use: the goal, the outcomes, the **unit map** (the whole semester's units, in order), workload,
+prerequisites, reading and grading. Its **body** holds what only people read — the catalogue
+description, teaching methods, level, policies (including an AI-use policy), office hours — in your
+institution's order. Only the goal and the outcomes are required: it is best effort, not a form.
 
-It is scaffolded with placeholders and is yours to edit. Its `workload` block is left commented out
-deliberately, so you can draft a syllabus before credits are settled; `classkit validate` warns
-until you fill it in. That is a reminder, not a failure.
+It is scaffolded with placeholders and a default skeleton of sections; `/plan-syllabus` (step 5)
+drafts it from your materials, and it is yours to edit by hand at any time. Its `workload` block is
+left out until credits are settled; `classkit validate` warns until you fill it in. That is a
+reminder, not a failure.
 
 Scaffolding never overwrites. Re-run it whenever you want the pieces you are missing — everything
 you have already written is left exactly as it is.
@@ -103,7 +108,7 @@ recorded** — mentions links inside your materials that look like course resour
 you list in `links.md` become materials), and reports what your course actually
 covers and where it is thin — saying first which units your materials reach, and "no material
 yet" for the rest. Once you have read it, it is saved to `course/materials/coverage.md` (a later run
-asks before replacing it, so notes you add there are not lost), and `/plan-units` reads it. Each
+asks before replacing it, so notes you add there are not lost), and `/plan-syllabus` reads it. Each
 step you approve is recorded in the course log.
 
 What that buys you: an answer reference can point at **`M0007#slide-18`**, and `classkit validate`
@@ -159,8 +164,8 @@ paths and answer references cite it by key.
 
 ## 4. Set your settings
 
-The course's *aim* — its goal, outcomes, prerequisites and workload — lives in
-`course/syllabus/syllabus.md`, which you edit directly. Everything *tunable* is in
+The course's *aim* — its goal, outcomes, unit map, prerequisites, workload and grading — lives in
+`course/syllabus/syllabus.md`, which `/plan-syllabus` drafts and you edit. Everything *tunable* is in
 **`course/course.yaml`**:
 
 | Setting | What it controls |
@@ -194,13 +199,35 @@ Open Claude Code in your course repo and run these in order:
 | Command | What it does |
 |---|---|
 | `/ingest` | Reads `materials/source/` and `links.md` — pre-flight, convert, classify — and reports what your course covers |
-| `/plan-units` | Writes the syllabus — goal, Course Outcomes — then the unit map, each unit's objectives rolling up to those outcomes |
+| `/plan-syllabus` | The syllabus: evidence and questions → a full draft → revisions with you → your approval |
+| `/review-syllabus` | Optional: an independent critic reads the syllabus — outcomes that are topic labels, claims nothing supports |
+| `/plan-units` | Each unit's objectives, rolling up to the approved syllabus's outcomes. *Being rewritten next: `/plan-units 1 2` for the units named* |
 | `/design-unit 3` | The main event: the week's study sessions with their guiding questions, the entry quiz, then the in-class hour built on both |
 | `/review-unit 3` | An adversarial critic — checks the hour genuinely depends on the prework |
 | `/write-items 3` | More assessment items for the entry quiz |
 
 *Homework, programming assignments and exams (`/write-items` in its full form) and the class Gem
 (`/build-gem`) are later phases. They are not built.*
+
+### The syllabus first — and approving it
+
+Establish the syllabus before any unit: it is often what you upload to the university, and the units
+build on it. `/plan-syllabus` drafts it **best effort** from the evidence you ingested — an old
+syllabus above all, the book's table of contents, your decks — and **asks** what the evidence cannot
+answer (credits, grading, office hours) rather than inventing it. What nobody knows yet appears in
+the body as **TBD**. You revise it in conversation or by hand, as many rounds as you like.
+
+When it is good enough to build on, **approve** it — at the command's last step, by saying "approve
+the syllabus", or by hand. Approval is recorded in the file itself (`approved: {on, hash}`), by
+`classkit approve syllabus`. Editing afterwards is normal: nothing un-approves, and `classkit status`
+says "approved 5 Oct — edited since" until you approve again. Approved does not mean perfect — unit
+work builds on what you approved, and the validator reports any inconsistency; nothing waits on it.
+
+**`classkit status`** shows where the course stands — the syllabus, the unit map with each unit's
+state, the materials. Every command shows it first.
+
+To upload the syllabus to the university, copy from `syllabus.md` for now; a formatted document is
+a later export.
 
 ### How the commands behave
 

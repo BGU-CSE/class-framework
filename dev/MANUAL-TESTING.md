@@ -329,6 +329,72 @@ fresh course.
 
 ---
 
+## Step 3-syllabus — `/plan-syllabus`, approval and `classkit status` (D-043)
+
+**What it should deliver:** a syllabus you would be willing to upload — drafted best effort from
+your real materials, with nothing invented — revised with you, and approved. **The agent's output is
+the thing under test**; the tooling around it is small. Use the real course: a fresh clone and course
+(Steps 2c-1/2c-2 for ingest), with the old syllabus, the textbook (in `private/`), and the decks.
+
+```bash
+.venv/bin/classkit status
+# Syllabus  NOT STARTED: the scaffolded placeholders — run /plan-syllabus
+# Units     13 in course.yaml / no unit map yet; Materials: none ingested yet
+```
+
+Run `/ingest` first (status then shows the materials and "coverage report: materials/coverage.md"),
+then `/plan-syllabus`. Check, step by step:
+
+- **Step 0** shows `classkit status`, and `/ingest` now shows it too, before `doctor`.
+- **Step 1 — evidence.** It names the old syllabus, the book's index and the decks by id, says how
+  far each reaches, which form it will mirror (your old syllabus's sections), and asks **only** what
+  the evidence does not answer — credits if the old syllabus lacks them, grading, office hours.
+  Each question says what the draft will do if you leave it unanswered. It waits.
+- **Step 2 — the draft** is written through the write path: the first write is refused (exit 3 —
+  the placeholders are there); it tells you so and asks before `--overwrite`. Then `classkit
+  validate` — no errors; `syllabus_workload_missing` only if workload is TBD.
+- **The report** says where each part came from, gives the outcomes-against-units table, and lists
+  every **TBD** and guess.
+- **Step 3 — revise.** Ask for one change ("CO2 too broad — split it"): you see a `--diff` touching
+  only that (and its prose in the body), nothing else; write on your OK; a log entry follows. Edit
+  the file by hand between rounds — the next round keeps your edit.
+- **Step 4 — approve.** Say "approve":
+
+```bash
+.venv/bin/classkit approve syllabus --diff      # the record it would add; nothing written
+.venv/bin/classkit approve syllabus --why "first approval"
+.venv/bin/classkit status                       # Syllabus  APPROVED: approved 2026-…
+# edit one word in the body, then:
+.venv/bin/classkit status                       # APPROVED, EDITED SINCE: … — edited since
+# reword a YAML comment only: still APPROVED (comments are not part of the hash)
+.venv/bin/classkit approve syllabus             # re-approves; the record is replaced in place
+tail -5 course/LOG.md                           # "classkit approve syllabus … re-approved …"
+```
+
+  By hand: replace the block with `approved: {on: 2026-10-05}` → status says "edits since cannot
+  be tracked", and `validate` has no error (YAML reads the bare `on` as a boolean; the loader
+  handles it).
+- **`/review-syllabus`** (optional): the critic's findings, ordered by damage, broken vs. taste;
+  nothing written; fixes go back through `/plan-syllabus`.
+
+### What is worth your judgement here
+
+- **Would you upload the body as it is** — after filling the TBDs? Does it mirror your institution's
+  form (your old syllabus's sections and order)?
+- **Is anything invented?** Credits, weights, a policy, a prerequisite, a date you never gave and
+  the old syllabus does not have. This is the failure that matters most.
+- **Are the outcomes outcomes** — assessable capabilities, a handful, each spanning units — not
+  topic labels or one per unit?
+- **Is the unit map right**, and are its `evidence` locators the right slides and pages? Nothing
+  checks them (gap report G-2) — open a few.
+- **The AI-use policy** — proposed, concrete, and marked as a proposal?
+- **Did it quote the private book?** `classkit doctor` after the draft — any ACTION is a D-042
+  breach. Read the Reading and Course description sections yourself too.
+- **Did the gates hold** — one step at a time, nothing written before you saw it (except the draft,
+  which is written to be read, and shown at once)?
+
+---
+
 ## Expected noise — do not report these as bugs
 
 | What you will see | Why | Tracked as |

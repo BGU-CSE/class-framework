@@ -186,7 +186,7 @@ activities; and the **entry quiz** — its assessment items and their answer key
 exams, grading weights, the Gem builder, PPTX export, metrics, and course lifecycle.
 
 **Agents and commands active in Core.** Agents: `syllabus-designer` (the whole syllabus: goal,
-Course Outcomes, the unit map, grading, the descriptor) **(target, D-029, D-043)**,
+Course Outcomes, the unit map, grading, the descriptor; D-029, D-043),
 `curriculum-architect` (unit objectives, against the approved syllabus),
 `study-session-designer` (sessions, guiding questions, answers, `est_minutes`, the study-path pool),
 `lesson-planner` (the in-class hour), `assessment-writer` (entry-quiz items only, in Core),
@@ -198,9 +198,9 @@ reports coverage; read-only — it returns, the command records, §8.7), `course
 | Verb | Means | Commands |
 |---|---|---|
 | *ingest* | read the teacher's materials | `/ingest` |
-| *plan* | **what** is taught, in what order | `/plan-syllabus` **(target, D-043)**; `/plan-units N…` |
+| *plan* | **what** is taught, in what order | `/plan-syllabus` (D-043); `/plan-units N…` |
 | *design* | **how** students learn it | `/design-unit N [session K \| quiz \| class]` — a part names what to revise alone **(target, D-043)** |
-| *review* | an independent agent critiques what it did not write | `/review-syllabus` **(target, D-043)**; `/review-unit N` |
+| *review* | an independent agent critiques what it did not write | `/review-syllabus` (D-043); `/review-unit N` |
 | *build* | something produced for others | Exports: `/build-gem`, later the syllabus document and slides |
 
 `/write-items` is **retired from Core** (D-043): the entry quiz is `/design-unit N quiz`; writing
@@ -388,7 +388,7 @@ Course-level setup runs once; then units are designed one at a time.
                       yet" for the rest, never "thin"); after the teacher has read it,
                       written to materials/coverage.md (D-040)
                    Every approved step appends to course/LOG.md (§8.8).
-/plan-syllabus     (target, D-043) syllabus-designer, BEST EFFORT, four gated steps:
+/plan-syllabus     (D-043) syllabus-designer, BEST EFFORT, four gated steps:
                    1. EVIDENCE — what it found (an old syllabus, materials/coverage.md,
                       a book's table of contents, course.yaml) and the questions the
                       evidence cannot answer (credits, grading, policies) → WAIT
@@ -474,8 +474,8 @@ Why: an agent that designs a whole unit before the teacher sees anything compoun
 assumption across four sessions, an hour, and a quiz. Gates keep the blast radius one step wide.
 
 **Every command starts by showing where the course stands** — the overview from `classkit status`
-(§8.9): what is approved, what is approved but edited since, what is not started **(target,
-D-043)**.
+(§8.9): what is approved, what is approved but edited since, what is not started (D-043; built for
+`/ingest`, `/plan-syllabus` and `/review-syllabus` — the other commands as each is rewritten).
 
 **Where the gate lives.** A gate is *conversational* — the command states what it produced and waits
 for the teacher's reply. It must therefore sit in the **orchestrating command, between agent
@@ -628,9 +628,9 @@ Deferred: a `gem` block (Exports phase).
 | `workload` | object | | `{ credits (✓), credit_system (✓; string — ECTS is one instantiation, never hardcoded), total_hours (number, opt) }`. Optional so a teacher can draft and validate a syllabus before credits are settled; `syllabus_workload_missing` warns while it is absent (D-031d) |
 | `prerequisites` | array\<string\> | | course-level prerequisites (free text or course codes) |
 | `assessment` | array\<obj\> | | the grading scheme, e.g. `{ type, weight }`. **The agent may draft it** (from an old syllabus, or by asking); nothing validates its content — approving or editing it is the teacher's responsibility **(D-043; it was "reserved, empty in Core")**. Its item shape is **deliberately left open** (`additionalProperties` *not* false): the Assessment phase will give grading real structure, and may then ask for what was written freely to be converted (G-11) |
-| `reading` | object | | **(target, D-032)** `{ required: [string], recommended: [string] }`. Entries may be a `textbooks[].key` from `course.yaml` (preferred — no duplication) or free-text for anything not listed there |
-| `approved` | object | | **(target, D-043)** `{ on (date, ✓), hash (opt) }` — the teacher's approval of this syllabus, the milestone unit work builds on (§8.9). Written by `classkit approve syllabus`, or by hand (then without `hash`) |
-| `unit_map` | array\<obj\> | | **(target, D-040, step 3)** the whole semester's plan, written before most units exist: each `{ number (✓), title (✓), summary (opt), evidence (opt, array of material locators — what the plan for this unit rests on) }`. **Authoritative for which units the course has and their order and titles.** A `units/NN-slug/` directory is created only when a unit is *planned* in detail (§5.1); `unit_map_mismatch` warns when a unit's `unit.md` disagrees with its map entry |
+| `reading` | object | | (D-032) `{ required: [string], recommended: [string] }`. Entries may be a `textbooks[].key` from `course.yaml` (preferred — no duplication) or free-text for anything not listed there |
+| `approved` | object | | (D-043) `{ on (date `YYYY-MM-DD`, ✓), hash (opt, `sha256:<hex>`) }` — the teacher's approval of this syllabus, the milestone unit work builds on (§8.9). Written by `classkit approve syllabus`, or by hand (then without `hash`). YAML 1.1 reads a bare `on:` key as the boolean `true`; the loader reads it as `on` |
+| `unit_map` | array\<obj\> | | (D-040, D-043) the whole semester's plan, written before most units exist: each `{ number (✓), title (✓), summary (opt), evidence (opt, array of material locators — what the plan for this unit rests on) }`. **Authoritative for which units the course has and their order and titles.** A `units/NN-slug/` directory is created only when a unit is *planned* in detail (§5.1); `unit_map_mismatch` **(target, [units])** warns when a unit's `unit.md` disagrees with its map entry |
 
 `bloom` enum, everywhere it appears: `remember | understand | apply | analyze | evaluate | create`.
 
@@ -1528,7 +1528,7 @@ Append-only. One entry per non-trivial change:
   why — which is what makes year-to-year revision possible without re-deriving intent.
 - The teacher may add entries by hand ("taught U03 — students found S02 too long").
 
-### 8.9 Approval and the course's status **(target, D-043)**
+### 8.9 Approval and the course's status (D-043)
 
 A milestone the teacher reaches — "the syllabus is approved", later "unit 3 is designed" — is a
 teacher's act, so it is **recorded**, not derived. It is recorded **in the approved file itself**,
@@ -1536,12 +1536,19 @@ never in a separate progress file, which would duplicate state and drift (a dele
 "designed").
 
 - **The record:** `approved: { on: <date>, hash: <sha256 of the file without its own approved
-  block> }` in the file's front matter. Today: `syllabus.md`. The units' states (planned,
+  block> }` in the file's front matter. The hash is taken over the **parsed** front matter
+  (canonical JSON, keys sorted, `approved` excluded) followed by the body — so a YAML comment, key
+  order or quoting style is not an "edit", and a hand-written record may sit anywhere in any style.
+  The body is hashed exactly. Today: `syllabus.md`. The units' states (planned,
   designed, reviewed…) are specified with the unit steps and use the same mechanism in `unit.md`.
 - **Three routes, one record.** The teacher approves at a command's gate ("approve"), in
   conversation ("approve the syllabus" — the chat runs it), or by hand. The first two run
-  **`classkit approve syllabus`**, which writes the record through the write path (`--diff`, then
-  `--overwrite`; §8.6) and appends a course-log entry. By hand, the teacher may write
+  **`classkit approve syllabus`**, which writes the record through the write path (§8.6) and appends a
+  course-log entry. The teacher's "approve" is the explicit confirmation, so it writes with
+  `overwrite`; `classkit approve syllabus --diff` shows the change first and writes nothing. Only
+  the record's lines change — the teacher's comments survive — and the result is re-parsed: if
+  anything else would differ, nothing is written. Approving content already approved with the same
+  hash records nothing. By hand, the teacher may write
   `approved: {on: 2026-10-05}` without a hash.
 - **Editing after approval is normal** — the syllabus keeps changing during the semester. Nothing
   is un-approved. The hash only lets the overview say **"approved 5 Oct — edited since"**; without

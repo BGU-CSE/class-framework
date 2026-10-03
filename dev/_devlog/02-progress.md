@@ -1737,3 +1737,28 @@ one verb per meaning (`/write-items` retired), best effort over completeness, th
 rule, four gated steps. Also fixed a stale order in §5.2 (quiz before the class hour, D-031a). Spec,
 D-043, ledger (rows [3-syllabus], [units]; 194 changes).
 
+## Session 37 — 2026-10-03 — The syllabus increment built ([3-syllabus], D-043)
+
+Built every [3-syllabus] row (18) from a fresh session. Tooling: the syllabus schema (`unit_map`,
+`reading`, `approved {on, hash}`, `assessment` draftable) and template (front matter with commented
+examples; a default body skeleton of descriptor sections, AI-use policy included; the template's
+hardcoded minutes removed, invariant 2); `classkit approve syllabus` (`approve.py`: record in the
+file, hash over parsed front matter + body, textual edit re-parsed before writing, logged);
+`classkit status` (`status.py`: syllabus state, unit map with units present or not, materials,
+last log entry; read-only, committed files only). Found by testing: YAML 1.1 reads the spec's
+`on:` key as `True` — the loader normalises it (gap G-1 ⚑, rename suggested).
+
+The product: `syllabus-designer` (read-only; tasks evidence / draft / revise; returns the whole file;
+TBD rather than invention; AI-use policy always proposed where an AI study path is used; D-042),
+`/plan-syllabus` (status → evidence → draft through the write path → revision rounds by `--diff` →
+`classkit approve syllabus`), `/review-syllabus` and the critic's syllabus section. Narrowed
+`curriculum-architect`'s description; `/ingest` shows status first. Docs, spec (§3.1, §5.1, §5.2,
+§8.2, §8.9 — target marks removed, §8.9's hash and write refined), MANUAL-TESTING section, gap
+report (`reviews/impl-gaps-step-3-syllabus.md`, two ⚑). 318 tests. Ledger 98 / 6 / 91 of 195.
+
+### Next
+
+Avin runs `/ingest` + `/plan-syllabus` on a real course (`MANUAL-TESTING.md`, "Step 3-syllabus") and
+judges the agent's output; prompts revised from what he finds. Decide G-1 and G-2. Meanwhile, the
+spec of the [units] increment.
+

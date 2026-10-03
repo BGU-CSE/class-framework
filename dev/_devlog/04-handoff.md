@@ -19,7 +19,25 @@ Then, for history and what is still open:
 6. `02-progress.md` (last block) — where we stopped.
 7. `03-open-questions.md` — what's unresolved.
 
-## Current state — 2026-10-03 (Core re-oriented; the syllabus increment designed)
+## Current state — 2026-10-03 (the syllabus increment built)
+
+**The syllabus increment is built** (Session 37): every [3-syllabus] row. Suite: **318 tests**,
+green. Ledger: 98 built, 6 in progress, 91 not started — `../ROADMAP.md` is authoritative. Gap
+report: `../reviews/impl-gaps-step-3-syllabus.md` (two ⚑: G-1 the `on:` key is a YAML boolean —
+rename to `date:` while it is cheap?; G-2 `unit_map` evidence locators unchecked).
+
+- **What exists now:** `syllabus-designer` (read-only; evidence / draft / revise), `/plan-syllabus`
+  (four gated steps), `/review-syllabus` (course-critic's syllabus section), `classkit approve
+  syllabus` (date + hash in the file, logged), `classkit status` (syllabus state, unit map, materials);
+  the schema's `unit_map`, `reading`, `approved`; a template with a descriptor skeleton. `/ingest`
+  shows status first.
+- **Not yet:** `/plan-units N…` and the architect's rewrite, `/write-items` retired, unit states,
+  `unit_map_mismatch` — the [units] increment. Until then `/plan-units` behaves as before (G-11).
+- **Next: Avin's check on a real course** — `/ingest`, then `/plan-syllabus` to approval
+  (`../MANUAL-TESTING.md`, "Step 3-syllabus"). The agent's output is what is judged; prompts are
+  revised from it. Decide G-1, G-2. Meanwhile, specify the [units] increment.
+
+## State after D-043 was designed — 2026-10-03 (kept for history)
 
 **Step 2 is built and reviewed**; its re-test folds into the real-course checks below. Suite: 294
 tests, green.

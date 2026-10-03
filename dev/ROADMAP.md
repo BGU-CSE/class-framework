@@ -85,7 +85,7 @@ Each step should end in something runnable and inspectable, not just green tests
 | **1. Initialize** ✅ | `classkit scaffold course` produces a complete, valid course skeleton *including* `syllabus/syllabus.md`. The teacher's first contact with the framework. | D-021 (schema, template, model, scaffold rows), D-031d |
 | **2. Ingest + course log** ✅ — **2a ✅** validation re-classification (D-037) + course log (D-036); **2b ✅** ingest (awaiting independent review and Avin's hand test on real materials) | `/ingest` end to end: pre-flight report, `classkit ingest` (extractors, anchors, manifest, incremental, hand-edit detection), classification and duplicate confirmation, `classkit add-url`, `material_locator_resolves`. Plus the course log — `classkit log` — since ingest is its first user. **Designed** (Q-028 → D-035, D-036). D-037 folded in as 2a, since it reworks the validator ingest's rule lands in. | D-035, D-036, D-037 |
 | **2c. The hand test's fixes** — **2c-1 ✅** privacy and `classkit doctor` (gap report `reviews/impl-gaps-step-2c-1.md`); **2c-2 ✅** the rest (gap report `reviews/impl-gaps-step-2c-2.md`); **reviewed ✅** (`reviews/impl-review-step-2c.md`; its outcome is D-042). **Step 2 closes after Avin's re-test** with a fresh course | From Avin's hand test of 0–2b (`reviews/manual-test-step-0-2b.md`). 2c-1: `source/private/` (committed index, local full text), `audience` and `instructor_material_cited`, `course/.gitignore`, `private_material_committed`, `classkit doctor`. 2c-2: D-041 (the self-certifying full text, `course_gitignore_missing`, `write.remove()`, permissions, `.DS_Store`), duplicate detection and link harvesting dropped, `units: all`, `materials/coverage.md`, prose locators, refusal diff, `write --diff`, path kinds, and the plain extraction/UX fixes. Two implementation rounds, **one review after 2c-2**. Rows tagged **[2c-1]** / **[2c-2]** in the D-040 ledger block. | D-040 |
-| **3. Syllabus** — the first increment of the re-oriented Core (D-043) | `/plan-syllabus` (syllabus-designer, best effort, gated), `/review-syllabus`, `unit_map`, `classkit approve syllabus`, `classkit status`. **Build, then Avin checks it on a real course.** Rows tagged **[3-syllabus]**. Then the units increment (`/plan-units N…`, rows **[units]**), specified next. | D-029, D-032, D-040, D-043 |
+| **3. Syllabus** — the first increment of the re-oriented Core (D-043) | `/plan-syllabus` (syllabus-designer, best effort, gated), `/review-syllabus`, `unit_map`, `classkit approve syllabus`, `classkit status`. **Built (Session 37); next, Avin checks it on a real course.** Rows tagged **[3-syllabus]**. Then the units increment (`/plan-units N…`, rows **[units]**), specified next. | D-029, D-032, D-040, D-043 |
 | **4. Study sessions** | `answer`, `est_minutes`, `defer_to_class`, session-level `paths`, the budget rule, `study-session-designer`, the rewritten `estimating-study-time` skill. | D-019, D-020, D-023, D-025 |
 | **5. Entry quiz** | `model_answer` rename, `usage` scoping, `unit_has_entry_quiz_items`, `assessment-writer` scoped to the entry quiz. | D-031c, D-031g |
 | **6. In-class hour** | Optional `guiding_questions` + `reason`, the unmapped-time cap and its course override, `activity_item_reference`, `lesson-planner`. | D-028, D-031a, D-031e |
@@ -218,10 +218,10 @@ is calibrated rather than pure vibes.
 
 | | Artifact | Change |
 |---|---|---|
-| ⬜ | `.claude/agents/syllabus-designer.md` | **[3-syllabus]** **new** — owns `syllabus/syllabus.md`: goal, Course Outcomes, workload, prerequisites (scope widened by D-043) |
+| ✅ | `.claude/agents/syllabus-designer.md` | **[3-syllabus]** **new** — owns `syllabus/syllabus.md`: goal, Course Outcomes, workload, prerequisites (scope widened by D-043) |
 | ⬜ | `.claude/commands/plan-units.md` | ~~run syllabus-designer and curriculum-architect as one flow~~ — **superseded by D-043**: `/plan-syllabus` is its own command; `/plan-units N…` plans unit objectives (units increment) |
 | ⬜ | `.claude/agents/curriculum-architect.md` | scope narrowed to the unit map and unit objectives; consumes the outcome list |
-| ⬜ | `.claude/agents/course-critic.md` | **[3-syllabus]** syllabus judgment: outcomes that are real outcomes not topic labels, a meaningful goal, plausible workload — run by `/review-syllabus` |
+| ✅ | `.claude/agents/course-critic.md` | **[3-syllabus]** syllabus judgment: outcomes that are real outcomes not topic labels, a meaningful goal, plausible workload — run by `/review-syllabus` |
 
 ## D-030 — Command interaction protocol
 
@@ -268,10 +268,10 @@ Reopens step 1's artifact — the schema and template exist, these extend them.
 
 | | Artifact | Change |
 |---|---|---|
-| ⬜ | `schemas/syllabus.schema.json` | **[3-syllabus]** add optional `reading {required[], recommended[]}`. ~~`level`, `course_type`, `offered`, `teaching_methods`~~ — **superseded by D-043**: body sections, not fields |
-| ⬜ | `templates/course/syllabus.md` | **[3-syllabus]** see D-043's template row (it replaces this one) |
-| ⬜ | `GETTING-STARTED.md` | **[3-syllabus]** the syllabus is where course-descriptor information lives |
-| ⬜ | `.claude/agents/syllabus-designer.md` | **[3-syllabus]** authors the full descriptor; leaves unknown fields out rather than inventing them (invariant 7) — see D-043 |
+| ✅ | `schemas/syllabus.schema.json` | **[3-syllabus]** add optional `reading {required[], recommended[]}`. ~~`level`, `course_type`, `offered`, `teaching_methods`~~ — **superseded by D-043**: body sections, not fields |
+| ✅ | `templates/course/syllabus.md` | **[3-syllabus]** see D-043's template row (it replaces this one) |
+| ✅ | `GETTING-STARTED.md` | **[3-syllabus]** the syllabus is where course-descriptor information lives |
+| ✅ | `.claude/agents/syllabus-designer.md` | **[3-syllabus]** authors the full descriptor; leaves unknown fields out rather than inventing them (invariant 7) — see D-043 |
 | ⬜ | *(Exports slice)* | the **rendered syllabus** — one document combining `syllabus.md` + identity fields from `course.yaml` + a unit overview derived from the units. Deferred; listed here so it is not lost |
 
 ## D-033 — Rule states; `syllabus_missing`
@@ -376,7 +376,7 @@ Tags: **[2c-1]** privacy and `doctor` · **[2c-2]** the rest of the hand test's 
 | ✅ | `src/classkit/validate.py`, `CLAUDE.md`, agents | **[2c-2]** `material_locator_in_text` (warn) over Markdown bodies (not `LOG.md`, `ingested/`); locators always fully qualified |
 | ✅ | `src/classkit/ingest/core.py`, `report.py` | **[2c-2]** a hand-edit refusal shows the diff between the current file and a fresh extraction, grouped by anchor |
 | 🔨 | `schemas/study-session.schema.json` | **[2c-2; the rest step 4]** path kinds gain `slides` and `notes` (now) — ✅ done in 2c-2; step 4: one resource-kind vocabulary for paths and `answer`, `kind` optional when `ref` is a material locator |
-| ⬜ | `schemas/syllabus.schema.json`, template (step 3) | **[3-syllabus]** `unit_map` (number, title, summary, evidence) |
+| ✅ | `schemas/syllabus.schema.json`, template (step 3) | **[3-syllabus]** `unit_map` (number, title, summary, evidence) |
 | ⬜ | `src/classkit/validate.py` (step 3) | **[step 3]** `unit_map_mismatch` (warn, consistency) |
 | ⬜ | `.claude/commands/plan-units.md`, `syllabus-designer`, `curriculum-architect` (step 3) | **[step 3]** course level whole, from evidence (asks when there is none); the unit map in the syllabus; units planned incrementally — `/plan-units 4 5`; reads `materials/coverage.md` |
 | ✅ | `schemas/manifest.schema.json`, `ingest/core.py`, `cli.py`, agent | **[2c-2]** `units: all` (course-wide) in the schema, `apply`, `set --unit all`; the classifier uses it; consumers (designers, the D-039 re-map) treat `all` as every unit |
@@ -415,17 +415,17 @@ checks it on a real course) · **[units]** the next increment.
 
 | | Artifact | Change |
 |---|---|---|
-| ⬜ | `.claude/agents/syllabus-designer.md` (new) | **[3-syllabus]** best effort; reads the evidence (old syllabus, `materials/coverage.md`, the book's index, `course.yaml`); drafts goal, outcomes, unit map, workload, prerequisites, reading, grading and the descriptor body mirroring the institution's form; asks rather than invents; always proposes an AI-use policy where AI study paths are used; never copies private text (D-042); read-only — returns, the command writes (like D-039) |
-| ⬜ | `.claude/commands/plan-syllabus.md` (new) | **[3-syllabus]** shows `classkit status`; evidence → gate → full draft (write path) → gate → revision rounds → approval via `classkit approve syllabus`; each approved step logged |
-| ⬜ | `.claude/commands/review-syllabus.md` (new) | **[3-syllabus]** runs `course-critic` on the syllabus; optional |
-| ⬜ | `schemas/syllabus.schema.json` | **[3-syllabus]** `unit_map` (D-040 row), `approved {on, hash?}`, `assessment` description updated (draftable) |
-| ⬜ | `templates/course/syllabus.md` | **[3-syllabus]** front matter: `unit_map`, `reading`, grading (commented); a default body skeleton of descriptor sections — description, aim, outcomes prose, teaching methods, level/type/when offered, schedule (from the map), workload, grading, reading, policies incl. AI use, staff and office hours |
-| ⬜ | `src/classkit/approve.py` (new), `cli.py` | **[3-syllabus]** `classkit approve syllabus` — writes `approved {on, hash}` through the write path, logs it |
-| ⬜ | `src/classkit/status.py` (new), `cli.py` | **[3-syllabus]** `classkit status` — read-only overview: syllabus approved / edited since / draft; the unit map with each unit's state (units: present or not, until the units increment defines states); materials ingested / outstanding |
-| ⬜ | `.claude/agents/curriculum-architect.md` | **[3-syllabus]** narrow its `description` only — "unit objectives for the units named, under `/plan-units`; the unit map belongs to the syllabus (D-043)" — so Claude Code does not pick it for semester planning; the rewrite is the [units] increment |
-| ⬜ | `.claude/commands/ingest.md` | **[3-syllabus]** shows `classkit status` first (the other commands as each is rewritten) |
-| ⬜ | `CLAUDE.md`, `GETTING-STARTED.md`, `README.md`, `dev/MANUAL-TESTING.md` | **[3-syllabus]** `/plan-syllabus`, `/review-syllabus`, approval and status; a hand-test section |
-| ⬜ | `tests/` | **[3-syllabus]** approve writes on/hash and logs; status reads approved / edited since / no-hash; schema accepts the new fields; a fresh scaffold still validates with 0 errors |
+| ✅ | `.claude/agents/syllabus-designer.md` (new) | **[3-syllabus]** best effort; reads the evidence (old syllabus, `materials/coverage.md`, the book's index, `course.yaml`); drafts goal, outcomes, unit map, workload, prerequisites, reading, grading and the descriptor body mirroring the institution's form; asks rather than invents; always proposes an AI-use policy where AI study paths are used; never copies private text (D-042); read-only — returns, the command writes (like D-039) |
+| ✅ | `.claude/commands/plan-syllabus.md` (new) | **[3-syllabus]** shows `classkit status`; evidence → gate → full draft (write path) → gate → revision rounds → approval via `classkit approve syllabus`; each approved step logged |
+| ✅ | `.claude/commands/review-syllabus.md` (new) | **[3-syllabus]** runs `course-critic` on the syllabus; optional |
+| ✅ | `schemas/syllabus.schema.json` | **[3-syllabus]** `unit_map` (D-040 row), `approved {on, hash?}`, `assessment` description updated (draftable) |
+| ✅ | `templates/course/syllabus.md` | **[3-syllabus]** front matter: `unit_map`, `reading`, grading (commented); a default body skeleton of descriptor sections — description, aim, outcomes prose, teaching methods, level/type/when offered, schedule (from the map), workload, grading, reading, policies incl. AI use, staff and office hours |
+| ✅ | `src/classkit/approve.py` (new), `cli.py` | **[3-syllabus]** `classkit approve syllabus` — writes `approved {on, hash}` through the write path, logs it |
+| ✅ | `src/classkit/status.py` (new), `cli.py` | **[3-syllabus]** `classkit status` — read-only overview: syllabus approved / edited since / draft; the unit map with each unit's state (units: present or not, until the units increment defines states); materials ingested / outstanding |
+| ✅ | `.claude/agents/curriculum-architect.md` | **[3-syllabus]** narrow its `description` only — "unit objectives for the units named, under `/plan-units`; the unit map belongs to the syllabus (D-043)" — so Claude Code does not pick it for semester planning; the rewrite is the [units] increment |
+| ✅ | `.claude/commands/ingest.md` | **[3-syllabus]** shows `classkit status` first (the other commands as each is rewritten) |
+| ✅ | `CLAUDE.md`, `GETTING-STARTED.md`, `README.md`, `dev/MANUAL-TESTING.md` | **[3-syllabus]** `/plan-syllabus`, `/review-syllabus`, approval and status; a hand-test section |
+| ✅ | `tests/` | **[3-syllabus]** approve writes on/hash and logs; status reads approved / edited since / no-hash; schema accepts the new fields; a fresh scaffold still validates with 0 errors |
 | ⬜ | `.claude/commands/plan-units.md`, `curriculum-architect` | **[units]** `/plan-units N…`: objectives for the named units against the approved syllabus; asks (does not refuse) when the syllabus is unapproved |
 | ⬜ | `.claude/commands/write-items.md`, `design-unit.md` | **[units]** retire `/write-items` from Core; `/design-unit N [session K \| quiz \| class]` |
 
@@ -437,8 +437,10 @@ checks it on a real course) · **[units]** the next increment.
 | ✅ | `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block was scaffolded and documented although Exports is deferred (G-16). **Removed from the template and the settings table** — shipping configuration for a feature that does not exist confuses a teacher reading their own `course.yaml`. The optional field stays in `course.schema.json`, so a course that sets it still validates |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-10-03 (after D-043, the syllabus increment designed):** 19 decision blocks, 195 artifact
-changes, **80 built, 6 in progress, 109 not started** — counted from the table. Step 2 is built and
+**Count as of 2026-10-03 (after the syllabus increment was built, Session 37):** 19 decision blocks,
+195 artifact changes, **98 built, 6 in progress, 91 not started** — counted from the table. Every
+[3-syllabus] row is built (18); next, Avin checks it on a real course. (After D-043 was designed:
+80 / 6 / 109.) Step 2 is built and
 reviewed; it closes after Avin's re-test with a fresh course. (After step 2c-2: 177; 76 / 6 / 95.) Step 2c-2 (every [2c-2] row in
 the D-040 and D-041 blocks) is built; the path-kinds row is 🔨 because its step-4 half remains. Next:
 one independent review of 2c-1 and 2c-2 together. (After step 2c-1 and D-041: 61 / 5 / 111 of 177.

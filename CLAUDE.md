@@ -55,7 +55,7 @@ Two words are **banned** because each used to mean two things: **"topic"**, and 
 
 | Term | Meaning |
 |---|---|
-| **Syllabus** | The course-level top layer, `syllabus/syllabus.md`. Course goal, Course Outcomes, workload, prerequisites. One per course. |
+| **Syllabus** | The course-level top layer, `syllabus/syllabus.md`. Course goal, Course Outcomes, the unit map, workload, prerequisites, grading, and the descriptor's body sections. One per course; approved by the teacher (`classkit approve syllabus`). |
 | **Course Outcome** | What a student who passes the course can do. `CO1`, `CO2`, … The roof of the coverage chain: every Unit Objective rolls up to ≥1 outcome. |
 | **Unit** | One week's subject. 12–13 per semester. |
 | **Unit Objective** | Abstract, teacher-facing goal. 2–4 per unit. Not the working layer. |
@@ -88,9 +88,17 @@ M0007#slide-18   a place inside it: slide-N, page-N, or a heading's slug
 | Command | What it does |
 |---|---|
 | `/ingest` | Read your existing materials and report what the course actually covers |
-| `/plan-units` | The syllabus: course goal, Course Outcomes, the unit map, unit objectives |
+| `/plan-syllabus` | The syllabus: course goal, Course Outcomes, the unit map, workload, grading, the descriptor — drafted best effort, revised with you, approved |
+| `/review-syllabus` | Optional: an independent agent reviews the syllabus |
+| `/plan-units` | Unit objectives, against the approved syllabus |
 | `/design-unit N` | One unit end to end — study sessions, the in-class hour, the entry quiz |
 | `/review-unit N` | An independent agent reviews what it did not write |
+
+**Every command starts with `classkit status`** — the syllabus (approved / approved, edited since /
+draft), the unit map with each unit's state, the materials. The teacher approves the syllabus at
+`/plan-syllabus`'s last step, in conversation, or by hand; `classkit approve syllabus` records it in
+the file (date and hash) and logs it. **Agents never approve and never write the `approved`
+block.** An unapproved syllabus makes a command ask whether to go on — not refuse.
 
 `classkit scaffold` creates files; `classkit validate` checks that the course holds together — the
 same answer on every clone; `classkit doctor` checks **this machine's** copy (private files present
