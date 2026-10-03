@@ -403,6 +403,73 @@ then `/plan-syllabus`. Check, step by step:
 - **Did the gates hold** — one step at a time, nothing written before you saw it (except the draft,
   which is written to be read, and shown at once)?
 
+## Step 3-units — `/plan-units`, unit states and `classkit approve unit` (D-046)
+
+**What it should deliver:** for the units you name, plans you would teach from — objectives that are
+real capabilities, each serving one of your Course Outcomes, drawn from that unit's own material,
+nothing invented — revised with you and approved, unit by unit. **The agent's output is the thing
+under test.** Use the same real course as the syllabus section, with the syllabus approved; plan
+**two units whose material is ingested** (say 1 and 2), and later one unit with none.
+
+Everything below is said in the chat.
+
+1. **"Bring the materials' unit hints into line with the map"** (or accept `/plan-syllabus`'s offer
+   of step 5 after approving). It shows only the rows that would change — material, units now →
+   proposed, and why (a map entry's evidence, a deck's title slide); asks whether you set any hints
+   yourself; keeps those unless you agree; records your confirmed rows in one `classkit material
+   apply`, then logs.
+2. **`/plan-units 1 2`.**
+   - **Step 0** shows the status (`U01 … not started`), runs `doctor`, says which private materials
+     are index-only here. Try it once with the syllabus *not* approved: it should say so and **ask**
+     whether to go on — not refuse.
+   - **Step 1** — per unit: an objectives-against-outcomes table (each objective → its CO, the
+     locator it rests on); anything serving no outcome named plainly; prerequisites; what does not
+     fit the week's budget with a proposal (cut / optional / move); **difficulties** — it asks what
+     your students find hard, and may propose classic ones as `origin: proposed`. Accept one, reject
+     one, add one of your own. It waits.
+   - **Step 2** — it scaffolds the unit with the **map's title**, writes `unit.md` through the write
+     path (refused first — the placeholders are there; it says so and asks), then checks the course:
+     no errors, no `unit_map_mismatch`, no `objective_maps_to_outcome`; it **names** the expected
+     `objective_coverage` alerts for objectives beyond the placeholder sessions, rather than "fixing"
+     them. Open `unit.md`: your accepted proposal is `origin: proposed`, yours `origin: teacher`,
+     the rejected one is nowhere.
+3. **Revise in the chat.** "U01-O2 is really two things — split it": the chat does it itself, shows
+   a diff touching only that, writes on your OK, logs. Edit `unit.md` by hand between rounds — the
+   next round keeps your edit. Ask for an objective your syllabus has no outcome for: it should
+   **say** it serves no outcome and offer `/plan-syllabus`, not attach it to the nearest CO.
+4. **"Approve unit 1."** Then:
+   - "where does the course stand?" → `U01  …  planned 2026-…`, and a count line (`1 planned, 1
+     drafted, 11 not started`)
+   - edit one objective's wording by hand → `planned … — edited since`
+   - "approve unit 1 again" → re-approved as **planned** (the plan changed), the record replaced in
+     place; the log says what it was
+   - edit a placeholder session → unit 1 is **not** "edited since" (a planned unit's hash is
+     `unit.md` only)
+   - change a unit's `title` so it differs from the map → checking the course warns
+     `unit_map_mismatch` against that `unit.md`; change it back
+5. **`/plan-units 7`** for a unit with **no material**: it should say so and **not** draft
+   objectives from memory as though they were fact — at most a sketch, labelled as one, if you ask.
+6. **`/review-unit 1`** (optional) on the planned unit: the critic reviews the **plan** (objectives,
+   outcomes stretched to fit, load, prerequisites, difficulties), not the placeholder sessions;
+   nothing is written.
+
+By hand: `approved: {date: 2026-10-05, stage: planned}` without a hash → status says "edits since
+cannot be tracked", and checking the course gives no error. Without `stage` it is a schema error.
+
+### What is worth your judgement here
+
+- **Would you teach from these objectives?** Assessable capabilities, the methodology's number per
+  unit, broader than a guiding question and narrower than an outcome — not subject labels.
+- **Are the outcome links honest?** Each objective's CO is one it really serves; an objective that
+  serves none is *said*, not hidden.
+- **Did it read your material, or the textbook in its head?** Open a few locators. For an index-only
+  book, did it say so?
+- **The load.** Did it notice what a three-hour lecture week cannot fit, and leave the cut to you?
+- **Difficulties** — specific enough to design a class activity against? Were proposals few,
+  classic, marked `proposed`, and recorded only when you accepted?
+- **Did it quote the private book?** "What does doctor say?" after step 2.
+- **Did the gates hold** — one step at a time, nothing written before you saw it?
+
 ---
 
 ## Expected noise — do not report these as bugs
@@ -412,7 +479,9 @@ then `/plan-syllabus`. Check, step by step:
 | Many `guiding_question_assessed` warnings (12 for one unit) | Only entry-quiz items exist in Core, and a short quiz cannot test every guiding question. Decided to be `off` in Core — not yet implemented | D-031c, step 5 |
 | `syllabus_workload_missing` | `workload` is optional by design so a syllabus validates before credits are settled | D-031d |
 | `unit_count`: "N of 13 units exist so far" | Informational while the course is being built | — |
-| No `outcomes:` on unit objectives; no coverage checking | The coverage chain is step 3 | D-021, D-033 |
+| `objective_maps_to_outcome` ALERTs on a unit you scaffolded but did not plan | Its placeholder objectives name no Course Outcome — true: the unit is not planned. `/plan-units` writes objectives that do | D-046 |
+| `objective_coverage` ALERT for U0N-O3 or -O4 on a planned unit | The placeholder sessions name only the first two objectives; `/design-unit` writes the guiding questions that address the rest | D-046 |
+| No `outcome_coverage` check (an outcome no objective serves) | Parked: a completeness rule, useful only once every unit is planned | D-046 |
 | A material's `kind` is `other` right after `classkit ingest` | Kind is only guessed from the format; the classifier sets it in `/ingest` step 3 | D-035 |
 | Link titles are their URL or note | Metadata fetching is best-effort; offline, or a site that blocks it, gives no title | D-035 |
 | `doctor`: "pandoc / LibreOffice is not installed" notes | They are optional; a note, not an action, unless you want those formats read | D-035, D-040 |

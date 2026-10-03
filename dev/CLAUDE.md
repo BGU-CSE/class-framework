@@ -78,8 +78,8 @@ src/classkit/
     links.py                links.md — parse, `add-url`, best-effort metadata
     manifest.py             materials/manifest.yaml — load, save, ids
     core.py                 scan → reconcile (shared with the validator) → convert; private material
-  approve.py              `classkit approve syllabus`: the teacher's approval recorded in the file (on, hash) (D-043)
-  status.py               `classkit status`: read-only overview — syllabus state, unit map, materials (D-043)
+  approve.py              `classkit approve syllabus | unit N`: the teacher's approval recorded in the file (date, a unit's stage, hash; a designed unit's hash covers the whole unit) (D-043, D-046)
+  status.py               `classkit status`: read-only overview — syllabus state, unit map with each unit's state, materials (D-043, D-046)
   doctor.py               `classkit doctor`: this machine's copy — private files, .gitignore, deps (D-040)
   mode.py                 teacher / framework-developer hat: `classkit mode` (D-034)
   validate.py             schema layer + semantic rules
@@ -149,7 +149,7 @@ reaches every course on the next `git merge framework/main`.
 .claude/agents/     syllabus-designer, curriculum-architect, study-session-designer,
                     lesson-planner, assessment-writer, topic-researcher, gem-builder,
                     course-critic, material-classifier
-.claude/skills/     writing-a-syllabus, writing-guiding-questions, estimating-study-time
+.claude/skills/     writing-a-syllabus, planning-units, writing-guiding-questions, estimating-study-time
 .claude/commands/   /ingest /plan-syllabus /review-syllabus /plan-units /design-unit /write-items
                     /review-unit /build-gem
 ```

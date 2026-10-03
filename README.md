@@ -112,7 +112,7 @@ wrong.
 |---|---|
 | `material-classifier` | What your existing materials are, which units they serve, who may see them, and what the course covers |
 | `syllabus-designer` | The syllabus: course goal, Course Outcomes, the unit map, workload, grading, and the descriptor the university asks for — best effort, asking rather than inventing |
-| `curriculum-architect` | Unit objectives for the units named, against the approved syllabus |
+| `curriculum-architect` | The plan of the units named — objectives (each serving a Course Outcome), prerequisites, difficulties — from each unit's own material, against the approved syllabus |
 | `study-session-designer` | Home study: guiding questions, their answers and study times |
 | `assessment-writer` | Items with diagnostic distractors and real rubrics |
 | `lesson-planner` | The 50-minute meeting, built from activities |
@@ -120,15 +120,16 @@ wrong.
 | `course-critic` | Adversarial review of what the validator can't see |
 | `gem-builder` | The class Gem bundle — *later phase* |
 
-Teacher-facing commands: `/ingest`, `/plan-syllabus`, `/review-syllabus`, `/plan-units`,
+Teacher-facing commands: `/ingest`, `/plan-syllabus`, `/review-syllabus`, `/plan-units N…`,
 `/design-unit N`, `/write-items N`, `/review-unit N`. (`/build-gem N` is a later phase.)
 
 Commands are **stepwise**: each announces a step, produces it, shows you the result and waits for
 your approval before the next. Nothing overwrites work you authored without asking you first — that
 one is enforced in code, not by instruction.
 
-Shared craft lives in skills — `writing-a-syllabus`, `writing-guiding-questions`, `estimating-study-time` — so the
-designer, the critic and the assessment writer apply the same standard.
+Shared craft lives in skills — `writing-a-syllabus`, `planning-units`, `writing-guiding-questions`,
+`estimating-study-time` — so the designer, the chat revising with you, and the critic apply the same
+standard.
 
 ## Commands
 
@@ -145,8 +146,9 @@ designer, the critic and the assessment writer apply the same standard.
 | `classkit add-url URL` | Add a link to `materials/source/links.md` |
 | `classkit material` | Record materials' kinds, units and audience (`apply`, a batch; `set`, one); optionally merge two materials the teacher says are one; `remove` a private material |
 | `classkit doctor` | Check this machine's copy of the course — private files present or stale, the `.gitignore`, dependencies; each problem with its fix |
-| `classkit status` | Where the course stands — the syllabus (approved, edited since, draft), the unit map, the materials. Every command shows it first |
+| `classkit status` | Where the course stands — the syllabus (approved, edited since, draft), the unit map with each unit's state (not started, drafted, planned, designed, edited since), the materials. Every command shows it first |
 | `classkit approve syllabus` | Record the teacher's approval in the syllabus itself (date and hash) and log it; `--diff` shows the change first |
+| `classkit approve unit N` | Record a unit's approval in its `unit.md` — `--stage planned` (its plan) or `designed` (the whole unit: sessions, class hour, entry quiz) — and log it |
 
 Scaffolding **never overwrites**. Re-run it any time — you get whatever is missing and keep
 everything you wrote. Skipped files are reported.
@@ -155,7 +157,7 @@ everything you wrote. Skipped files are reported.
 
 ```
 .claude/agents/     the agents that do the design work
-.claude/skills/     shared craft: writing guiding questions, estimating study time
+.claude/skills/     shared craft: the syllabus, planning units, guiding questions, study time
 .claude/commands/   teacher-facing workflow: /ingest, /plan-syllabus, /plan-units, /design-unit ...
 .claude/hooks/      reports whether a session is in teacher or framework-developer mode
 schemas/            JSON Schema for every content type — the contract

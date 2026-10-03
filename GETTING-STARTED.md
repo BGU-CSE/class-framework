@@ -15,7 +15,8 @@ You need [Claude Code](https://claude.com/claude-code) and Python 3.10+.
 > **The framework is still being built.** The workflow below is the design; not all of it exists
 > yet. `classkit scaffold`, `classkit validate`, `classkit log` and the materials tools
 > (`/ingest`, `classkit ingest`, `classkit add-url`, `classkit material`, `classkit doctor`) and the
-> syllabus (`/plan-syllabus`, `/review-syllabus`, `classkit approve syllabus`, `classkit status`) work today. The `/` commands in step 5 are
+> syllabus (`/plan-syllabus`, `/review-syllabus`, `classkit approve syllabus`, `classkit status`) and
+> planning units (`/plan-units N…`, `classkit approve unit N`) work today. The `/` commands in step 5 are
 > being implemented one at a time — `dev/ROADMAP.md`'s ledger is the authoritative list of what is
 > actually built. Expect this document to change as they land.
 
@@ -221,7 +222,7 @@ Open Claude Code in your course repo and run these in order:
 | `/ingest` | Reads `materials/source/` and `links.md` — pre-flight, convert, classify — and reports what your course covers |
 | `/plan-syllabus` | The syllabus: evidence and questions → a full draft → revisions with you → your approval |
 | `/review-syllabus` | Optional: an independent critic reads the syllabus — outcomes that are topic labels, claims nothing supports |
-| `/plan-units` | Each unit's objectives, rolling up to the approved syllabus's outcomes. *Being rewritten next: `/plan-units 1 2` for the units named* |
+| `/plan-units 1 2` | The units named, a few at a time as their material arrives: each one's objectives (each serving a Course Outcome), prerequisites, and what students find hard — drafted, revised with you, approved as *planned* |
 | `/design-unit 3` | The main event: the week's study sessions with their guiding questions, the entry quiz, then the in-class hour built on both |
 | `/review-unit 3` | An adversarial critic — checks the hour genuinely depends on the prework |
 | `/write-items 3` | More assessment items for the entry quiz |
@@ -238,13 +239,29 @@ answer (credits, grading, office hours) rather than inventing it. What nobody kn
 the body as **TBD**. You revise it in conversation or by hand, as many rounds as you like.
 
 When it is good enough to build on, **approve** it — at the command's last step, by saying "approve
-the syllabus", or by hand. Approval is recorded in the file itself (`approved: {on, hash}`), by
+the syllabus", or by hand. Approval is recorded in the file itself (`approved: {date, hash}`), by
 `classkit approve syllabus`. Editing afterwards is normal: nothing un-approves, and `classkit status`
 says "approved 5 Oct — edited since" until you approve again. Approved does not mean perfect — unit
 work builds on what you approved, and the validator reports any inconsistency; nothing waits on it.
 
 **`classkit status`** shows where the course stands — the syllabus, the unit map with each unit's
 state, the materials. Every command shows it first.
+
+### Then the units — a few at a time
+
+You do not plan the whole semester's units at once. When a unit's material is in, `/plan-units 3 4`
+plans those units: for each, a short summary, the earlier units it needs, its 2–4 objectives (the
+number comes from your methodology) — each naming the Course Outcome it serves — and, if you know
+them, the **difficulties** students meet in it. If you do not know them yet (a course you are
+flipping for the first time), say so: planning goes on, and you can add them after teaching the week.
+The agent may *propose* classic difficulties of a well-known subject; one is recorded only if you
+accept it, and stays marked `proposed` so later agents know it is a guess.
+
+Approve each unit when its plan is good enough ("approve unit 3"); `classkit approve unit 3` records
+it in `unit.md` as **planned**. Later, approving the finished unit at the end of `/design-unit`
+records it as **designed** — and editing any part of it afterwards shows "designed — edited since".
+In `classkit status` each unit reads *not started* (on the map, nothing yet), *drafted, not
+approved*, *planned* or *designed*. Nothing is blocked by these states; they tell you where you are.
 
 To upload the syllabus to the university, copy from `syllabus.md` for now; a formatted document is
 a later export.

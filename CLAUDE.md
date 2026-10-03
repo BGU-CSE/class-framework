@@ -90,15 +90,18 @@ M0007#slide-18   a place inside it: slide-N, page-N, or a heading's slug
 | `/ingest` | Read your existing materials and report what the course actually covers |
 | `/plan-syllabus` | The syllabus: course goal, Course Outcomes, the unit map, workload, grading, the descriptor — drafted best effort, revised with you, approved |
 | `/review-syllabus` | Optional: an independent agent reviews the syllabus |
-| `/plan-units` | Unit objectives, against the approved syllabus |
+| `/plan-units N…` | The units named, as their material arrives: objectives (each serving a Course Outcome), prerequisites, difficulties — drafted, revised with you, approved as *planned* |
 | `/design-unit N` | One unit end to end — study sessions, the in-class hour, the entry quiz |
 | `/review-unit N` | An independent agent reviews what it did not write |
 
 **Every command starts with `classkit status`** — the syllabus (approved / approved, edited since /
-draft), the unit map with each unit's state, the materials. The teacher approves the syllabus at
-`/plan-syllabus`'s last step, in conversation, or by hand; `classkit approve syllabus` records it in
-the file (date and hash) and logs it. **Agents never approve and never write the `approved`
-block.** An unapproved syllabus makes a command ask whether to go on — not refuse.
+draft), the unit map with each unit's state (not started / drafted / planned / designed, or edited
+since), the materials. The teacher approves the syllabus at `/plan-syllabus`'s last step, in
+conversation, or by hand; `classkit approve syllabus` records it in the file (date and hash) and
+logs it. A unit is approved the same way — `classkit approve unit N --stage planned` at the end of
+`/plan-units`, `--stage designed` once the whole unit is designed — recorded in its `unit.md`.
+**Agents never approve and never write the `approved` block.** An unapproved syllabus — or a unit
+not yet planned — makes a command ask whether to go on, not refuse.
 
 ## The teacher works in the chat — you run `classkit`
 

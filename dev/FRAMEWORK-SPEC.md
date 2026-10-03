@@ -421,14 +421,14 @@ Course-level setup runs once; then units are designed one at a time.
                       is sent off again only for a structural REWORK
                    4. APPROVAL, when the teacher says so — recorded with its hash (§8.9);
                       /review-syllabus offered, optional
-                   5. (optional, once the map is approved; target, D-046) UPDATE THE
+                   5. (optional, once the map is approved; D-046) UPDATE THE
                       MATERIALS' UNIT HINTS: the classifier guessed `units` before any map
                       existed (D-039); the command proposes corrections against the approved
                       map, the teacher confirms, `classkit material apply` records them.
                       Hints the teacher set by hand are kept unless the teacher agrees.
                    The milestone: an APPROVED syllabus, which unit work then builds on.
                    It may keep changing all semester; the overview shows "edited since".
-/plan-units 1 2    (target, D-046) plans the units NAMED — more later, as material arrives.
+/plan-units 1 2    (D-046) plans the units NAMED — more later, as material arrives.
                    0. shows `classkit status`; if the syllabus is not approved, says so and
                       asks whether to go on — it does not refuse (D-043)
                    1. curriculum-architect (read-only; loads planning-units) READS the
@@ -508,7 +508,7 @@ assumption across four sessions, an hour, and a quiz. Gates keep the blast radiu
 
 **Every command starts by showing where the course stands** — the overview from `classkit status`
 (§8.9): what is approved, what is approved but edited since, what is not started (D-043; built for
-`/ingest`, `/plan-syllabus` and `/review-syllabus` — the other commands as each is rewritten).
+`/ingest`, `/plan-syllabus`, `/review-syllabus` and `/plan-units` — the other commands as each is rewritten).
 
 **Where the gate lives.** A gate is *conversational* — the command states what it produced and waits
 for the teacher's reply. It must therefore sit in the **orchestrating command, between agent
@@ -673,7 +673,7 @@ Deferred: a `gem` block (Exports phase).
 | `assessment` | array\<obj\> | | the grading scheme, e.g. `{ type, weight }`. **The agent may draft it** (from an old syllabus, or by asking); nothing validates its content — approving or editing it is the teacher's responsibility **(D-043; it was "reserved, empty in Core")**. Its item shape is **deliberately left open** (`additionalProperties` *not* false): the Assessment phase will give grading real structure, and may then ask for what was written freely to be converted (G-11) |
 | `reading` | object | | (D-032) `{ required: [string], recommended: [string] }`. Entries may be a `textbooks[].key` from `course.yaml` (preferred — no duplication) or free-text for anything not listed there |
 | `approved` | object | | (D-043) `{ date (`YYYY-MM-DD`, ✓), hash (opt, `sha256:<hex>`) }` — the teacher's approval of this syllabus, the milestone unit work builds on (§8.9). Written by `classkit approve syllabus`, or by hand (then without `hash`). The key was `on` until D-044: YAML 1.1 reads a bare `on:` as the boolean `true` (the same trap as `off`); a record still written with `on:` is read as `date` |
-| `unit_map` | array\<obj\> | | (D-040, D-043) the whole semester's plan, written before most units exist: each `{ number (✓), title (✓), summary (opt), evidence (opt, array of material locators — what the plan for this unit rests on) }`. **Authoritative for which units the course has and their order and titles.** A `units/NN-slug/` directory is created only when a unit is *planned* in detail (§5.1); `unit_map_mismatch` **(target, [units])** warns when a unit's `unit.md` disagrees with its map entry |
+| `unit_map` | array\<obj\> | | (D-040, D-043) the whole semester's plan, written before most units exist: each `{ number (✓), title (✓), summary (opt), evidence (opt, array of material locators — what the plan for this unit rests on) }`. **Authoritative for which units the course has and their order and titles.** A `units/NN-slug/` directory is created only when a unit is *planned* in detail (§5.1); `unit_map_mismatch` (D-046) warns when a unit's `unit.md` disagrees with its map entry |
 
 `bloom` enum, everywhere it appears: `remember | understand | apply | analyze | evaluate | create`.
 
@@ -720,8 +720,8 @@ overview assembled from the unit map and, where they exist, the units.
 | `title` | string | ✓ | the week's subject |
 | `summary` | string | | |
 | `prerequisites` | array\<`U<NN>`\> | | units that must precede this one |
-| `difficulties` | array\<obj\> | | **(target, D-046)** what students find hard in this unit — misconceptions, sticking points — each `{ text (✓), origin (✓: `teacher` \| `proposed`) }`. **Optional**: in a newly flipped course the teacher may not know them yet; they can be added at any time (after teaching the unit once). The agent may *propose* classic ones for a well-known subject, recorded only if the teacher accepts them and marked `proposed`, so the entry-quiz and class-hour agents later know which are guesses. The class hour is built to repair these |
-| `approved` | object | | **(target, D-046)** `{ date (✓), stage (✓: `planned` \| `designed`), hash (opt) }` — the unit's milestone (§8.9) |
+| `difficulties` | array\<obj\> | | (D-046) what students find hard in this unit — misconceptions, sticking points — each `{ text (✓), origin (✓: `teacher` \| `proposed`) }`. **Optional**: in a newly flipped course the teacher may not know them yet; they can be added at any time (after teaching the unit once). The agent may *propose* classic ones for a well-known subject, recorded only if the teacher accepts them and marked `proposed`, so the entry-quiz and class-hour agents later know which are guesses. The class hour is built to repair these |
+| `approved` | object | | (D-046) `{ date (✓), stage (✓: `planned` \| `designed`), hash (opt) }` — the unit's milestone (§8.9) |
 | `objectives` | array\<obj\> | ✓ (≥1) | see below. **Kept as shape, deliberately** (D-038): a unit with no objectives has nothing for guiding questions to roll up to, so the coverage chain cannot even be expressed for it — unlike an absent `outcomes` list, which is merely unfinished |
 
 Objective object:
@@ -731,7 +731,7 @@ Objective object:
 | `id` | `U<NN>-O<N>` | ✓ | |
 | `statement` | string | ✓ | |
 | `bloom` | enum | | optional Bloom level |
-| `outcomes` | array\<`CO<N>`\> | | (D-021) Course Outcomes this objective rolls up to. **Not schema-required** (D-037): naming none is advisory (`objective_maps_to_outcome`, **target**); naming one the syllabus does not declare is an integrity error (`outcome_reference`) |
+| `outcomes` | array\<`CO<N>`\> | | (D-021) Course Outcomes this objective rolls up to. **Not schema-required** (D-037): naming none is advisory (`objective_maps_to_outcome`, an alert, D-046); naming one the syllabus does not declare is an integrity error (`outcome_reference`) |
 
 #### `units/NN-slug/sessions/NN.md` — a study session
 
@@ -937,10 +937,10 @@ Severity is the default; **(target)** means not built yet. Every rule is also a 
 | `material_locator_resolves` | every `M<NNNN>` / `M<NNNN>#anchor` locator names a real material and anchor (D-035; which fields are read: §8.7) | integrity | error |
 | `outcome_coverage` | every Course Outcome is covered by ≥1 unit objective. Completeness rule | advisory | **alert** **(target, D-021/D-033/D-037 — parked, D-046: useful only once every unit exists; needs the completeness mechanism)** |
 | `objective_coverage` | every unit objective is addressed by ≥1 guiding question | advisory | **alert** |
-| `objective_maps_to_outcome` | every unit objective names ≥1 Course Outcome | advisory | **alert** **(target, D-021/D-037; built with the units increment, D-046)** |
+| `objective_maps_to_outcome` | every unit objective names ≥1 Course Outcome | advisory | **alert** (D-021/D-037; built with the units increment, D-046). Consistency rule |
 | `syllabus_missing` | the course has no `syllabus/syllabus.md` | advisory | **alert** **(target, D-033/D-037)** |
 | `unit_count` | units on disk vs `course.yaml` `units` | advisory | warn |
-| `unit_map_mismatch` | the syllabus `unit_map` and the units disagree: a unit directory whose number is not on the map or whose title differs from its entry, or a map whose length differs from `course.yaml` `units`. A map entry with no directory yet is *not started*, not a mismatch. Consistency rule | advisory | warn **(target, D-040, D-046)** |
+| `unit_map_mismatch` | the syllabus `unit_map` and the units disagree: a unit directory whose number is not on the map or whose title differs from its entry, or a map whose length differs from `course.yaml` `units`. A map entry with no directory yet is *not started*, not a mismatch; a syllabus with no map yet has nothing to disagree with. Titles are compared ignoring case and spacing. Unit findings are reported against the unit's `unit.md`, the length against the syllabus. Consistency rule | advisory | warn (D-040, D-046) |
 | `session_count` | sessions per unit == methodology `sessions_per_unit` | advisory | warn |
 | `goal_count` | goals per session within `goals_per_session` | advisory | warn |
 | `goal_type` | `goal.type ∈ allowed_goal_types` | advisory | warn |
@@ -1585,24 +1585,28 @@ never in a separate progress file, which would duplicate state and drift (a dele
   (canonical JSON, keys sorted, `approved` excluded) followed by the body — so a YAML comment, key
   order or quoting style is not an "edit", and a hand-written record may sit anywhere in any style.
   The body is hashed exactly. Today: `syllabus.md`; and `unit.md` (below).
-- **A unit's states (target, D-046).** *not started* — on the syllabus's map, no directory yet;
-  **planned** — the teacher approved its objectives (`/plan-units`): `approved: {date, stage:
-  planned, hash}` in `unit.md`, the hash over `unit.md`; **designed** — the teacher approved the whole
-  unit at the end of `/design-unit`: `stage: designed`, the hash over **the whole unit** — `unit.md`,
-  its sessions, its `in-class.md`, and its entry-quiz items (`assessments/items/U<NN>-I*.md`), each
-  file hashed as above and combined in a fixed order — so editing any part shows "designed, edited
-  since". Recorded by **`classkit approve unit N [--stage planned|designed]`** (the stage defaults to
-  the next one). **Review is not a state**: `/review-unit` is optional and logged. **Nothing is
-  blocked by state**: `/design-unit 3` on a unit not yet planned asks whether to go on.
+- **A unit's states (D-046).** *not started* — on the syllabus's map, no directory yet;
+  *drafted* — a directory, not yet approved; **planned** — the teacher approved its objectives
+  (`/plan-units`): `approved: {date, stage: planned, hash}` in `unit.md`, the hash over `unit.md`;
+  **designed** — the teacher approved the whole unit at the end of `/design-unit`: `stage: designed`,
+  the hash over **the whole unit** — `unit.md`, its sessions, its `in-class.md`, and its entry-quiz
+  items (`assessments/items/U<NN>-I*.md` with `usage: in-class-quiz`), each file hashed as above and
+  combined in a fixed order (unit.md, sessions by number, in-class.md, items by id), each named
+  relative to the unit so renaming its directory's slug is not an edit — so editing any part shows
+  "designed, edited since". Recorded by **`classkit approve unit N [--stage planned|designed]`**.
+  The stage defaults to the next one: *planned* for a unit never approved, or whose approved plan
+  was edited since; *designed* once the plan is approved and unchanged. The commands always pass
+  `--stage` explicitly. **Review is not a state**: `/review-unit` is optional and logged. **Nothing
+  is blocked by state**: `/design-unit 3` on a unit not yet planned asks whether to go on.
 - **Three routes, one record.** The teacher approves at a command's gate ("approve"), in
   conversation ("approve the syllabus" — the chat runs it), or by hand. The first two run
-  **`classkit approve syllabus`**, which writes the record through the write path (§8.6) and appends a
+  **`classkit approve syllabus`** (or **`classkit approve unit N`**), which writes the record through the write path (§8.6) and appends a
   course-log entry. The teacher's "approve" is the explicit confirmation, so it writes with
   `overwrite`; `classkit approve syllabus --diff` shows the change first and writes nothing. Only
   the record's lines change — the teacher's comments survive — and the result is re-parsed: if
   anything else would differ, nothing is written. Approving content already approved with the same
   hash records nothing. By hand, the teacher may write
-  `approved: {date: 2026-10-05}` without a hash.
+  `approved: {date: 2026-10-05}` without a hash (a unit's: `{date: 2026-10-05, stage: planned}`).
 - **Editing after approval is normal** — the syllabus keeps changing during the semester. Nothing
   is un-approved. The hash only lets the overview say **"approved 5 Oct — edited since"**; without
   a hash it says "approved 5 Oct (edits since cannot be tracked)". Approving again records a new
@@ -1612,7 +1616,7 @@ never in a separate progress file, which would duplicate state and drift (a dele
   syllabus unapproved says so and asks whether to go on; it does not refuse.
 - **`classkit status`** — read-only — assembles the overview from the records: the syllabus
   (approved / approved, edited since / draft), the unit map with each unit's state (not started /
-  planned / designed, or "edited since"), the materials
+  drafted / planned / designed, or "edited since"), the materials
   (ingested, outstanding). Every command shows it first (§5.2). It reads committed files only, so it
   gives the same answer on every clone (§2.2).
 

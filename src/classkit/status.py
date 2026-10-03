@@ -235,7 +235,8 @@ def report(found: Status) -> str:
         counts = [(n, label) for label in (DESIGNED, PLANNED, UNIT_DRAFTED, NOT_STARTED)
                   if (n := sum(1 for line in found.units if line.state == label))]
         edited = sum(1 for line in found.units if line.edited)
-        out.append("              " + ", ".join(f"{n} {label}" for n, label in counts)
+        out.append("              " + ", ".join(f"{n} {'drafted' if label == UNIT_DRAFTED else label}"
+                                                for n, label in counts)
                    + (f"; {edited} edited since approval" if edited else ""))
     if found.units:
         width = max(len(line.title) for line in found.units)
