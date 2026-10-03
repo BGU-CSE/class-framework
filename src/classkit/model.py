@@ -19,6 +19,7 @@ Layout, as created by `classkit scaffold course`:
 
 from __future__ import annotations
 
+import datetime
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -165,6 +166,22 @@ def normalize_rules(block: dict) -> None:
         block["rules"] = {code: ("off" if level is False else level) for code, level in rules.items()}
 
 
+def normalize_approved(data: dict) -> None:
+    """Read an `approved: {on: 2026-10-05}` record as it was meant (D-043, spec §8.9).
+
+    YAML 1.1 parses the bare key ``on`` as the boolean ``True``, and an unquoted date as a
+    ``datetime.date``; the spec tells a teacher to write exactly that by hand. So the key becomes
+    ``"on"`` and the date an ISO string — what the schema and `classkit status` expect.
+    """
+    record = data.get("approved")
+    if not isinstance(record, dict):
+        return
+    if True in record and "on" not in record:
+        record["on"] = record.pop(True)
+    if isinstance(record.get("on"), datetime.date):
+        record["on"] = record["on"].isoformat()
+
+
 def load_course(course_root: Path, framework_root: Path) -> Course:
     config = load_yaml(course_root / "course.yaml")
     methodology = load_methodology(framework_root, config.get("methodology", "question-driven-25"))
@@ -182,6 +199,7 @@ def load_course(course_root: Path, framework_root: Path) -> Course:
     syllabus_file = course_root / "syllabus" / "syllabus.md"
     if syllabus_file.is_file():
         s_data, s_body = load(syllabus_file)
+        normalize_approved(s_data)
         course.syllabus = Doc(syllabus_file, s_data, s_body)
 
     units_dir = course_root / "units"

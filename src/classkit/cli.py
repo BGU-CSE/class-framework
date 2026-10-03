@@ -9,7 +9,7 @@ from pathlib import Path
 
 import yaml
 
-from . import doctor, ingest, log
+from . import approve, doctor, ingest, log, status
 from .frontmatter import FrontMatterError
 from .ingest import links as linkfile
 from .ingest.manifest import AUDIENCES, KINDS, SOURCE_DIR, ManifestError
@@ -230,6 +230,28 @@ def build_parser() -> argparse.ArgumentParser:
              "(read-only; exit 1 if something needs action)",
     )
     doctor_cmd.add_argument("--course", help="course directory (default: search upward)")
+
+    # The teacher's approval, recorded in the approved file itself (D-043, spec §8.9).
+    approve_cmd = subcommands.add_parser(
+        "approve",
+        help="record the teacher's approval in the file itself (date and hash), and log it",
+    )
+    approve_cmd.add_argument("what", choices=["syllabus"], help="what is approved")
+    approve_cmd.add_argument(
+        "--diff", action="store_true",
+        help="show the change to the file without writing or logging anything",
+    )
+    approve_cmd.add_argument("--why", help="for the course log (default: 'the teacher approved it')")
+    approve_cmd.add_argument("--date", help="YYYY-MM-DD (default: today)")
+    approve_cmd.add_argument("--course", help="course directory (default: search upward)")
+
+    # Where the course stands (D-043, spec §8.9) — every command shows it first.
+    status_cmd = subcommands.add_parser(
+        "status",
+        help="where the course stands: the syllabus (approved / edited since / draft), the unit "
+             "map, the materials (read-only)",
+    )
+    status_cmd.add_argument("--course", help="course directory (default: search upward)")
 
     # Which hat a session in this repo wears (D-034). Teacher is the default; switching
     # to framework-developer creates a gitignored marker, and refuses if the ignore rule
@@ -495,6 +517,43 @@ def run_doctor(args) -> int:
     return 1 if any(line.status == doctor.ACTION for line in lines) else 0
 
 
+def run_approve(args) -> int:
+    if args.date:
+        try:
+            datetime.date.fromisoformat(args.date)
+        except ValueError:
+            print(f"error: --date must be YYYY-MM-DD, not {args.date!r}", file=sys.stderr)
+            return 2
+    course_root = find_course_root(Path(args.course) if args.course else None)
+    try:
+        approval = approve.approve_syllabus(course_root, on=args.date, dry_run=args.diff,
+                                            why=args.why or "")
+    except approve.ApproveError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    if approval.already:
+        print(f"unchanged  {approve.SYLLABUS.as_posix()}  (already approved {approval.on}; "
+              "not edited since — nothing to record)")
+        return 0
+    sys.stdout.write(approval.changes if approval.changes.endswith("\n") else approval.changes + "\n")
+    if args.diff:
+        print("(nothing written — run without --diff to record the approval)")
+        return 0
+    print(f"approved   {approve.SYLLABUS.as_posix()}  on {approval.on}, {approval.hash[:15]}…")
+    print(f"logged     {course_root / log.LOG_FILE}")
+    return 0
+
+
+def run_status(args) -> int:
+    course_root = find_course_root(Path(args.course) if args.course else None)
+    try:
+        framework_root = find_framework_root(course_root)
+    except LayoutError:
+        framework_root = None
+    print(status.report(status.status(course_root, framework_root)))
+    return 0
+
+
 def run_mode(args, framework_root: Path) -> int:
     if args.mode is None:
         mode = current_mode(framework_root)
@@ -538,6 +597,10 @@ def main(argv: list[str] | None = None) -> int:
             return run_material(args)
         if args.command == "doctor":
             return run_doctor(args)
+        if args.command == "approve":
+            return run_approve(args)
+        if args.command == "status":
+            return run_status(args)
         framework_root = find_framework_root()
         if args.command == "mode":
             return run_mode(args, framework_root)

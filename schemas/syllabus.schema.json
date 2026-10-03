@@ -2,9 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/BGU-CSE/class-framework/schemas/syllabus.schema.json",
   "title": "Syllabus",
-  "description": "YAML front matter of course/syllabus/syllabus.md — the course-level top layer (D-021). Bologna-style: the course goal, its Course Outcomes, workload and prerequisites. Identity fields (title, code, textbooks) are NOT repeated here; they live in course.yaml, and a rendered syllabus stitches them in along with a live unit overview, so the two cannot drift.",
+  "description": "YAML front matter of course/syllabus/syllabus.md — the course-level top layer (D-021, D-043). Front matter holds what tools or agents USE: the goal, Course Outcomes, the unit map, workload, prerequisites, reading, grading, and the teacher's approval. What only people read — the catalogue description, teaching methods, level, policies, an AI-use policy — is body sections, in the institution's own order. Identity fields (title, code, textbooks) are NOT repeated here; they live in course.yaml. Best effort, not a form: only `goal` and `outcomes` are required.",
   "type": "object",
-  "required": ["goal", "outcomes"],
+  "required": [
+    "goal",
+    "outcomes"
+  ],
   "additionalProperties": false,
   "properties": {
     "accepted": {
@@ -12,7 +15,9 @@
       "description": "The teacher's deliberate exceptions for THIS file (D-037). Each entry suppresses one validation rule's findings for this file; `classkit validate` still counts them, so they are never invisible. Only the teacher adds these — an agent never does so on its own.",
       "items": {
         "type": "object",
-        "required": ["rule"],
+        "required": [
+          "rule"
+        ],
         "additionalProperties": false,
         "properties": {
           "rule": {
@@ -37,7 +42,10 @@
       "description": "Course Outcomes — the roof of the coverage chain (D-021). Every Unit Objective rolls up to at least one of these, and every one of these is covered by at least one Unit Objective, so 'do the units together deliver what the course promised?' is checkable at course scope.",
       "items": {
         "type": "object",
-        "required": ["id", "statement"],
+        "required": [
+          "id",
+          "statement"
+        ],
         "additionalProperties": false,
         "properties": {
           "id": {
@@ -50,8 +58,52 @@
             "description": "What a student who passes the course can do. An outcome, not a subject label."
           },
           "bloom": {
-            "enum": ["remember", "understand", "apply", "analyze", "evaluate", "create"],
+            "enum": [
+              "remember",
+              "understand",
+              "apply",
+              "analyze",
+              "evaluate",
+              "create"
+            ],
             "description": "Optional Bloom level."
+          }
+        }
+      }
+    },
+    "unit_map": {
+      "type": "array",
+      "description": "The whole semester's plan, written before most units exist (D-040, D-043): which units the course has, in what order, with what titles. Authoritative for that; a units/NN-slug/ directory is created only when a unit is planned in detail (/plan-units).",
+      "items": {
+        "type": "object",
+        "required": [
+          "number",
+          "title"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "number": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "description": "The unit's number — its week in the semester's order."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The unit's subject."
+          },
+          "summary": {
+            "type": "string",
+            "description": "A line on what the unit covers."
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Material locators the plan for this unit rests on, e.g. 'M0007#slide-1', 'M0003#page-12'. What a later agent reads first when it plans the unit."
           }
         }
       }
@@ -59,10 +111,16 @@
     "workload": {
       "type": "object",
       "description": "Optional (D-031d): a teacher may draft and validate a syllabus before credits are settled. While it is absent, `syllabus_workload_missing` warns. Note that no credit system is hardcoded — ECTS is one instantiation of `credit_system`, not the framework's assumption (invariant 2).",
-      "required": ["credits", "credit_system"],
+      "required": [
+        "credits",
+        "credit_system"
+      ],
       "additionalProperties": false,
       "properties": {
-        "credits": { "type": "number", "minimum": 0 },
+        "credits": {
+          "type": "number",
+          "minimum": 0
+        },
         "credit_system": {
           "type": "string",
           "description": "The system the credits are counted in, e.g. 'ECTS', 'BGU points', 'US semester hours'."
@@ -76,17 +134,71 @@
     },
     "prerequisites": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "description": "Course-level prerequisites: free text, or the codes of other courses. Unit-level prerequisites live on the unit."
+    },
+    "reading": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The course's reading list (D-032). Each entry is a `textbooks[].key` from course.yaml (preferred — no duplication), or free text for anything not listed there.",
+      "properties": {
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "recommended": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
     },
     "assessment": {
       "type": "array",
-      "description": "RESERVED for the Assessment phase — the grading scheme. May be empty in Core, and its item shape is deliberately not yet fixed, so a course that fills it early is not invalidated by the phase that specifies it.",
+      "description": "The grading scheme, e.g. [{type: exam, weight: 60}, {type: homework, weight: 40}]. The syllabus-designer may draft it — from an old syllabus, or by asking the teacher, never invented (D-043); nothing validates its content, and approving or editing it is the teacher's responsibility. Its item shape is deliberately left open (no additionalProperties: false): the Assessment phase will give grading real structure, and may then ask for what was written freely to be converted.",
       "items": {
         "type": "object",
         "properties": {
-          "type": { "type": "string", "description": "e.g. 'exam', 'homework', 'project'." },
-          "weight": { "type": "number", "minimum": 0, "description": "Share of the final grade." }
+          "type": {
+            "type": "string",
+            "description": "e.g. 'exam', 'homework', 'project'."
+          },
+          "weight": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Share of the final grade."
+          },
+          "description": {
+            "type": "string",
+            "description": "What the component is, in a line — e.g. 'six problem sets; the lowest is dropped'."
+          }
+        }
+      }
+    },
+    "approved": {
+      "type": "object",
+      "required": [
+        "on"
+      ],
+      "additionalProperties": false,
+      "description": "The teacher's approval of this syllabus — the milestone unit work builds on (D-043, spec §8.9). Written by `classkit approve syllabus`, or by hand (then usually without `hash`). Editing afterwards is normal and un-approves nothing; `classkit status` uses the hash to say 'edited since'. Agents never write or change it.",
+      "properties": {
+        "on": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "The date of approval, YYYY-MM-DD."
+        },
+        "hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "sha256 of the syllabus at approval, without this block — front matter and body, comments aside (spec §8.9). Written by the tool; absent when approved by hand."
         }
       }
     }
