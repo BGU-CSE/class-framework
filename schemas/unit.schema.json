@@ -36,6 +36,44 @@
       "items": { "type": "string", "pattern": "^U\\d{2}$" },
       "description": "Units that must precede this one."
     },
+    "difficulties": {
+      "type": "array",
+      "description": "What students find hard in this unit — misconceptions, sticking points (D-046). Optional: in a newly flipped course the teacher may not know them yet. The class hour is built to repair these; the entry-quiz and class-hour agents read `origin` to know which are guesses.",
+      "items": {
+        "type": "object",
+        "required": ["text", "origin"],
+        "additionalProperties": false,
+        "properties": {
+          "text": { "type": "string", "minLength": 1, "description": "The difficulty, in a sentence — e.g. 'Students read O(n) as an exact running time rather than an upper bound.'" },
+          "origin": {
+            "enum": ["teacher", "proposed"],
+            "description": "`teacher` — the teacher said so; `proposed` — an agent proposed it (a classic difficulty of a well-known subject) and the teacher accepted it, still a guess about these students."
+          }
+        }
+      }
+    },
+    "approved": {
+      "type": "object",
+      "required": ["date", "stage"],
+      "additionalProperties": false,
+      "description": "The teacher's approval of this unit — its milestone (D-046, spec §8.9). Written by `classkit approve unit N`, or by hand (then usually without `hash`). Editing afterwards is normal and un-approves nothing; `classkit status` uses the hash to say 'edited since'. Agents never write or change it.",
+      "properties": {
+        "date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "The date of approval, YYYY-MM-DD."
+        },
+        "stage": {
+          "enum": ["planned", "designed"],
+          "description": "`planned` — the objectives were approved (/plan-units); the hash is over unit.md. `designed` — the whole unit was approved (/design-unit); the hash is over unit.md, its sessions, its in-class.md and its entry-quiz items."
+        },
+        "hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "sha256 at approval, without this block (spec §8.9). Written by the tool; absent when approved by hand."
+        }
+      }
+    },
     "objectives": {
       "type": "array",
       "minItems": 1,

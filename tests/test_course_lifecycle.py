@@ -377,11 +377,21 @@ def test_alerts_are_reported_before_errors_and_warnings(course_root: Path):
     assert str(validator.ordered()[0]).startswith("ALERT")
 
 
+def give_objectives_outcomes(course_root: Path) -> None:
+    """The scaffolded unit's placeholder objectives name no outcome (objective_maps_to_outcome,
+    an alert); a test about another alert names one for each."""
+    path = next(course_root.glob("units/01-*/unit.md"))
+    path.write_text(path.read_text(encoding="utf-8")
+                    .replace("    bloom: understand\n", "    bloom: understand\n    outcomes: [CO1]\n")
+                    .replace("    bloom: apply\n", "    bloom: apply\n    outcomes: [CO2]\n"), encoding="utf-8")
+
+
 def run_cli(course_root: Path, *args: str) -> int:
     return main(["validate", str(course_root), *args])
 
 
 def test_validate_exits_zero_on_alerts_and_warnings(course_root: Path, capsys):
+    give_objectives_outcomes(course_root)  # only objective_coverage's alert, below
     for number in range(1, 5):
         path = session(course_root, number)
         path.write_text(
@@ -595,8 +605,81 @@ def test_an_objective_naming_an_undeclared_outcome_is_an_error(course_root: Path
 
 
 def test_an_objective_naming_no_outcome_is_not_a_schema_error(course_root: Path):
-    """Presence is advisory (D-037) — `objective_maps_to_outcome` lands with step 3."""
+    """Presence is advisory (D-037): `objective_maps_to_outcome`, below."""
     assert "schema" not in codes(course_root)
+
+
+# -- objective_maps_to_outcome (alert, consistency; D-046) ----------------------
+
+def test_an_objective_naming_no_outcome_is_an_alert(course_root: Path):
+    # The scaffolded unit's two placeholder objectives name none: the unit is not planned yet.
+    found = [f for f in findings(course_root) if f.code == "objective_maps_to_outcome"]
+    assert [f.level for f in found] == ["alert", "alert"]
+    assert "U01-O1" in found[0].message and found[0].where.endswith("unit.md")
+
+
+def test_an_empty_outcomes_list_is_the_same_as_none(course_root: Path):
+    give_objectives_outcomes(course_root)
+    edit(unit_md(course_root), "outcomes: [CO2]", "outcomes: []")
+    found = [f for f in findings(course_root) if f.code == "objective_maps_to_outcome"]
+    assert len(found) == 1 and "U01-O2" in found[0].message
+
+
+def test_objectives_that_all_name_an_outcome_raise_no_alert(course_root: Path):
+    give_objectives_outcomes(course_root)
+    assert levels(course_root, "objective_maps_to_outcome") == set()
+    assert errors(course_root) == []
+
+
+def test_objective_maps_to_outcome_can_be_accepted_in_unit_md(course_root: Path):
+    edit(unit_md(course_root), "objectives:\n",
+         "accepted:\n  - rule: objective_maps_to_outcome\n    reason: \"orientation week\"\nobjectives:\n")
+    assert levels(course_root, "objective_maps_to_outcome") == set()
+
+
+# -- unit_map_mismatch (warn, consistency; D-046) ---------------------------------
+
+def with_unit_map(course_root: Path, *entries: tuple[int, str], units: int | None = None) -> None:
+    """Give the scaffolded syllabus a unit map (and, optionally, set course.yaml's `units`)."""
+    lines = "".join(f'  - number: {n}\n    title: "{t}"\n' for n, t in entries)
+    edit(syllabus(course_root), 'goal: "TODO"\n', f'goal: "TODO"\nunit_map:\n{lines}')
+    if units is not None:
+        edit(course_root / "course.yaml", "units: 13", f"units: {units}")
+
+
+def mismatches(course_root: Path) -> list:
+    return [f for f in findings(course_root) if f.code == "unit_map_mismatch"]
+
+
+def test_a_syllabus_without_a_unit_map_has_nothing_to_disagree_with(course_root: Path):
+    assert mismatches(course_root) == []
+
+
+def test_a_unit_matching_its_map_entry_is_fine_and_entries_without_units_are_not_started(course_root: Path):
+    with_unit_map(course_root, (1, "first   unit"), (2, "Heaps"), (3, "Graphs"), units=3)
+    assert mismatches(course_root) == []  # case and spacing are not a difference
+
+
+def test_a_title_differing_from_the_map_warns_against_unit_md(course_root: Path):
+    with_unit_map(course_root, (1, "Asymptotic analysis"), (2, "Heaps"), units=2)
+    found = mismatches(course_root)
+    assert [f.level for f in found] == ["warn"]
+    assert "Asymptotic analysis" in found[0].message and found[0].where.endswith("unit.md")
+
+
+def test_a_unit_not_on_the_map_warns(course_root: Path):
+    with_unit_map(course_root, (1, "First Unit"), (2, "Heaps"), units=2)
+    scaffold_unit(course_root, FRAMEWORK_ROOT, 4, "Extra")
+    found = mismatches(course_root)
+    assert len(found) == 1 and "unit 4 is not on" in found[0].message
+
+
+def test_a_map_whose_length_differs_from_course_yaml_warns_against_the_syllabus(course_root: Path):
+    with_unit_map(course_root, (1, "First Unit"), (2, "Heaps"))  # course.yaml says 13
+    found = mismatches(course_root)
+    assert [f.level for f in found] == ["warn"]
+    assert "2 units; course.yaml declares 13" in found[0].message
+    assert found[0].where.endswith("syllabus.md")
 
 
 def test_a_bare_yaml_off_in_rules_means_off(course_root: Path):

@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import log
-from .approve import SYLLABUS, ApproveError, content_hash, read
+from .approve import SYLLABUS, ApproveError, content_hash, read, unit_hash
 from .frontmatter import FrontMatterError, load_yaml
 
 _UNIT_DIR = re.compile(r"^(\d{2})-")
@@ -29,6 +29,12 @@ EDITED = "approved, edited since"
 UNTRACKED = "approved, edits untracked"
 MISSING = "missing"
 UNREADABLE = "unreadable"
+
+# A unit's states (D-046, spec §8.9). *Not started* — on the map, no directory yet; *drafted* — a
+# directory, not yet approved; then the approved stages, each possibly edited since.
+UNIT_DRAFTED = "drafted, not approved"
+PLANNED = "planned"
+DESIGNED = "designed"
 
 
 @dataclass
@@ -43,7 +49,12 @@ class SyllabusState:
 class UnitLine:
     number: int
     title: str
-    state: str  # "unit.md present" / "not planned yet" / "not in the unit map"
+    #: NOT_STARTED, UNIT_DRAFTED, PLANNED or DESIGNED — or UNREADABLE
+    state: str
+    #: what the overview prints: "planned 2026-10-05 — edited since", "not in the unit map", …
+    detail: str = ""
+    #: True when the approved stage's hash no longer matches
+    edited: bool = False
 
 
 @dataclass
@@ -91,9 +102,29 @@ def syllabus_state(course_root: Path, framework_root: Path | None) -> SyllabusSt
     return found
 
 
+def unit_state(course_root: Path, directory: Path, number: int) -> tuple[str, str, bool]:
+    """(state, detail, edited since) of a unit on disk, from its `approved` record (§8.9)."""
+    try:
+        data, _body = read((directory / "unit.md").read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ApproveError) as exc:
+        return UNREADABLE, f"unit.md cannot be read: {exc}", False
+    record = data.get("approved")
+    if record is None:
+        return UNIT_DRAFTED, UNIT_DRAFTED, False
+    stage = record.get("stage") if isinstance(record, dict) else None
+    if not isinstance(record, dict) or stage not in (PLANNED, DESIGNED) or not record.get("date"):
+        return UNIT_DRAFTED, "its `approved` record is malformed — `classkit validate` says how", False
+    on = record["date"]
+    if not record.get("hash"):
+        return stage, f"{stage} {on} (by hand: edits since cannot be tracked)", False
+    if record["hash"] == unit_hash(course_root, directory, number, stage):
+        return stage, f"{stage} {on}", False
+    return stage, f"{stage} {on} — edited since", True
+
+
 def unit_lines(course_root: Path, unit_map: list[dict], declared: int | None) -> list[UnitLine]:
-    """The unit map with each unit's state. Until the units increment defines states (planned,
-    designed, reviewed…), a unit is only present on disk or not."""
+    """The unit map with each unit's state (D-046): not started / drafted / planned / designed,
+    each approved stage "edited since" when its hash no longer matches."""
     on_disk: dict[int, Path] = {}
     units = course_root / "units"
     if units.is_dir():
@@ -106,15 +137,21 @@ def unit_lines(course_root: Path, unit_map: list[dict], declared: int | None) ->
     mapped: set[int] = set()
     for entry in sorted(unit_map, key=lambda u: u.get("number") if isinstance(u.get("number"), int) else 99):
         number = entry.get("number")
-        if not isinstance(number, int):
+        if not isinstance(number, int) or number in mapped:
             continue
         mapped.add(number)
-        lines.append(UnitLine(number, str(entry.get("title") or "—"),
-                              "unit.md present" if number in on_disk else "not planned yet"))
+        title = str(entry.get("title") or "—")
+        if number in on_disk:
+            state, detail, edited = unit_state(course_root, on_disk[number], number)
+            lines.append(UnitLine(number, title, state, detail, edited))
+        else:
+            lines.append(UnitLine(number, title, NOT_STARTED, NOT_STARTED))
     for number, directory in sorted(on_disk.items()):
         if number not in mapped:
-            lines.append(UnitLine(number, directory.name[3:],
-                                  "unit.md present — not in the unit map" if unit_map else "unit.md present"))
+            state, detail, edited = unit_state(course_root, directory, number)
+            if unit_map:
+                detail += " — not in the unit map"
+            lines.append(UnitLine(number, directory.name[3:], state, detail, edited))
     lines.sort(key=lambda line: line.number)
     return lines
 
@@ -195,9 +232,15 @@ def report(found: Status) -> str:
     declared = f"{found.units_declared} in course.yaml" if found.units_declared else "course.yaml declares none"
     out += ["", f"Units         {declared}" + (f", {len(s.unit_map)} in the unit map" if s.unit_map else "")]
     if found.units:
+        counts = [(n, label) for label in (DESIGNED, PLANNED, UNIT_DRAFTED, NOT_STARTED)
+                  if (n := sum(1 for line in found.units if line.state == label))]
+        edited = sum(1 for line in found.units if line.edited)
+        out.append("              " + ", ".join(f"{n} {label}" for n, label in counts)
+                   + (f"; {edited} edited since approval" if edited else ""))
+    if found.units:
         width = max(len(line.title) for line in found.units)
         for line in found.units:
-            out.append(f"  U{line.number:02d}  {line.title:<{width}}  {line.state}")
+            out.append(f"  U{line.number:02d}  {line.title:<{width}}  {line.detail}")
     else:
         out.append("  no unit map yet, and no unit on disk")
     if s.unit_map and found.units_declared and len(s.unit_map) != found.units_declared:

@@ -234,9 +234,16 @@ def build_parser() -> argparse.ArgumentParser:
     # The teacher's approval, recorded in the approved file itself (D-043, spec §8.9).
     approve_cmd = subcommands.add_parser(
         "approve",
-        help="record the teacher's approval in the file itself (date and hash), and log it",
+        help="record the teacher's approval in the file itself (date, a unit's stage, hash), and log it",
     )
-    approve_cmd.add_argument("what", choices=["syllabus"], help="what is approved")
+    approve_cmd.add_argument("what", choices=["syllabus", "unit"], help="what is approved")
+    approve_cmd.add_argument("number", nargs="?", type=int,
+                             help="the unit's number, for `approve unit N`")
+    approve_cmd.add_argument(
+        "--stage", choices=list(approve.STAGES),
+        help="a unit's milestone: planned (its objectives — /plan-units) or designed (the whole "
+             "unit — /design-unit). Default: the next one",
+    )
     approve_cmd.add_argument(
         "--diff", action="store_true",
         help="show the change to the file without writing or logging anything",
@@ -524,22 +531,34 @@ def run_approve(args) -> int:
         except ValueError:
             print(f"error: --date must be YYYY-MM-DD, not {args.date!r}", file=sys.stderr)
             return 2
+    if args.what == "unit" and args.number is None:
+        print("error: which unit? `classkit approve unit N [--stage planned|designed]`", file=sys.stderr)
+        return 2
+    if args.what == "syllabus" and (args.number is not None or args.stage):
+        print("error: the syllabus has no number and no stage — `classkit approve syllabus`", file=sys.stderr)
+        return 2
     course_root = find_course_root(Path(args.course) if args.course else None)
     try:
-        approval = approve.approve_syllabus(course_root, on=args.date, dry_run=args.diff,
-                                            why=args.why or "")
+        if args.what == "unit":
+            approval = approve.approve_unit(course_root, args.number, stage=args.stage, on=args.date,
+                                            dry_run=args.diff, why=args.why or "")
+        else:
+            approval = approve.approve_syllabus(course_root, on=args.date, dry_run=args.diff,
+                                                why=args.why or "")
     except approve.ApproveError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    shown = approval.path.relative_to(course_root).as_posix()
+    stage = f" as {approval.stage}" if approval.stage else ""
     if approval.already:
-        print(f"unchanged  {approve.SYLLABUS.as_posix()}  (already approved {approval.on}; "
+        print(f"unchanged  {shown}  (already approved{stage} {approval.on}; "
               "not edited since — nothing to record)")
         return 0
     sys.stdout.write(approval.changes if approval.changes.endswith("\n") else approval.changes + "\n")
     if args.diff:
-        print("(nothing written — run without --diff to record the approval)")
+        print(f"(nothing written — run without --diff to record the approval{stage})")
         return 0
-    print(f"approved   {approve.SYLLABUS.as_posix()}  on {approval.on}, {approval.hash[:15]}…")
+    print(f"approved   {shown}{stage}  on {approval.on}, {approval.hash[:15]}…")
     print(f"logged     {course_root / log.LOG_FILE}")
     return 0
 

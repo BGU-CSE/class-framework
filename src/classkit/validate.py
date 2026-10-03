@@ -47,6 +47,10 @@ DEFAULT_SEVERITY = {
     "material_locator_resolves": "error",
     # -- advisory, high priority: the coverage chain -----------------------
     "objective_coverage": "alert",
+    # D-046, consistency: an objective that rolls up to no Course Outcome — wrong the moment it is
+    # written, so it fires exactly when /plan-units writes objectives. (Its reverse,
+    # outcome_coverage, is a completeness rule and parked.)
+    "objective_maps_to_outcome": "alert",
     # D-040, consistency: a student-facing place points at instructor-only material. An alert,
     # not an error — nothing reaches a student until it is published, and every exporter
     # refuses instructor material in code (the hard guarantee is there).
@@ -54,6 +58,10 @@ DEFAULT_SEVERITY = {
     # -- advisory ----------------------------------------------------------
     "schema_unavailable": "warn",
     "unit_count": "warn",
+    # D-046, consistency: a unit's number and title live in the syllabus's unit map and in its
+    # unit.md — the one place duplication makes drift likely. A map entry with no directory yet is
+    # *not started*, not a mismatch.
+    "unit_map_mismatch": "warn",
     "session_count": "warn",
     "goal_count": "warn",
     "goal_type": "warn",
@@ -255,6 +263,7 @@ class Validator:
         self.check_rule_names()
         self.check_syllabus()
         self.check_unit_count()
+        self.check_unit_map()
         for unit in self.course.units:
             self.check_unit(unit)
         self.check_items()
@@ -395,6 +404,52 @@ class Validator:
                 f"{actual} of {declared} units exist so far.",
             )
 
+    def check_unit_map(self) -> None:
+        """`unit_map_mismatch` (D-040, D-046): the syllabus's unit map and the units disagree — a
+        unit directory whose number is not on the map or whose title differs from its entry, or a
+        map whose length differs from `course.yaml` `units`. A consistency rule. A map entry with
+        no directory yet is *not started*, not a mismatch; a syllabus with no map yet (not drafted)
+        has nothing to disagree with."""
+        syllabus = self.course.syllabus
+        entries = [e for e in (syllabus.data.get("unit_map") or []) if isinstance(e, dict)] \
+            if syllabus is not None and isinstance(syllabus.data.get("unit_map"), list) else []
+        if not entries:
+            return
+
+        declared = self.course.config.get("units")
+        if isinstance(declared, int) and len(entries) != declared:
+            self.report(
+                "unit_map_mismatch",
+                syllabus.path,
+                f"the unit map has {len(entries)} units; course.yaml declares {declared}.",
+            )
+
+        titles = {e.get("number"): str(e.get("title") or "") for e in entries if isinstance(e.get("number"), int)}
+
+        def same(a: str, b: str) -> bool:
+            return " ".join(a.split()).casefold() == " ".join(b.split()).casefold()
+
+        for unit in self.course.units:
+            match = re.match(r"(\d{2})-", unit.directory.name)
+            number = int(match.group(1)) if match else unit.doc.data.get("number")
+            if not isinstance(number, int):
+                continue
+            if number not in titles:
+                self.report(
+                    "unit_map_mismatch",
+                    unit.doc.path,
+                    f"unit {number} is not on the syllabus's unit map. Add it to the map "
+                    "(/plan-syllabus), or remove the unit if it was a mistake.",
+                )
+            elif not same(str(unit.doc.data.get("title") or ""), titles[number]):
+                self.report(
+                    "unit_map_mismatch",
+                    unit.doc.path,
+                    f"unit {number} is titled {unit.doc.data.get('title')!r} here but "
+                    f"{titles[number]!r} on the syllabus's unit map — make them the same, in "
+                    "whichever file is wrong.",
+                )
+
     def check_unit(self, unit: Unit) -> None:
         methodology = self.course.methodology
         home = methodology.get("home_study", {})
@@ -403,12 +458,19 @@ class Validator:
         objective_ids = {o.get("id") for o in unit.objectives if isinstance(o, dict)}
         goal_ids: set[str] = set()
 
-        # --- objectives roll up to Course Outcomes that exist (D-021, D-037). Whether an
-        # objective names any outcome at all is advisory, and lands with the coverage chain.
+        # --- objectives roll up to Course Outcomes that exist (D-021, D-037). Naming one that
+        # does not exist is integrity; naming none at all is advisory — an alert (D-046).
         outcome_ids = {str(o.get("id")) for o in self.course.outcomes}
         for objective in unit.objectives:
             if not isinstance(objective, dict):
                 continue
+            if not objective.get("outcomes"):
+                self.report(
+                    "objective_maps_to_outcome",
+                    unit.doc.path,
+                    f"objective {objective.get('id')} names no Course Outcome, so it rolls up to "
+                    "nothing in the syllabus. Add `outcomes: [CO…]` — the outcome(s) it serves.",
+                )
             for outcome in objective.get("outcomes") or []:
                 if outcome not in outcome_ids:
                     self.report(

@@ -167,7 +167,8 @@ def normalize_rules(block: dict) -> None:
 
 
 def normalize_approved(data: dict) -> None:
-    """Read an `approved: {date: 2026-10-05}` record as it was meant (D-043, spec §8.9).
+    """Read an `approved: {date: 2026-10-05}` record as it was meant (D-043, spec §8.9) — the
+    syllabus's, and a unit's (D-046).
 
     An unquoted date parses as a ``datetime.date``; it becomes an ISO string, which is what the
     schema and `classkit status` expect. The key was ``on`` until D-044 — but YAML 1.1 reads a bare
@@ -210,6 +211,7 @@ def load_course(course_root: Path, framework_root: Path) -> Course:
             if not unit_file.is_file():
                 continue
             data, body = load(unit_file)
+            normalize_approved(data)
             unit = Unit(doc=Doc(unit_file, data, body), directory=unit_dir)
 
             sessions_dir = unit_dir / "sessions"

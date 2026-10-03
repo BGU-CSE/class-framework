@@ -11,11 +11,12 @@ from pathlib import Path
 import pytest
 
 from classkit import log
-from classkit.approve import ApproveError, approve_syllabus, content_hash, read
+from classkit.approve import ApproveError, approve_syllabus, approve_unit, content_hash, read
 from classkit.cli import main
 from classkit.model import load_course
-from classkit.scaffold import scaffold_course, scaffold_unit
-from classkit.status import APPROVED, DRAFT, EDITED, NOT_STARTED, UNTRACKED, report, status
+from classkit.scaffold import scaffold_course, scaffold_item, scaffold_unit
+from classkit.status import (APPROVED, DESIGNED, DRAFT, EDITED, NOT_STARTED, PLANNED, UNIT_DRAFTED,
+                             UNTRACKED, report, status)
 from classkit.validate import validate
 
 FRAMEWORK_ROOT = Path(__file__).resolve().parents[1]
@@ -296,9 +297,9 @@ def test_status_lists_the_unit_map_with_each_units_state(course_root: Path):
 
     lines = {line.number: line for line in status(course_root, FRAMEWORK_ROOT).units}
 
-    assert lines[1].state == "unit.md present"
-    assert lines[2].title == "Heaps" and lines[2].state == "not planned yet"
-    assert lines[5].state == "unit.md present — not in the unit map"
+    assert lines[1].state == UNIT_DRAFTED
+    assert lines[2].title == "Heaps" and lines[2].state == NOT_STARTED
+    assert lines[5].state == UNIT_DRAFTED and lines[5].detail.endswith("not in the unit map")
 
 
 def test_status_reports_materials_and_the_last_log_entry(course_root: Path, capsys):
@@ -323,3 +324,208 @@ def test_status_writes_nothing(course_root: Path):
     before = {p: p.read_bytes() for p in course_root.rglob("*") if p.is_file()}
     main(["status", "--course", str(course_root)])
     assert {p: p.read_bytes() for p in course_root.rglob("*") if p.is_file()} == before
+
+
+# -- approve unit N: planned, designed, edited since (D-046, spec §8.9) ----------
+
+def unit_dir(course_root: Path, number: int = 1) -> Path:
+    return next(course_root.glob(f"units/{number:02d}-*"))
+
+
+def unit_md(course_root: Path, number: int = 1) -> Path:
+    return unit_dir(course_root, number) / "unit.md"
+
+
+def unit_line(course_root: Path, number: int = 1):
+    return next(line for line in status(course_root, FRAMEWORK_ROOT).units if line.number == number)
+
+
+def touch(path: Path, old: str, new: str) -> None:
+    text = path.read_text(encoding="utf-8")
+    assert old in text, f"fixture drifted: {old!r} not in {path.name}"
+    path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+
+def test_the_schema_accepts_difficulties_and_a_unit_approval(course_root: Path):
+    touch(unit_md(course_root), "objectives:\n",
+          "difficulties:\n  - text: \"Reads O(n) as exact\"\n    origin: teacher\n"
+          "  - text: \"Confuses best and worst case\"\n    origin: proposed\n"
+          "approved: {date: 2026-10-05, stage: planned}\nobjectives:\n")
+    assert errors(course_root) == []
+    assert load_course(course_root, FRAMEWORK_ROOT).units[0].doc.data["approved"] == \
+        {"date": "2026-10-05", "stage": "planned"}
+
+
+@pytest.mark.parametrize("bad", [
+    "difficulties:\n  - text: \"x\"\n    origin: guessed\n",   # origin not in the enum
+    "difficulties:\n  - text: \"x\"\n",                         # origin missing
+    "approved: {date: 2026-10-05}\n",                            # a unit's record needs a stage
+    "approved: {date: 2026-10-05, stage: reviewed}\n",           # review is not a state
+])
+def test_the_schema_rejects_malformed_difficulties_and_records(course_root: Path, bad: str):
+    touch(unit_md(course_root), "objectives:\n", bad + "objectives:\n")
+    assert any(f.code == "schema" for f in errors(course_root))
+
+
+def test_approve_unit_records_planned_with_the_hash_of_unit_md_and_logs_it(course_root: Path):
+    approval = approve_unit(course_root, 1, on="2026-10-05", why="step 4 of /plan-units")
+
+    data, body = read(unit_md(course_root).read_text(encoding="utf-8"))
+    assert data["approved"] == {"date": "2026-10-05", "stage": "planned", "hash": approval.hash}
+    assert approval.hash == content_hash(data, body)
+    last = log_entries(course_root)[-1]
+    assert last.title == "classkit approve unit 1"
+    assert "U01 approved as planned" in last.changed
+    assert last.why == "step 4 of /plan-units"
+    assert last.files == [unit_md(course_root).relative_to(course_root).as_posix()]
+    assert errors(course_root) == []
+    assert unit_line(course_root).state == PLANNED and unit_line(course_root).detail == "planned 2026-10-05"
+
+
+def test_approve_unit_changes_nothing_but_the_record(course_root: Path):
+    before = unit_md(course_root).read_text(encoding="utf-8")
+    approve_unit(course_root, 1, on="2026-10-05")
+    after = unit_md(course_root).read_text(encoding="utf-8")
+
+    removed = [line for line in difflib.ndiff(before.splitlines(), after.splitlines()) if line.startswith("- ")]
+    assert removed == []
+    assert read(after)[1] == read(before)[1]
+
+
+def test_a_planned_unit_edited_since_says_so(course_root: Path):
+    approve_unit(course_root, 1, on="2026-10-05")
+    touch(unit_md(course_root), 'statement: "TODO"', 'statement: "Analyse a loop"')
+    line = unit_line(course_root)
+    assert line.state == PLANNED and line.edited
+    assert line.detail == "planned 2026-10-05 — edited since"
+
+
+def test_editing_a_session_does_not_touch_a_planned_units_hash(course_root: Path):
+    approve_unit(course_root, 1, on="2026-10-05")
+    touch(unit_dir(course_root) / "sessions" / "01.md", "TODO", "What is a loop invariant?")
+    assert not unit_line(course_root).edited
+
+
+def test_the_stage_defaults_to_the_next_one(course_root: Path):
+    assert approve_unit(course_root, 1, on="2026-10-05").stage == "planned"
+    # the plan approved and unchanged → the next approval is the design
+    assert approve_unit(course_root, 1, on="2026-10-20").stage == "designed"
+    assert unit_line(course_root).state == DESIGNED
+
+
+def test_a_plan_edited_since_its_approval_defaults_to_planned_again(course_root: Path):
+    approve_unit(course_root, 1, on="2026-10-05")
+    touch(unit_md(course_root), 'statement: "TODO"', 'statement: "Analyse a loop"')
+    approval = approve_unit(course_root, 1, on="2026-10-06")
+    assert approval.stage == "planned"
+    assert "was planned 2026-10-05" in log_entries(course_root)[-1].changed
+
+
+def test_designed_hashes_the_whole_unit(course_root: Path):
+    scaffold_item(course_root, FRAMEWORK_ROOT, "U01")
+    approve_unit(course_root, 1, stage="designed", on="2026-10-20")
+    assert unit_line(course_root).detail == "designed 2026-10-20"
+    last = log_entries(course_root)[-1]
+    assert "assessments/items/U01-I01.md" in last.files
+
+    for path, old, new in [
+        (unit_md(course_root), 'statement: "TODO"', 'statement: "Analyse a loop"'),
+        (unit_dir(course_root) / "sessions" / "03.md", "TODO", "Why?"),
+        (course_root / "assessments" / "items" / "U01-I01.md", 'stem: "TODO"', 'stem: "Which?"'),
+    ]:  # in-class.md: the next test
+        original = path.read_text(encoding="utf-8")
+        touch(path, old, new)
+        line = unit_line(course_root)
+        assert line.edited and line.detail == "designed 2026-10-20 — edited since", path.name
+        path.write_text(original, encoding="utf-8")
+        assert not unit_line(course_root).edited, path.name
+
+
+def test_an_edit_to_the_in_class_hour_shows_on_a_designed_unit(course_root: Path):
+    approve_unit(course_root, 1, stage="designed", on="2026-10-20")
+    path = unit_dir(course_root) / "in-class.md"
+    path.write_text(path.read_text(encoding="utf-8") + "\nA note the teacher added.\n", encoding="utf-8")
+    assert unit_line(course_root).edited
+
+
+def test_a_new_session_or_entry_quiz_item_shows_on_a_designed_unit(course_root: Path):
+    approve_unit(course_root, 1, stage="designed", on="2026-10-20")
+    scaffold_item(course_root, FRAMEWORK_ROOT, "U01")
+    assert unit_line(course_root).edited
+
+
+def test_a_homework_item_or_another_units_item_is_not_part_of_the_unit_hash(course_root: Path):
+    scaffold_item(course_root, FRAMEWORK_ROOT, "U01")
+    homework = course_root / "assessments" / "items" / "U01-I01.md"
+    touch(homework, "usage: [in-class-quiz]", "usage: [homework]")
+    approve_unit(course_root, 1, stage="designed", on="2026-10-20")
+    touch(homework, 'stem: "TODO"', 'stem: "Which?"')
+    scaffold_unit(course_root, FRAMEWORK_ROOT, 2, "Second")
+    scaffold_item(course_root, FRAMEWORK_ROOT, "U02")
+    assert not unit_line(course_root).edited
+
+
+def test_renaming_the_units_directory_is_not_an_edit(course_root: Path):
+    approve_unit(course_root, 1, stage="designed", on="2026-10-20")
+    unit_dir(course_root).rename(course_root / "units" / "01-renamed-by-hand")
+    assert not unit_line(course_root).edited
+
+
+def test_approving_a_unit_again_without_edits_records_nothing(course_root: Path):
+    approve_unit(course_root, 1, stage="planned", on="2026-10-05")
+    text = unit_md(course_root).read_text(encoding="utf-8")
+    entries = len(log_entries(course_root))
+
+    again = approve_unit(course_root, 1, stage="planned", on="2026-10-09")
+
+    assert again.already and again.on == "2026-10-05"
+    assert unit_md(course_root).read_text(encoding="utf-8") == text
+    assert len(log_entries(course_root)) == entries
+
+
+def test_re_approving_replaces_the_record_in_place(course_root: Path):
+    approve_unit(course_root, 1, stage="planned", on="2026-10-05")
+    approve_unit(course_root, 1, stage="designed", on="2026-10-20")
+    text = unit_md(course_root).read_text(encoding="utf-8")
+    assert text.count("\napproved:") == 1
+    assert read(text)[0]["approved"]["stage"] == "designed"
+
+
+def test_a_hand_written_unit_approval_is_untracked_and_approving_adds_the_hash(course_root: Path):
+    touch(unit_md(course_root), "objectives:\n", "approved: {date: 2026-10-01, stage: planned}\nobjectives:\n")
+    assert "edits since cannot be tracked" in unit_line(course_root).detail
+
+    approval = approve_unit(course_root, 1, stage="planned", on="2026-10-05")
+    assert read(unit_md(course_root).read_text(encoding="utf-8"))[0]["approved"]["hash"] == approval.hash
+    assert "by hand, without a hash" in log_entries(course_root)[-1].changed
+
+
+def test_approve_unit_cli_diff_writes_nothing_and_the_real_run_logs(course_root: Path, capsys):
+    before = unit_md(course_root).read_text(encoding="utf-8")
+    assert main(["approve", "unit", "1", "--stage", "planned", "--diff", "--course", str(course_root)]) == 0
+    assert unit_md(course_root).read_text(encoding="utf-8") == before
+    assert "+  stage: planned" in capsys.readouterr().out
+
+    assert main(["approve", "unit", "1", "--stage", "planned", "--course", str(course_root)]) == 0
+    out = capsys.readouterr().out
+    assert "as planned" in out and "logged" in out
+
+
+def test_approve_unit_cli_needs_a_number_and_the_syllabus_takes_none(course_root: Path, capsys):
+    assert main(["approve", "unit", "--course", str(course_root)]) == 2
+    assert "which unit" in capsys.readouterr().err
+    assert main(["approve", "syllabus", "--stage", "planned", "--course", str(course_root)]) == 2
+
+
+def test_approving_a_unit_with_no_directory_fails_cleanly(course_root: Path, capsys):
+    assert main(["approve", "unit", "7", "--course", str(course_root)]) == 2
+    assert "Run /plan-units 7" in capsys.readouterr().err
+
+
+def test_status_report_shows_each_units_state_and_the_counts(course_root: Path):
+    drafted(course_root)  # a map of two units: 1 "First Unit", 2 "Heaps"
+    approve_unit(course_root, 1, stage="planned", on="2026-10-05")
+    text = report(status(course_root, FRAMEWORK_ROOT))
+    assert "U01  First Unit  planned 2026-10-05" in text
+    assert "U02  Heaps       not started" in text
+    assert "1 planned, 1 not started" in text
