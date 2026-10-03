@@ -72,10 +72,10 @@ def syllabus_state(course_root: Path, framework_root: Path | None) -> SyllabusSt
 
     record = data.get("approved")
     if record is not None:
-        if not isinstance(record, dict) or not record.get("on"):
+        if not isinstance(record, dict) or not record.get("date"):
             found.detail = "its `approved` record is malformed — `classkit validate` says how"
             return found
-        on = record["on"]
+        on = record["date"]
         if not record.get("hash"):
             found.state, found.detail = UNTRACKED, f"approved {on} (by hand: edits since cannot be tracked)"
         elif record["hash"] == content_hash(data, body):

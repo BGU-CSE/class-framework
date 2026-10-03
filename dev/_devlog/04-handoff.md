@@ -19,6 +19,24 @@ Then, for history and what is still open:
 6. `02-progress.md` (last block) — where we stopped.
 7. `03-open-questions.md` — what's unresolved.
 
+## Current state — 2026-10-03 (the syllabus increment built and adjusted; awaiting Avin's check)
+
+**The syllabus increment is built** (Session 37, gap report `../reviews/impl-gaps-step-3-syllabus.md`)
+**and adjusted to D-044** (Session 38): `/plan-syllabus` (evidence → draft → revision rounds →
+approval), `/review-syllabus`, `syllabus-designer` (read-only; `evidence`, `draft`, `rework`), the
+**`writing-a-syllabus` skill** (one standard for the designer, the chat and the critic), `classkit
+approve syllabus` (`approved: {date, hash}`), `classkit status`. Suite: **320 tests**, green.
+
+- **D-044 — what goes where** (spec §2.1): command = procedure in the teacher's conversation (gates,
+  writing, logging, revisions with the teacher); agent = fresh context or independence, returns;
+  skill = craft loaded by chat and agents; descriptions name their command. **The agent drafts, the
+  chat revises.** To be applied to every other agent as it is rewritten.
+- **Next — Avin checks the syllabus increment on a real course:** a fresh clone; `/ingest` the real
+  materials (this is also step 2's re-test — CLRS readability, F-09); `/plan-syllabus` through to
+  approval; `/review-syllabus`; `classkit status`. `dev/MANUAL-TESTING.md` has the section. Known
+  staging gap: `/plan-units` still behaves the old way until the units increment (G-11).
+- **Then** the units increment's spec (`/plan-units N…`, unit states), applying D-044.
+
 ## Current state — 2026-10-03 (the syllabus increment built)
 
 **The syllabus increment is built** (Session 37): every [3-syllabus] row. Suite: **318 tests**,

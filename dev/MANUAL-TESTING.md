@@ -371,9 +371,8 @@ then `/plan-syllabus`. Check, step by step:
 tail -5 course/LOG.md                           # "classkit approve syllabus … re-approved …"
 ```
 
-  By hand: replace the block with `approved: {on: 2026-10-05}` → status says "edits since cannot
-  be tracked", and `validate` has no error (YAML reads the bare `on` as a boolean; the loader
-  handles it).
+  By hand: replace the block with `approved: {date: 2026-10-05}` → status says "edits since
+  cannot be tracked", and `validate` has no error.
 - **`/review-syllabus`** (optional): the critic's findings, ordered by damage, broken vs. taste;
   nothing written; fixes go back through `/plan-syllabus`.
 

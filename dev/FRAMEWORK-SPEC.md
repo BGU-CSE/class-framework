@@ -63,21 +63,22 @@ Framework-wide: these apply to every phase, not only Core.
 ```
 ┌────────────────────────────────────────────────────────────┐
 │  COMMANDS      .claude/commands/*.md                       │
-│  what the teacher types. Orchestration only —              │
-│  which agents, in what order, and why that order.          │
+│  what the teacher types. The procedure the chat follows    │
+│  IN the teacher's conversation: gates, writing, logging,   │
+│  and the revisions made with the teacher.                  │
 └───────────────┬────────────────────────────────────────────┘
                 │ invokes
 ┌───────────────▼────────────────────────────────────────────┐
 │  AGENTS        .claude/agents/*.md                         │
-│  judgment. Each has its own context and tool set.          │
-│  Write course content; cannot verify their own arithmetic. │
+│  workers sent off by a command: their own fresh context    │
+│  and tools; cannot talk to the teacher; return one result. │
 └───────────────┬───────────────────────────┬────────────────┘
                 │ loads                     │ runs
 ┌───────────────▼──────────────┐  ┌─────────▼────────────────┐
 │  SKILLS  .claude/skills/     │  │  TOOLING  src/classkit/  │
-│  craft shared by >1 agent,   │  │  verification.           │
-│  so the designer and the     │  │  Deterministic, tested,  │
-│  critic judge by one bar.    │  │  free, agent-independent.│
+│  craft — what good looks     │  │  verification.           │
+│  like — loaded by the chat   │  │  Deterministic, tested,  │
+│  AND the agents: one bar.    │  │  free, agent-independent.│
 └──────────────────────────────┘  └──────────┬───────────────┘
                                              │ enforces
                                   ┌──────────▼───────────────┐
@@ -85,6 +86,22 @@ Framework-wide: these apply to every phase, not only Core.
                                   │  the content contract.   │
                                   └──────────────────────────┘
 ```
+
+**What goes where (D-044).** A **command** is the procedure, and it runs in the teacher's own
+conversation: it holds the gates (only the conversation can ask the teacher anything, D-031h), writes
+through the write path, logs, and — with a skill loaded — **makes the revisions the teacher asks for
+in conversation**, because it has what the teacher said. An **agent** is sent off for work that
+needs a **fresh context** (reading a hundred files without flooding the chat; a first draft; a
+structural rework) or **independence** (the critic judges what it did not write); it cannot ask the
+teacher anything, so its questions go into what it returns, and the command asks them. A **skill**
+is the **craft** — what a good outcome, guiding question or study-time estimate looks like — loaded
+by the chat and by every agent that writes or judges that thing, so all of them work to one
+standard. Agents return and commands write (the D-039 pattern), as each agent is rewritten.
+
+Neither commands nor agents start only when called: Claude Code may start one by itself when a
+request matches its `description`. So every description names the command it belongs to
+("Use under /plan-syllabus"), which keeps an old agent from answering a request that is now another
+one's (the `curriculum-architect` collision, D-043).
 
 ### 2.2 Code verifies, agents judge
 
@@ -398,7 +415,9 @@ Course-level setup runs once; then units are designed one at a time.
                       descriptor sections → WAIT. What the evidence does not support is
                       asked or left out, never invented.
                    3. REVISION IN CONVERSATION, as many rounds as the teacher wants —
-                      change what was asked, leave the rest (§5.2 rule 3)
+                      made by the chat itself with the writing-a-syllabus skill (D-044);
+                      change what was asked, leave the rest (§5.2 rule 3). syllabus-designer
+                      is sent off again only for a structural REWORK
                    4. APPROVAL, when the teacher says so — recorded with its hash (§8.9);
                       /review-syllabus offered, optional
                    The milestone: an APPROVED syllabus, which unit work then builds on.
@@ -629,7 +648,7 @@ Deferred: a `gem` block (Exports phase).
 | `prerequisites` | array\<string\> | | course-level prerequisites (free text or course codes) |
 | `assessment` | array\<obj\> | | the grading scheme, e.g. `{ type, weight }`. **The agent may draft it** (from an old syllabus, or by asking); nothing validates its content — approving or editing it is the teacher's responsibility **(D-043; it was "reserved, empty in Core")**. Its item shape is **deliberately left open** (`additionalProperties` *not* false): the Assessment phase will give grading real structure, and may then ask for what was written freely to be converted (G-11) |
 | `reading` | object | | (D-032) `{ required: [string], recommended: [string] }`. Entries may be a `textbooks[].key` from `course.yaml` (preferred — no duplication) or free-text for anything not listed there |
-| `approved` | object | | (D-043) `{ on (date `YYYY-MM-DD`, ✓), hash (opt, `sha256:<hex>`) }` — the teacher's approval of this syllabus, the milestone unit work builds on (§8.9). Written by `classkit approve syllabus`, or by hand (then without `hash`). YAML 1.1 reads a bare `on:` key as the boolean `true`; the loader reads it as `on` |
+| `approved` | object | | (D-043) `{ date (`YYYY-MM-DD`, ✓), hash (opt, `sha256:<hex>`) }` — the teacher's approval of this syllabus, the milestone unit work builds on (§8.9). Written by `classkit approve syllabus`, or by hand (then without `hash`). The key was `on` until D-044: YAML 1.1 reads a bare `on:` as the boolean `true` (the same trap as `off`); a record still written with `on:` is read as `date` |
 | `unit_map` | array\<obj\> | | (D-040, D-043) the whole semester's plan, written before most units exist: each `{ number (✓), title (✓), summary (opt), evidence (opt, array of material locators — what the plan for this unit rests on) }`. **Authoritative for which units the course has and their order and titles.** A `units/NN-slug/` directory is created only when a unit is *planned* in detail (§5.1); `unit_map_mismatch` **(target, [units])** warns when a unit's `unit.md` disagrees with its map entry |
 
 `bloom` enum, everywhere it appears: `remember | understand | apply | analyze | evaluate | create`.
@@ -915,7 +934,7 @@ Severity is the default; **(target)** means not built yet. Every rule is also a 
 | `syllabus_workload_missing` | the syllabus declares no `workload` | advisory | warn |
 | `unknown_rule` | a rule code in `course.yaml` `rules:`, a methodology's `rules:`, or an `accepted:` entry names no rule — a typo that would otherwise silently do nothing | advisory | warn |
 | `accepted_without_reason` | an `accepted:` entry gives no `reason` (or a blank one). The exception still takes effect (D-038) | advisory | warn |
-| `material_locator_in_text` | a `M<NNNN>#anchor` in the Markdown body of a course file (not `LOG.md`, not `ingested/`) names a real material and anchor (§8.7). Consistency rule | integrity, reported as advisory (prose) | warn |
+| `material_locator_in_text` | a `M<NNNN>#anchor` in the Markdown body of a course file (not `LOG.md`, not `ingested/`) — or in the syllabus's `unit_map[].evidence` (D-044: front matter, but nothing about the syllabus's content is an error) — names a real material and anchor (§8.7). Consistency rule | integrity, reported as advisory (prose) | warn |
 | `materials_not_ingested` | a source (file or `links.md` line) is new, changed, moved or gone since the last ingest — one finding, reported against `materials/manifest.yaml` (D-035). **Ignores `source/private/`** (D-040): its files are not looked at and private materials are not judged — what is there differs per machine, and `classkit doctor` reports it. For a material whose hand-edit refusal awaits the teacher, the message says so and names `classkit ingest --keep ID` / `--overwrite ID`, not "run /ingest" (F-25): its source changed and its ingested file differs from `ingested_hash` | advisory | warn |
 | `course_gitignore_missing` | `course/.gitignore` is absent or does not list `materials/source/private/` and `materials/private-text/` (§8.7). Reported against `course/.gitignore`. Consistency rule | advisory | warn |
 | `instructor_material_cited` | a student-facing locator (today a study path's `ref`; step 4 adds `answer`, D-019) names a material with `audience: instructor` (D-040). Consistency rule | advisory | **alert** |
@@ -1535,7 +1554,7 @@ teacher's act, so it is **recorded**, not derived. It is recorded **in the appro
 never in a separate progress file, which would duplicate state and drift (a deleted unit still
 "designed").
 
-- **The record:** `approved: { on: <date>, hash: <sha256 of the file without its own approved
+- **The record:** `approved: { date: <YYYY-MM-DD>, hash: <sha256 of the file without its own approved
   block> }` in the file's front matter. The hash is taken over the **parsed** front matter
   (canonical JSON, keys sorted, `approved` excluded) followed by the body — so a YAML comment, key
   order or quoting style is not an "edit", and a hand-written record may sit anywhere in any style.
@@ -1549,7 +1568,7 @@ never in a separate progress file, which would duplicate state and drift (a dele
   the record's lines change — the teacher's comments survive — and the result is re-parsed: if
   anything else would differ, nothing is written. Approving content already approved with the same
   hash records nothing. By hand, the teacher may write
-  `approved: {on: 2026-10-05}` without a hash.
+  `approved: {date: 2026-10-05}` without a hash.
 - **Editing after approval is normal** — the syllabus keeps changing during the semester. Nothing
   is un-approved. The hash only lets the overview say **"approved 5 Oct — edited since"**; without
   a hash it says "approved 5 Oct (edits since cannot be tracked)". Approving again records a new

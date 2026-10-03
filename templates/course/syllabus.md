@@ -55,7 +55,7 @@ prerequisites: []
 #   - { type: homework, weight: 40, description: "six problem sets; the lowest is dropped" }
 
 # APPROVAL — written by `classkit approve syllabus` (date and hash), or by you by hand
-# (`approved: {on: 2026-10-05}`). Editing afterwards is normal; `classkit status` says
+# (`approved: {date: 2026-10-05}`). Editing afterwards is normal; `classkit status` says
 # "edited since". Agents never write it.
 ---
 

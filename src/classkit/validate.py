@@ -808,6 +808,22 @@ class Validator:
                     self.report("material_locator_in_text", path,
                                 f"the text cites {match.group(0)}, but {problem}")
 
+        # The syllabus's unit map (D-044): its `evidence` is front matter, but nothing about the
+        # syllabus's content is an error (D-043) — so an invented locator behind a unit's plan is
+        # reported here, at this rule's severity, before `/plan-units` follows it.
+        syllabus = self.course.syllabus
+        if syllabus is not None:
+            for entry in syllabus.data.get("unit_map") or []:
+                if not isinstance(entry, dict):
+                    continue
+                for value in entry.get("evidence") or []:
+                    for match in LOCATOR.finditer(value if isinstance(value, str) else ""):
+                        problem = self._locator_problem(match.group(1), match.group(2))
+                        if problem:
+                            self.report("material_locator_in_text", syllabus.path,
+                                        f"the unit map's evidence for unit {entry.get('number')} "
+                                        f"cites {match.group(0)}, but {problem}")
+
     def _locator_problem(self, material_id: str, anchor: str | None) -> str | None:
         """Why `material_id` / `material_id#anchor` does not resolve — or None when it does. The
         one definition both locator rules share. It proves the place exists, not that the answer

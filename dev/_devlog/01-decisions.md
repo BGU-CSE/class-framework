@@ -1530,3 +1530,32 @@ judged by him and the prompts revised. New validation rules only where the real 
 need; already-designed unbuilt rules are parked, not cut. One independent review at the end of Core,
 not per increment.
 
+## D-044 — Commands, agents, skills: what goes where; the chat revises; `approved.date`
+**Date:** 2026-10-03 · **Status:** locked (design + implemented) · sources: Avin's question
+("commands vs agents keep confusing me"), `reviews/impl-gaps-step-3-syllabus.md`
+
+Avin asked to see the command/agent split in line with Claude before the teacher-facing tools grow.
+Claude laid it out (a command is the procedure in the teacher's conversation and can hold gates; an
+agent is a worker with a fresh context and its own tools that cannot talk to the teacher; a skill is
+craft either can load) and named where it was loose — including that commands, like agents, can be
+started by Claude Code itself when a request matches (`plan-syllabus` appears among the skills).
+Decided (Avin):
+
+1. **What goes where.** Command = procedure, gates, writing, logging, and the revisions made with the
+   teacher. Agent = work needing a fresh context (heavy reading, a first draft, a structural rework)
+   or independence (the critic); it returns, and the command writes. Skill = the craft, loaded by the
+   chat and the agents, so all work to one standard. Every description names its command. Spec §2.1.
+2. **The agent drafts; the chat revises.** An agent re-sent for every revision starts cold and loses
+   the conversation's nuance; the chat has it. Applied to the just-built syllabus increment:
+   **`writing-a-syllabus`** skill (the craft moved out of `syllabus-designer` and the critic's
+   syllabus section, into one place); `syllabus-designer`'s `revise` task became **`rework`**, for
+   structural changes only; `/plan-syllabus` step 3 — the chat loads the skill and revises itself;
+   `course-critic` loads the skill for `/review-syllabus`.
+3. **Gap report ⚑, accepted:** G-1 — `approved.on` renamed **`approved.date`**: YAML 1.1 reads a
+   bare `on` as `true`. Claude's spec error, the same trap as `off` in step 2a, walked into again; an
+   old `on:` record is still read. G-2 — the unit map's `evidence` locators are checked by
+   `material_locator_in_text` (warn): the one place code beats a prompt is catching an invented
+   reference. The rest of the report accepted as built.
+
+320 tests (+2).
+

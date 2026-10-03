@@ -429,6 +429,20 @@ checks it on a real course) · **[units]** the next increment.
 | ⬜ | `.claude/commands/plan-units.md`, `curriculum-architect` | **[units]** `/plan-units N…`: objectives for the named units against the approved syllabus; asks (does not refuse) when the syllabus is unapproved |
 | ⬜ | `.claude/commands/write-items.md`, `design-unit.md` | **[units]** retire `/write-items` from Core; `/design-unit N [session K \| quiz \| class]` |
 
+## D-044 — Commands, agents, skills; the chat revises; `approved.date`
+
+| | Artifact | Change |
+|---|---|---|
+| ✅ | `.claude/skills/writing-a-syllabus/SKILL.md` (new) | the syllabus craft, one standard for the designer, the chat and the critic |
+| ✅ | `.claude/agents/syllabus-designer.md` | loads the skill; tasks `evidence`, `draft`, `rework` (structural only) |
+| ✅ | `.claude/commands/plan-syllabus.md` | step 3: the chat revises with the skill; the agent only for a rework |
+| ✅ | `.claude/agents/course-critic.md` | loads the skill for `/review-syllabus` |
+| ✅ | `schemas/syllabus.schema.json`, `model.py`, `approve.py`, `status.py`, template, docs | `approved.on` → `approved.date`; an old `on:` still read |
+| ✅ | `src/classkit/validate.py` | the unit map's `evidence` locators checked by `material_locator_in_text` (warn) |
+| ✅ | `dev/FRAMEWORK-SPEC.md` §2.1, §5.1, §8.4; `dev/CLAUDE.md`, `README.md` | what goes where; the chat revises |
+| ✅ | `tests/` | `date` written and read, `on:` still read; an invented evidence locator warns |
+| ⬜ | every other agent and command, as each is rewritten (units increment onwards) | apply §2.1: craft into skills, agents return, the chat revises, descriptions name their command |
+
 ## Cross-cutting
 
 | | Artifact | Change |

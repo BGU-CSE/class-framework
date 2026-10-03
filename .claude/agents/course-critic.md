@@ -50,8 +50,9 @@ Read `course/syllabus/syllabus.md`, `course/course.yaml`, the methodology (`meth
 — **its numbers, never assumed ones**), `course/materials/coverage.md` if it exists, the manifest,
 and the evidence the syllabus cites (`M0007#slide-1` → `course/materials/ingested/`; a private
 material's full text in `course/materials/private-text/` where this machine has it — otherwise say
-it is index-only here). The writing-guiding-questions skill does not apply here; your own judgement
-does.
+it is index-only here). **Load the `writing-a-syllabus` skill** — the standard the syllabus was
+drafted and revised to; judging by anything else gives the teacher contradictory advice. The
+checks below are where syllabi fail most; the skill says what good looks like.
 
 **1. Course Outcomes that are topic labels.** "Graph algorithms" is a subject; "choose and justify a
 shortest-path algorithm for a given graph" is an outcome. Of each: could an exam tell whether a

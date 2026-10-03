@@ -149,7 +149,7 @@ reaches every course on the next `git merge framework/main`.
 .claude/agents/     syllabus-designer, curriculum-architect, study-session-designer,
                     lesson-planner, assessment-writer, topic-researcher, gem-builder,
                     course-critic, material-classifier
-.claude/skills/     writing-guiding-questions, estimating-study-time
+.claude/skills/     writing-a-syllabus, writing-guiding-questions, estimating-study-time
 .claude/commands/   /ingest /plan-syllabus /review-syllabus /plan-units /design-unit /write-items
                     /review-unit /build-gem
 ```
@@ -158,7 +158,11 @@ When editing agents:
 
 - **Read the methodology, never hardcode it.** An agent that assumes 4 sessions of 25 minutes
   breaks every other teacher's course (D-011, invariant 2).
-- **Craft shared by more than one agent belongs in a skill**, so the designer and the critic judge
+- **What goes where (D-044, spec §2.1):** the command is the procedure in the teacher's
+  conversation (gates, writing, logging, and the revisions made with the teacher); an agent is sent
+  off for a fresh context or for independence, and returns; a skill is the craft, loaded by the chat
+  and the agents. Every `description` names the command it belongs to.
+- **Craft shared by more than one agent — or by an agent and the chat — belongs in a skill**, so the designer and the critic judge
   by the same standard rather than drifting apart.
 - **Agents must not fabricate resources.** No invented URLs, page numbers, or video titles. A
   fabricated study path validates cleanly and fails a student mid-session.

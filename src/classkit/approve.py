@@ -4,7 +4,7 @@ A milestone is a teacher's act, so it is recorded, not derived — and recorded 
 file, never in a separate progress file that would drift from it:
 
     approved:
-      on: 2026-10-05
+      date: 2026-10-05
       hash: "sha256:…"
 
 The hash is of the syllabus *without* its own `approved` block, so approving does not change what
@@ -73,7 +73,7 @@ def with_record(text: str, on: str, digest: str) -> str:
     if not match:
         raise ApproveError("no YAML front matter (the file must start with a '---' line)")
     newline = "\r\n" if match.group("open").endswith("\r\n") else "\n"
-    record = [f"approved:", f"  on: {on}", f'  hash: "{digest}"']
+    record = [f"approved:", f"  date: {on}", f'  hash: "{digest}"']
     lines = (match.group("fm") or "").splitlines()
 
     start = next((i for i, line in enumerate(lines) if _KEY.match(line)), None)
@@ -100,10 +100,10 @@ def with_record(text: str, on: str, digest: str) -> str:
     after, new_body = read(result)
     if new_body != body or {k: v for k, v in after.items() if k != "approved"} != \
             {k: v for k, v in before.items() if k != "approved"} or \
-            after.get("approved") != {"on": on, "hash": digest}:
+            after.get("approved") != {"date": on, "hash": digest}:
         raise ApproveError(
             "could not place the `approved` record without changing anything else in the front "
-            "matter (an unusual layout?). Add it by hand: `approved: {on: " + on + "}`."
+            "matter (an unusual layout?). Add it by hand: `approved: {date: " + on + "}`."
         )
     return result
 
@@ -146,7 +146,7 @@ def approve_syllabus(course_root: Path, *, on: str | None = None, dry_run: bool 
     on = on or datetime.date.today().isoformat()
 
     if previous and previous.get("hash") == digest:
-        return Approval(path, str(previous.get("on")), digest, previous, text, "")
+        return Approval(path, str(previous.get("date")), digest, previous, text, "")
 
     new_text = with_record(text, on, digest)
     approval = Approval(path, on, digest, previous, new_text, diff(path, new_text))
@@ -155,7 +155,7 @@ def approve_syllabus(course_root: Path, *, on: str | None = None, dry_run: bool 
 
     approval.outcome = write(path, new_text, overwrite=True)
     if previous:
-        before = f"approved {previous.get('on')}" + ("" if previous.get("hash") else " by hand, without a hash")
+        before = f"approved {previous.get('date')}" + ("" if previous.get("hash") else " by hand, without a hash")
         changed = f"syllabus re-approved ({digest[:15]}…); was {before}"
     else:
         changed = f"syllabus approved ({digest[:15]}…)"

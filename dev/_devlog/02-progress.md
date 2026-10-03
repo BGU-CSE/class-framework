@@ -1762,3 +1762,12 @@ Avin runs `/ingest` + `/plan-syllabus` on a real course (`MANUAL-TESTING.md`, "S
 judges the agent's output; prompts revised from what he finds. Decide G-1 and G-2. Meanwhile, the
 spec of the [units] increment.
 
+## Session 38 — 2026-10-03 — Commands vs agents vs skills (→ D-044); the syllabus increment adjusted
+
+Avin asked for the command/agent distinction to be laid out and tightened. Agreed: command =
+procedure in the conversation, agent = fresh context or independence, skill = shared craft; the agent
+drafts, the chat revises. The syllabus build (Session 37) predated it, so Claude adjusted it here: new
+`writing-a-syllabus` skill (craft moved out of the agent and the critic), `rework` replaces `revise`,
+`/plan-syllabus` step 3 revises in the chat. Gap report ⚑: `approved.on` → `date` (Claude's YAML-1.1
+trap, again), unit-map evidence locators warn. Spec §2.1, §5.1, §8.4; D-044; ledger; 320 tests.
+

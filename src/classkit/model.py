@@ -167,19 +167,20 @@ def normalize_rules(block: dict) -> None:
 
 
 def normalize_approved(data: dict) -> None:
-    """Read an `approved: {on: 2026-10-05}` record as it was meant (D-043, spec §8.9).
+    """Read an `approved: {date: 2026-10-05}` record as it was meant (D-043, spec §8.9).
 
-    YAML 1.1 parses the bare key ``on`` as the boolean ``True``, and an unquoted date as a
-    ``datetime.date``; the spec tells a teacher to write exactly that by hand. So the key becomes
-    ``"on"`` and the date an ISO string — what the schema and `classkit status` expect.
+    An unquoted date parses as a ``datetime.date``; it becomes an ISO string, which is what the
+    schema and `classkit status` expect. The key was ``on`` until D-044 — but YAML 1.1 reads a bare
+    ``on`` as the boolean ``True`` (the same trap as ``off``), so it was renamed; a record written
+    with ``on:`` is still read, as ``date``.
     """
     record = data.get("approved")
     if not isinstance(record, dict):
         return
-    if True in record and "on" not in record:
-        record["on"] = record.pop(True)
-    if isinstance(record.get("on"), datetime.date):
-        record["on"] = record["on"].isoformat()
+    if True in record and "date" not in record:
+        record["date"] = record.pop(True)
+    if isinstance(record.get("date"), datetime.date):
+        record["date"] = record["date"].isoformat()
 
 
 def load_course(course_root: Path, framework_root: Path) -> Course:

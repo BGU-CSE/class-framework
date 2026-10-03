@@ -106,18 +106,37 @@ def test_an_approved_syllabus_validates(course_root: Path):
     assert errors(course_root) == []
 
 
-def test_a_hand_written_approval_validates_although_yaml_reads_on_as_true(course_root: Path):
-    # YAML 1.1 parses the bare key `on` as the boolean True — and the spec tells a teacher to
-    # write exactly `approved: {on: 2026-10-05}`.
+def test_a_hand_written_approval_validates(course_root: Path):
+    # What §8.9 tells a teacher to write by hand: `approved: {date: 2026-10-05}`.
+    path = drafted(course_root)
+    path.write_text(DRAFTED.replace("---\n\n#", "approved: {date: 2026-10-05}\n---\n\n#"), encoding="utf-8")
+    assert errors(course_root) == []
+    assert load_course(course_root, FRAMEWORK_ROOT).syllabus.data["approved"] == {"date": "2026-10-05"}
+
+
+def test_an_old_on_key_is_still_read_as_the_date(course_root: Path):
+    # The key was `on` until D-044; YAML 1.1 reads a bare `on` as True. Still read, as `date`.
     path = drafted(course_root)
     path.write_text(DRAFTED.replace("---\n\n#", "approved: {on: 2026-10-05}\n---\n\n#"), encoding="utf-8")
     assert errors(course_root) == []
-    assert load_course(course_root, FRAMEWORK_ROOT).syllabus.data["approved"] == {"on": "2026-10-05"}
+    assert load_course(course_root, FRAMEWORK_ROOT).syllabus.data["approved"] == {"date": "2026-10-05"}
+
+
+def test_an_invented_locator_in_the_unit_maps_evidence_warns(course_root: Path):
+    """D-044: nothing about the syllabus's content is an error (D-043), but an invented locator
+    behind a unit's plan is caught — at the prose-locator rule's severity, warn."""
+    path = drafted(course_root)
+    path.write_text(DRAFTED.replace('evidence: ["CLRS ch. 6"]', 'evidence: ["M0042#page-3", "CLRS ch. 6"]'),
+                    encoding="utf-8")
+    found = [f for f in findings(course_root) if f.code == "material_locator_in_text"]
+    assert [f.level for f in found] == ["warn"]
+    assert "unit 2" in found[0].message and "M0042#page-3" in found[0].message
+    assert errors(course_root) == []
 
 
 def test_a_malformed_approval_hash_is_a_schema_error(course_root: Path):
     path = drafted(course_root)
-    path.write_text(DRAFTED.replace("---\n\n#", 'approved: {on: 2026-10-05, hash: "abc"}\n---\n\n#'),
+    path.write_text(DRAFTED.replace("---\n\n#", 'approved: {date: 2026-10-05, hash: "abc"}\n---\n\n#'),
                     encoding="utf-8")
     assert any(f.code == "schema" and "hash" in f.message for f in errors(course_root))
 
@@ -135,7 +154,7 @@ def test_approve_writes_the_date_and_the_hash_and_logs_it(course_root: Path):
     approval = approve_syllabus(course_root, on="2026-10-05", why="step 4 of /plan-syllabus")
 
     data, body = read(path.read_text(encoding="utf-8"))
-    assert data["approved"] == {"on": "2026-10-05", "hash": approval.hash}
+    assert data["approved"] == {"date": "2026-10-05", "hash": approval.hash}
     assert approval.hash == content_hash(data, body)
     last = log_entries(course_root)[-1]
     assert last.title == "classkit approve syllabus"
@@ -153,7 +172,7 @@ def test_approve_changes_nothing_but_the_record(course_root: Path):
     changes = [line for line in difflib.ndiff(DRAFTED.splitlines(), text.splitlines())
                if line[:2] in ("- ", "+ ")]
     assert not [line for line in changes if line.startswith("- ")]
-    assert all(line[2:].startswith(("approved:", "  on: 2026-10-05", '  hash: "sha256:', "# "))
+    assert all(line[2:].startswith(("approved:", "  date: 2026-10-05", '  hash: "sha256:', "# "))
                or not line[2:].strip() for line in changes)
     assert read(text)[1] == read(DRAFTED)[1]
 
@@ -193,7 +212,7 @@ def test_approving_after_an_edit_replaces_the_record_in_place(course_root: Path)
     text = path.read_text(encoding="utf-8")
     assert text.count("approved:") == 1
     assert text.count("# The teacher's approval") == 1
-    assert read(text)[0]["approved"] == {"on": "2026-11-01", "hash": second.hash}
+    assert read(text)[0]["approved"] == {"date": "2026-11-01", "hash": second.hash}
     assert "re-approved" in log_entries(course_root)[-1].changed
 
 
@@ -203,7 +222,7 @@ def test_approving_over_a_hand_written_record_adds_the_hash(course_root: Path):
 
     approval = approve_syllabus(course_root, on="2026-10-05")
 
-    assert read(path.read_text(encoding="utf-8"))[0]["approved"] == {"on": "2026-10-05", "hash": approval.hash}
+    assert read(path.read_text(encoding="utf-8"))[0]["approved"] == {"date": "2026-10-05", "hash": approval.hash}
     assert "by hand, without a hash" in log_entries(course_root)[-1].changed
 
 
@@ -265,7 +284,7 @@ def test_a_comment_or_key_order_change_is_not_an_edit(course_root: Path):
 
 def test_status_of_a_hand_approval_without_a_hash_says_edits_are_untracked(course_root: Path):
     path = drafted(course_root)
-    path.write_text(DRAFTED.replace("---\n\n#", "approved: {on: 2026-10-05}\n---\n\n#"), encoding="utf-8")
+    path.write_text(DRAFTED.replace("---\n\n#", "approved: {date: 2026-10-05}\n---\n\n#"), encoding="utf-8")
     found = status(course_root, FRAMEWORK_ROOT).syllabus
     assert found.state == UNTRACKED
     assert "edits since cannot be tracked" in found.detail

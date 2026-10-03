@@ -127,7 +127,7 @@ Commands are **stepwise**: each announces a step, produces it, shows you the res
 your approval before the next. Nothing overwrites work you authored without asking you first — that
 one is enforced in code, not by instruction.
 
-Shared craft lives in skills — `writing-guiding-questions`, `estimating-study-time` — so the
+Shared craft lives in skills — `writing-a-syllabus`, `writing-guiding-questions`, `estimating-study-time` — so the
 designer, the critic and the assessment writer apply the same standard.
 
 ## Commands

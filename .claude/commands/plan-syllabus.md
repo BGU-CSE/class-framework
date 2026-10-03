@@ -107,14 +107,15 @@ classkit log "/plan-syllabus, step 2 approved — draft" --changed "syllabus dra
 
 ## Step 3 — Revision, as many rounds as the teacher wants.
 
-Each round: the teacher says what to change. **Re-read the file first** — they may have edited it by
-hand, and those edits are theirs.
+Each round: the teacher says what to change. **You revise it yourself, in this conversation**
+(D-044) — you have what the teacher said, and an agent sent off again would start cold, re-read
+everything and lose that. **Load the `writing-a-syllabus` skill** before the first round: it is the
+standard the draft was written to, and its **Revising** section is how you change it. **Re-read the
+file first** — the teacher may have edited it by hand, and those edits are theirs.
 
-- A change that needs judgement (reword an outcome, reorder the map, rewrite the AI policy, mirror a
-  different form): run the **syllabus-designer** with task **`revise`**, the teacher's request in
-  their words. It changes what was asked and leaves the rest.
-- A change the teacher dictates exactly ("credits are 5 ECTS", "CO3 should say 'design', not
-  'describe'") is the teacher's own edit: make it yourself, in the file's content.
+Run the **syllabus-designer** with task **`rework`** only when the teacher asks for it, or when the
+change is structural: the unit map restructured, the body re-mirrored to a different form, a
+re-draft from new evidence. Give it the teacher's request in their words.
 
 Either way, show the change before writing it:
 
