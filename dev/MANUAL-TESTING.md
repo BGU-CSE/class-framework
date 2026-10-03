@@ -479,7 +479,6 @@ cannot be tracked", and checking the course gives no error. Without `stage` it i
 | Many `guiding_question_assessed` warnings (12 for one unit) | Only entry-quiz items exist in Core, and a short quiz cannot test every guiding question. Decided to be `off` in Core — not yet implemented | D-031c, step 5 |
 | `syllabus_workload_missing` | `workload` is optional by design so a syllabus validates before credits are settled | D-031d |
 | `unit_count`: "N of 13 units exist so far" | Informational while the course is being built | — |
-| `objective_maps_to_outcome` ALERTs on a unit you scaffolded but did not plan | Its placeholder objectives name no Course Outcome — true: the unit is not planned. `/plan-units` writes objectives that do | D-046 |
 | `objective_coverage` ALERT for U0N-O3 or -O4 on a planned unit | The placeholder sessions name only the first two objectives; `/design-unit` writes the guiding questions that address the rest | D-046 |
 | No `outcome_coverage` check (an outcome no objective serves) | Parked: a completeness rule, useful only once every unit is planned | D-046 |
 | A material's `kind` is `other` right after `classkit ingest` | Kind is only guessed from the format; the classifier sets it in `/ingest` step 3 | D-035 |

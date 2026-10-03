@@ -377,21 +377,11 @@ def test_alerts_are_reported_before_errors_and_warnings(course_root: Path):
     assert str(validator.ordered()[0]).startswith("ALERT")
 
 
-def give_objectives_outcomes(course_root: Path) -> None:
-    """The scaffolded unit's placeholder objectives name no outcome (objective_maps_to_outcome,
-    an alert); a test about another alert names one for each."""
-    path = next(course_root.glob("units/01-*/unit.md"))
-    path.write_text(path.read_text(encoding="utf-8")
-                    .replace("    bloom: understand\n", "    bloom: understand\n    outcomes: [CO1]\n")
-                    .replace("    bloom: apply\n", "    bloom: apply\n    outcomes: [CO2]\n"), encoding="utf-8")
-
-
 def run_cli(course_root: Path, *args: str) -> int:
     return main(["validate", str(course_root), *args])
 
 
 def test_validate_exits_zero_on_alerts_and_warnings(course_root: Path, capsys):
-    give_objectives_outcomes(course_root)  # only objective_coverage's alert, below
     for number in range(1, 5):
         path = session(course_root, number)
         path.write_text(
@@ -594,13 +584,13 @@ def unit_md(course_root: Path) -> Path:
 
 
 def test_an_objective_naming_a_declared_outcome_is_fine(course_root: Path):
-    edit(unit_md(course_root), "    bloom: understand\n", "    bloom: understand\n    outcomes: [CO1]\n")
+    # The scaffolded placeholders name CO1 and CO2, the scaffolded syllabus's two outcomes.
     assert levels(course_root, "outcome_reference") == set()
     assert errors(course_root) == []
 
 
 def test_an_objective_naming_an_undeclared_outcome_is_an_error(course_root: Path):
-    edit(unit_md(course_root), "    bloom: understand\n", "    bloom: understand\n    outcomes: [CO9]\n")
+    edit(unit_md(course_root), "outcomes: [CO1]", "outcomes: [CO9]")
     assert levels(course_root, "outcome_reference") == {"error"}
 
 
@@ -612,26 +602,27 @@ def test_an_objective_naming_no_outcome_is_not_a_schema_error(course_root: Path)
 # -- objective_maps_to_outcome (alert, consistency; D-046) ----------------------
 
 def test_an_objective_naming_no_outcome_is_an_alert(course_root: Path):
-    # The scaffolded unit's two placeholder objectives name none: the unit is not planned yet.
+    edit(unit_md(course_root), "    outcomes: [CO1]\n", "")
     found = [f for f in findings(course_root) if f.code == "objective_maps_to_outcome"]
-    assert [f.level for f in found] == ["alert", "alert"]
+    assert [f.level for f in found] == ["alert"]
     assert "U01-O1" in found[0].message and found[0].where.endswith("unit.md")
+    assert errors(course_root) == []
 
 
 def test_an_empty_outcomes_list_is_the_same_as_none(course_root: Path):
-    give_objectives_outcomes(course_root)
     edit(unit_md(course_root), "outcomes: [CO2]", "outcomes: []")
     found = [f for f in findings(course_root) if f.code == "objective_maps_to_outcome"]
     assert len(found) == 1 and "U01-O2" in found[0].message
 
 
-def test_objectives_that_all_name_an_outcome_raise_no_alert(course_root: Path):
-    give_objectives_outcomes(course_root)
+def test_a_scaffolded_unit_raises_no_outcome_alert(course_root: Path):
+    # Its placeholders name the scaffolded syllabus's CO1 and CO2, so the coverage chain lands on
+    # a clean skeleton (D-021's plan for step 3).
     assert levels(course_root, "objective_maps_to_outcome") == set()
-    assert errors(course_root) == []
 
 
 def test_objective_maps_to_outcome_can_be_accepted_in_unit_md(course_root: Path):
+    edit(unit_md(course_root), "    outcomes: [CO1]\n", "")
     edit(unit_md(course_root), "objectives:\n",
          "accepted:\n  - rule: objective_maps_to_outcome\n    reason: \"orientation week\"\nobjectives:\n")
     assert levels(course_root, "objective_maps_to_outcome") == set()

@@ -1784,3 +1784,40 @@ decided with Avin: optional `difficulties` with origin; *planned*/*designed* sta
 re-map moved to `/plan-syllabus`; `unit_map_mismatch` built now; `planning-units` skill. Spec §3.1,
 §5.1, §8.2, §8.4, §8.9; D-046; ledger (219 changes).
 
+
+## Session 40 — 2026-10-03 — The units increment built (every [units] row)
+
+Built from D-046, with the syllabus increment as the model (D-044). **The product:** the
+`planning-units` skill (objectives assessable, few and broad — the methodology's number — each naming
+the Course Outcome it serves and never stretched to fit; prerequisites and home-study order; what a
+lecture week cannot fit, the cut left to the teacher; difficulties specific enough to design against,
+`teacher` vs `proposed`; revising; the rules); `curriculum-architect` rewritten read-only (Read, Grep,
+Glob; tasks `draft` / `rework`; reads `ingested/` and `coverage.md`, never `source/`; returns per unit a
+report, its questions — always "what do your students find hard?" — and the complete `unit.md`;
+proposed difficulties in the report, not the file); `/plan-units N…` rewritten (status → architect →
+gate, corrections and accepted difficulties applied by the chat → scaffold with the map's title + write
+through the write path → validate → revision rounds in the chat → `classkit approve unit N --stage
+planned`); `/plan-syllabus` step 5 (re-map the materials' unit hints against the approved map, the
+teacher's own hints kept, `classkit material apply`); `course-critic` gains a unit-plan section loading
+the skill, and `/review-unit` routes a planned unit to it.
+
+**The tooling:** `unit.md` schema and template (`difficulties`, `approved {date, stage, hash?}`; the
+placeholders name `CO1`/`CO2`, as the D-021 ledger planned); `classkit approve unit N [--stage]` (the
+syllabus's record mechanism generalised; *designed* hashes unit.md, sessions, in-class and entry-quiz
+items in a fixed order, slug-independent); `classkit status` per unit (not started / drafted / planned /
+designed, edited since, a count line); `unit_map_mismatch` (warn) and `objective_maps_to_outcome`
+(alert), both consistency rules. Docs (README, GETTING-STARTED, both CLAUDE.md, spec — targets removed,
+§8.4 and §8.9 made precise), a chat-style MANUAL-TESTING section. Gap report
+`reviews/impl-gaps-step-3-units.md` (three ⚑: the default stage's trap, `objective_coverage` noise on
+planned units, hint provenance). 352 tests (+32). Ledger 127 / 5 / 87 of 219.
+
+Claude's own miss, caught mid-build: it first left the unit template's objectives without `outcomes`
+(so a scaffolded unit alerted), then found the D-021 ledger's recorded plan to scaffold `CO1`/`CO2`
+and followed it.
+
+### Next
+
+One independent review of the syllabus and units builds together (both gap reports; the code from
+`d8a1351`, the syllabus increment's spec, to now). Then Avin checks both on a real course: `/plan-syllabus` to approval, step
+5, then `/plan-units` for the first units with material (`MANUAL-TESTING.md`, "Step 3-syllabus" and
+"Step 3-units"). Decide the three ⚑.

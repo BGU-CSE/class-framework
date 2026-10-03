@@ -9,13 +9,15 @@ prerequisites: []
 objectives:
   # {{objectives_min}}-{{objectives_max}} Unit Objectives. Teacher-facing and abstract —
   # the working layer is the Guiding Questions in sessions/. Each names the Course
-  # Outcome(s) it serves, e.g. `outcomes: [CO2]` — /plan-units fills these in.
+  # Outcome(s) of the syllabus it serves — /plan-units fills these in.
   - id: {{unit_id}}-O1
     statement: "TODO"
     bloom: understand
+    outcomes: [CO1]
   - id: {{unit_id}}-O2
     statement: "TODO"
     bloom: apply
+    outcomes: [CO2]
 
 # DIFFICULTIES — optional: what students find hard in this unit. Add them whenever you
 # know them (after teaching the unit once is fine). `origin: proposed` marks one an agent

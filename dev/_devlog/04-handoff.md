@@ -19,7 +19,36 @@ Then, for history and what is still open:
 6. `02-progress.md` (last block) — where we stopped.
 7. `03-open-questions.md` — what's unresolved.
 
-## Current state — 2026-10-03 (the syllabus increment built and adjusted; awaiting Avin's check)
+## Current state — 2026-10-03 (the syllabus and units increments built; next, one review)
+
+**The units increment is built** (Session 40, every [units] row; gap report
+`../reviews/impl-gaps-step-3-units.md`). Suite: **352 tests**, green. Ledger: 127 built, 5 in
+progress, 87 not started of 219 — `../ROADMAP.md` is authoritative.
+
+- **What exists now, beyond the syllabus increment:** `/plan-units N…` — units planned a few at a
+  time: `curriculum-architect` (read-only; `draft` / `rework`) drafts each named unit's summary,
+  prerequisites, objectives (each naming its Course Outcome) and difficulties from the unit's own
+  material; the chat revises with the **`planning-units` skill**; `classkit approve unit N --stage
+  planned`. Unit states in `classkit status` (not started / drafted / planned / designed, edited
+  since); *designed* hashes the whole unit, ready for `/design-unit`. `unit_map_mismatch` (warn),
+  `objective_maps_to_outcome` (alert). `/plan-syllabus` step 5 re-maps the materials' unit hints.
+  `course-critic` reviews a unit's plan (`/review-unit N` on a planned unit). `outcome_coverage`
+  stays parked.
+- **Three ⚑ in the gap report:** G-1 the default stage records *designed* on a second "approve"
+  with no edit between (propose: require `--stage`); G-2 `objective_coverage` alerts on every planned
+  unit with more than two objectives (the placeholder sessions name only two); G-3 who set a unit
+  hint is not recorded, so step 5 asks the teacher.
+- **Next — ONE independent review of the syllabus and units builds together:** both gap reports
+  (`impl-gaps-step-3-syllabus.md`, `impl-gaps-step-3-units.md`) and the code from `d8a1351` to now;
+  the review to `../reviews/impl-review-step-3.md`. The product is the skills, agents and commands —
+  review them as prompts a teacher's session will follow, not only the tooling.
+- **Then Avin checks both on a real course** (`../MANUAL-TESTING.md`, "Step 3-syllabus" and "Step
+  3-units"): `/ingest`, `/plan-syllabus` to approval and step 5, then `/plan-units` for the first
+  units with material. The agents' output is what is judged; prompts revised from it. Decide the ⚑.
+- **Then** the home-study and class-hour increments ([design]): `/design-unit N [session K | quiz |
+  class]`, `/write-items` retired, `approve unit N --stage designed` at the end.
+
+## State after the syllabus increment was adjusted — 2026-10-03 (kept for history)
 
 **The syllabus increment is built** (Session 37, gap report `../reviews/impl-gaps-step-3-syllabus.md`)
 **and adjusted to D-044** (Session 38): `/plan-syllabus` (evidence → draft → revision rounds →
