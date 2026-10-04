@@ -13,11 +13,30 @@ Claude Code does the design work; the validator catches what went wrong.
 You need [Claude Code](https://claude.com/claude-code) and Python 3.10+.
 
 > **The framework is still being built.** The workflow below is the design; not all of it exists
-> yet. `classkit scaffold` and `classkit validate` work today. The `/` commands in step 5 are
+> yet. `classkit scaffold`, `classkit validate`, `classkit log` and the materials tools
+> (`/ingest`, `classkit ingest`, `classkit add-url`, `classkit material`, `classkit doctor`) and the
+> syllabus (`/plan-syllabus`, `/review-syllabus`, `classkit approve syllabus`, `classkit status`) and
+> planning units (`/plan-units N…`, `classkit approve unit N`) work today. The `/` commands in step 5 are
 > being implemented one at a time — `dev/ROADMAP.md`'s ledger is the authoritative list of what is
 > actually built. Expect this document to change as they land.
 
 ---
+
+## You work in the chat
+
+**You never need the terminal.** Once the course repo is open in Claude Code, everything below is
+something you **ask the chat** for, in your own words — "create the course tree for 202-1-2051,
+Introduction to Data Structures", "check the course", "where does the course stand?", "approve the
+syllabus", "add this video link". The chat runs the `classkit` command for you, reads its output,
+and tells you what matters. The commands are shown in this guide so you know what is happening, not
+because you must type them.
+
+- Checks that only read (`classkit validate`, `status`, `doctor`) run without asking you.
+- Anything that writes asks you to confirm first.
+- The chat reports every alert and error it sees. If you want the raw output, ask for it.
+
+The one step that usually happens outside the chat is the very first `git clone` below. After that,
+open the folder in Claude Code and ask it to finish the setup.
 
 ## 1. Make your course repo
 
@@ -34,14 +53,17 @@ cd my-course
 git remote rename origin framework
 git remote add origin https://github.com/<owner>/my-course.git   # your private course repo
 git push -u origin main
-
-pip install -e .
 ```
+
+Then open `my-course` in Claude Code and ask: **"set up the classkit tooling"**. The chat runs
+`python3 -m venv .venv && .venv/bin/pip install -e .`.
 
 Your course repo stays private; the framework it came from is public. Pulling framework updates
 later works exactly the same either way.
 
 ## 2. Create the course tree
+
+Ask the chat: **"create the course tree for 202-1-2051, Introduction to Data Structures"**. It runs:
 
 ```bash
 classkit scaffold course --code "202-1-2051" --title "Introduction to Data Structures"
@@ -57,15 +79,20 @@ It also starts **`course/LOG.md`, the course log**: what changed in the course a
 git's history does not record. The commands add an entry at each step you approve, and the agents
 read the recent entries before they start work, so next year's revision knows what this year's
 decided. Add your own entries by hand whenever something worth remembering happens ("taught U03 —
-students found S02 too long"), or with `classkit log "taught U03" --changed "…" --why "…"`.
+students found S02 too long"), or ask the chat to log it ("log that I taught U03 and students found
+S02 too long").
 
-The syllabus is a **Bologna-style course descriptor**: alongside the goal and outcomes it has room
-for level, course type, when it is offered, teaching methods, reading, workload and the assessment
-scheme. Fill it in over time, or leave parts out — only the goal and the outcomes are required.
+The syllabus is **where your course descriptor lives** — everything the university's form asks for,
+so you never keep syllabus information anywhere else. Its **front matter** holds what tools and
+agents use: the goal, the outcomes, the **unit map** (the whole semester's units, in order), workload,
+prerequisites, reading and grading. Its **body** holds what only people read — the catalogue
+description, teaching methods, level, policies (including an AI-use policy), office hours — in your
+institution's order. Only the goal and the outcomes are required: it is best effort, not a form.
 
-It is scaffolded with placeholders and is yours to edit. Its `workload` block is left commented out
-deliberately, so you can draft a syllabus before credits are settled; `classkit validate` warns
-until you fill it in. That is a reminder, not a failure.
+It is scaffolded with placeholders and a default skeleton of sections; `/plan-syllabus` (step 5)
+drafts it from your materials, and it is yours to edit by hand at any time. Its `workload` block is
+left out until credits are settled; `classkit validate` warns until you fill it in. That is a
+reminder, not a failure.
 
 Scaffolding never overwrites. Re-run it whenever you want the pieces you are missing — everything
 you have already written is left exactly as it is.
@@ -77,24 +104,89 @@ past exams, reading lists, lecture notes. Any format. Nothing is required, and m
 the agents read this to work out what your course actually covers instead of inventing a
 generic version of it.
 
-It doesn't need to be organized — one folder of everything is fine, and duplicates (a deck and its
-PDF export) are detected. For videos and web pages, list them in
-`course/materials/source/links.md`, one per line with an optional note, or run
-`classkit add-url URL --note "…"` *(not built yet)*.
+It doesn't need to be organized — one folder of everything is fine. Identical copies are merged
+automatically; a deck and its PDF export simply stay two materials (both can be cited; agents
+prefer the deck). For videos and web pages, list them in
+`course/materials/source/links.md`, one per line with an optional note, or run:
 
-`/ingest` then turns all of it into a readable, citable copy in `course/materials/ingested/` —
-one file per source, with every slide and page marked — so that an answer can point at
-`M0007#slide-18` and the validator can check that slide exists. Your originals are never touched,
-and you can correct a badly extracted file by hand; a later ingest won't overwrite your fix without
-asking. Add material any time and run `/ingest` again — only what's new or changed is processed.
+```bash
+classkit add-url "https://www.youtube.com/watch?v=…" --note "heaps explained, 12 min"
+```
+
+PowerPoint, PDF, Word, Markdown and plain text are read out of the box. OpenDocument, RTF, HTML
+and EPUB need [pandoc](https://pandoc.org) installed; old `.ppt`/`.doc` need LibreOffice. Anything
+else — and a scanned PDF with no text, or a video file — is recorded and listed, never silently
+dropped; export it to PDF if you want it read.
+
+Then run **`/ingest`** in Claude Code. It first shows you a **pre-flight report** — how many files of
+each kind, slides and pages, links, what changed since last time, what it can't read, roughly how
+long it will take —
+and waits for your go-ahead. It then turns everything into a readable, citable copy in
+`course/materials/ingested/`, one file per source with every slide and page marked, and lists them in
+`course/materials/manifest.yaml` under a stable id (`M0007`). An agent then proposes what each one is
+(slides, exam, textbook, …, and which units it serves) — **you see and correct that before it is
+recorded** — mentions links inside your materials that look like course resources (only links
+you list in `links.md` become materials), and reports what your course actually
+covers and where it is thin — saying first which units your materials reach, and "no material
+yet" for the rest. Once you have read it, it is saved to `course/materials/coverage.md` (a later run
+asks before replacing it, so notes you add there are not lost), and `/plan-syllabus` reads it. Each
+step you approve is recorded in the course log.
+
+What that buys you: an answer reference can point at **`M0007#slide-18`**, and `classkit validate`
+reports an error if that slide does not exist — a made-up "slide 18" of a 12-slide deck is caught
+before it reaches a student. (It cannot tell whether the answer is *on* slide 18; that is still a
+human's or the reviewing agent's call.)
+
+- **Your originals are never touched.** Nothing in `materials/source/` is modified, moved or deleted.
+- **Files that must not be committed go in `materials/source/private/`** — a published textbook's
+  PDF, a publisher's slides, a solutions manual. `course/.gitignore` (scaffolded) keeps that folder
+  out of git. For each file there, ingest commits only an **index** in `ingested/` — its pages or
+  slides with their labels (printed page numbers, the book's sections from its bookmarks, slide
+  titles), no body text — so a citation like `M0005#page-63` is checked on every copy of the
+  repo. The full text goes to `materials/private-text/`, also kept out of git, on your machine only;
+  the agents read it there. A TA's clone without the PDF can still cite and validate the book; to
+  let agents read it there, copy the PDF into their `private/` and run `/ingest`.
+  - Everything **outside** `private/` is committed — the source *and* its full extracted text.
+    Anything pushed to GitHub stays in the repository's history even if deleted later. If a book is
+    already committed, moving it into `private/` stops future commits but not the history;
+    `classkit validate` warns about it (`private_material_committed`), and cleaning history is up
+    to you.
+  - A private file missing from a machine is "not on this machine", never "removed" — a TA's
+    clone and a lost file look the same. If it is gone for good: `classkit material remove M0005`.
+  - Private is **where the file is**; who may *see* it is separate. Mark material students must
+    never be pointed at — a solutions manual, a past exam — as **`audience: instructor`** (the
+    `/ingest` agent proposes it, you confirm; or `classkit material set M0012 --audience
+    instructor`). A study path citing it then raises an alert; your in-class plan may cite it.
+    A textbook is private but `student`.
+- **`classkit doctor`** checks this machine's copy: that the `.gitignore` is in effect, which
+  private files are here and whether their full text is current, and that the tools are installed.
+  Each line that needs action says what to run. `/ingest` runs it first.
+- **Reorganize freely.** A renamed or moved file keeps its id, so nothing that cites it breaks.
+- **Fix a bad extraction by hand** in `ingested/`. A later ingest notices your edit and asks before
+  replacing it — it shows what replacing would change, slide by slide or page by page, and you
+  choose to keep your edit or take a fresh extraction. If you corrected something by hand that a
+  newer version of the framework now extracts properly (Word text boxes, equations), choose the
+  fresh extraction once; until then that file stays "edited by hand".
+- **Thin extraction is reported.** The summary lists slides and pages with no text and documents
+  that came out far smaller than their source — so a deck of pictures is not mistaken for a thin
+  week.
+- **Add material any time** and run `/ingest` again — only what's new or changed is processed, and
+  an interrupted run picks up where it stopped. Until you do, `classkit validate` warns that some
+  material is not ingested yet.
+- **A deleted file** stays in the manifest, marked removed, so anything still citing it is reported.
+- **Running `classkit ingest` yourself** is fine; it adds an entry to the course log saying what
+  changed (`--why "…"` to say why).
+- **Citing a book:** `M0003#page-63` is the 63rd page of the PDF, which may not be the page printed
+  "63". So a book citation also says, in its note, the section, the exercise or question number, and
+  the printed page — `CLRS §6.2, Exercise 6.2-3 (printed p. 45)`.
 
 If your textbook isn't a file, record it in `course/course.yaml` under `textbooks:` — study
 paths and answer references cite it by key.
 
 ## 4. Set your settings
 
-The course's *aim* — its goal, outcomes, prerequisites and workload — lives in
-`course/syllabus/syllabus.md`, which you edit directly. Everything *tunable* is in
+The course's *aim* — its goal, outcomes, unit map, prerequisites, workload and grading — lives in
+`course/syllabus/syllabus.md`, which `/plan-syllabus` drafts and you edit. Everything *tunable* is in
 **`course/course.yaml`**:
 
 | Setting | What it controls |
@@ -128,14 +220,53 @@ Open Claude Code in your course repo and run these in order:
 
 | Command | What it does |
 |---|---|
-| `/ingest` | Reads `materials/source/`, reports what your course covers |
-| `/plan-units` | Writes the syllabus — goal, Course Outcomes — then the unit map, each unit's objectives rolling up to those outcomes |
+| `/ingest` | Reads `materials/source/` and `links.md` — pre-flight, convert, classify — and reports what your course covers |
+| `/plan-syllabus` | The syllabus: evidence and questions → a full draft → revisions with you → your approval |
+| `/review-syllabus` | Optional: an independent critic reads the syllabus — outcomes that are topic labels, claims nothing supports |
+| `/plan-units 1 2` | The units named, a few at a time as their material arrives: each one's objectives (each serving a Course Outcome), prerequisites, and what students find hard — drafted, revised with you, approved as *planned* |
 | `/design-unit 3` | The main event: the week's study sessions with their guiding questions, the entry quiz, then the in-class hour built on both |
 | `/review-unit 3` | An adversarial critic — checks the hour genuinely depends on the prework |
 | `/write-items 3` | More assessment items for the entry quiz |
 
 *Exams and the class Gem (`/build-gem`) are later phases. They are not built. Homework has its own
 flow — see [section 6](#6-create-homework).*
+
+### The syllabus first — and approving it
+
+Establish the syllabus before any unit: it is often what you upload to the university, and the units
+build on it. `/plan-syllabus` drafts it **best effort** from the evidence you ingested — an old
+syllabus above all, the book's table of contents, your decks — and **asks** what the evidence cannot
+answer (credits, grading, office hours) rather than inventing it. What nobody knows yet appears in
+the body as **TBD**. You revise it in conversation or by hand, as many rounds as you like.
+
+When it is good enough to build on, **approve** it — at the command's last step, by saying "approve
+the syllabus", or by hand. Approval is recorded in the file itself (`approved: {date, hash}`), by
+`classkit approve syllabus`. Editing afterwards is normal: nothing un-approves, and `classkit status`
+says "approved 5 Oct — edited since" until you approve again. Approved does not mean perfect — unit
+work builds on what you approved, and the validator reports any inconsistency; nothing waits on it.
+
+**`classkit status`** shows where the course stands — the syllabus, the unit map with each unit's
+state, the materials. Every command shows it first.
+
+### Then the units — a few at a time
+
+You do not plan the whole semester's units at once. When a unit's material is in, `/plan-units 3 4`
+plans those units: for each, a short summary, the earlier units it needs, its 2–4 objectives (the
+number comes from your methodology) — each naming the Course Outcome it serves — and, if you know
+them, the **difficulties** students meet in it. If you do not know them yet (a course you are
+flipping for the first time), say so: planning goes on, and you can add them after teaching the week.
+The agent may *propose* classic difficulties of a well-known subject; one is recorded only if you
+accept it, and stays marked `proposed` so later agents know it is a guess.
+
+Approve each unit when its plan is good enough ("approve unit 3"); `classkit approve unit 3 --stage planned` records
+it in `unit.md` as **planned** (the stage is always named, so a second "approve" can never mark an
+unplanned unit as designed — the chat picks it from where the unit stands, and asks if unsure). Later, approving the finished unit at the end of `/design-unit`
+records it as **designed** — and editing any part of it afterwards shows "designed — edited since".
+In `classkit status` each unit reads *not started* (on the map, nothing yet), *drafted, not
+approved*, *planned* or *designed*. Nothing is blocked by these states; they tell you where you are.
+
+To upload the syllabus to the university, copy from `syllabus.md` for now; a formatted document is
+a later export.
 
 ### How the commands behave
 
@@ -227,8 +358,8 @@ homework validates exactly as before.
 sees; it does not overrule you. It reports three kinds of finding:
 
 - **Errors — broken data.** A reference to something that doesn't exist: a guiding question an
-  activity names but nobody wrote, a quiz item that isn't there, an answer pointing at slide 18 of a
-  12-slide deck. These are almost never intentional, and the agents can't work correctly over them.
+  activity names but nobody wrote, a quiz item that isn't there, a study path pointing at
+  `M0007#slide-18` of a 12-slide deck. These are almost never intentional, and the agents can't work correctly over them.
 - **Alerts — high priority, shown first.** Coverage: a Course Outcome no unit delivers, an objective
   no guiding question addresses, an objective that rolls up to no outcome, a missing syllabus. Often
   a temporary state while you build — but worth looking at.

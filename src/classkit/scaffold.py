@@ -83,19 +83,28 @@ COURSE_DIRECTORIES = [
     "assessments/quizzes",
     "assessments/homework",
     "assessments/exams",
-    "materials",
+    "materials/ingested",
     "policies",
 ]
 
 # `materials/source/` is where the teacher drops their existing course materials. It is the
-# primary input to /ingest and the curriculum-architect, so it ships with a README explaining
-# what belongs there — an empty unexplained directory gets ignored.
+# input to /ingest, so it ships with a README explaining what belongs there — an empty
+# unexplained directory gets ignored — and with `links.md`, the course's list of links (D-035).
+# `materials/ingested/` is the derived layer `classkit ingest` writes into.
 SOURCE_README = "materials/source/README.md"
+SOURCE_LINKS = "materials/source/links.md"
 
 # The syllabus is the course-level top layer (D-021), so it is part of the first thing a
 # teacher sees rather than something a later command conjures. Scaffold writes the skeleton
 # once into the reserved `syllabus/` slot and, being create-only, never touches it again.
 SYLLABUS = "syllabus/syllabus.md"
+
+# `course/.gitignore` keeps private material out of git (D-040, spec §8.7): the teacher's
+# `materials/source/private/` (a published book, a solutions manual) and the full text ingest
+# extracts from it, `materials/private-text/`. It lives in `course/`, so it belongs to the course
+# and never conflicts with a framework update. Like everything scaffold writes, create-only — and
+# so re-running `scaffold course` adds it to a course created before it existed.
+GITIGNORE = ".gitignore"
 
 
 def scaffold_course(
@@ -110,6 +119,10 @@ def scaffold_course(
     methodology: str,
 ) -> Result:
     result = Result()
+    log_existed = (course_root / log.LOG_FILE).is_file()
+
+    # First, so the ignore rules are in place before anything private could be added.
+    write_new(course_root / GITIGNORE, _template(framework_root, "course", "gitignore"), result)
 
     for directory in COURSE_DIRECTORIES:
         write_new(course_root / directory / ".gitkeep", "", result)
@@ -117,6 +130,11 @@ def scaffold_course(
     write_new(
         course_root / SOURCE_README,
         _template(framework_root, "course", "materials-source-README.md"),
+        result,
+    )
+    write_new(
+        course_root / SOURCE_LINKS,
+        _template(framework_root, "course", "links.md"),
         result,
     )
 
@@ -150,6 +168,20 @@ def scaffold_course(
         for path in result.created
         if path.name != ".gitkeep"
     ]
+    if log_existed:
+        # Re-run on a course that already has a log: what this run added is a change to the
+        # course like any other, so it is an entry — typically `.gitignore`, added to a course
+        # scaffolded before it existed.
+        if created:
+            log.append(course_root, log.Entry(
+                title="classkit scaffold course",
+                changed=f"created {', '.join(created)}; every other file already existed",
+                why="re-run to add what a newer framework scaffolds",
+                files=created,
+            ))
+        else:
+            result.skipped.append(course_root / log.LOG_FILE)
+        return result
     write_new(
         course_root / log.LOG_FILE,
         log.new_log(

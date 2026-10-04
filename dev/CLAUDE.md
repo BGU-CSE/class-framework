@@ -13,8 +13,8 @@ classkit mode developer     # step 1 — creates the gitignored dev/.developer m
 
 `classkit mode` shows the current hat; `classkit mode teacher` switches back. The marker is
 **gitignored on purpose** — it must never reach a teacher's clone, which is exactly what makes its
-presence a reliable signal. `classkit mode developer` **verifies that ignore rule before creating
-the file** and refuses if it is missing, because a committed marker would put every teacher's clone
+presence a reliable signal. `classkit mode developer` **verifies that ignore rule — and that
+`.gitignore` itself is tracked (D-041) — before creating the file** and refuses otherwise, because a committed marker would put every teacher's clone
 into framework-developer mode. A running Claude Code session reads the marker once at startup, so
 restart it after switching.
 
@@ -52,7 +52,9 @@ them, so they are deliberately not duplicated here — two copies would drift.
    agent and command writes through `classkit.write.write()` / `classkit write`, which structurally
    refuses to overwrite existing content** without explicit confirmation (`--overwrite`) — see
    `FRAMEWORK-SPEC.md` §8.6 (D-030, D-031b). Silent loss of a teacher's authored work is
-   unrecoverable — this is the one place the framework does not trust a prompt.
+   unrecoverable — this is the one place the framework does not trust a prompt. **Scope (D-040):**
+   the framework's commands and agents; an edit the teacher asks for directly in conversation is
+   the teacher's own. To change part of a file, show `classkit write --diff`, then `--overwrite`.
 6. **Templates must validate.** A fresh scaffold has to produce a course with zero errors,
    or `tests/test_course_lifecycle.py` fails. Change a schema → change the template.
 
@@ -69,12 +71,20 @@ src/classkit/
   frontmatter.py          Markdown + YAML front-matter parsing
   model.py                locating and loading a course tree
   scaffold.py             create-only content generation
-  write.py                the overwrite-safe write path — every agent and command writes here
+  write.py                the overwrite-safe write path — every agent and command writes here; remove() and --diff (D-040, D-041)
   log.py                  the course log, LOG.md — `classkit log`, append-only through write.append (D-036, D-038)
+  ingest/                 materials (D-035, spec §8.7): `classkit ingest`, `add-url`, `material`
+    extract.py              extractors registered by extension; anchors
+    links.py                links.md — parse, `add-url`, best-effort metadata
+    manifest.py             materials/manifest.yaml — load, save, ids
+    core.py                 scan → reconcile (shared with the validator) → convert; private material
+  approve.py              `classkit approve syllabus | unit N`: the teacher's approval recorded in the file (date, a unit's stage, hash; a designed unit's hash covers the whole unit) (D-043, D-046)
+  status.py               `classkit status`: read-only overview — syllabus state, unit map with each unit's state, materials (D-043, D-046)
+  doctor.py               `classkit doctor`: this machine's copy — private files, .gitignore, deps (D-040)
   mode.py                 teacher / framework-developer hat: `classkit mode` (D-034)
   validate.py             schema layer + semantic rules
   cli.py                  argparse entry point
-tests/                    scaffold → validate round-trip
+tests/                    scaffold → validate round-trip; approve and status; ingest; extraction quality; private material; doctor (fixtures in tmp_path)
 dev/                      you are here — not part of a teacher's course
   VISION.md                 why the project exists, what it produces, how it is developed
   FRAMEWORK-SPEC.md         the spec — what the framework must contain
@@ -137,17 +147,23 @@ course repo. They ship to course repos through the clone (D-009), so an agent im
 reaches every course on the next `git merge framework/main`.
 
 ```
-.claude/agents/     curriculum-architect, study-session-designer, lesson-planner,
-                    assessment-writer, topic-researcher, gem-builder, course-critic
-.claude/skills/     writing-guiding-questions, estimating-study-time
-.claude/commands/   /ingest /plan-units /design-unit /write-items /review-unit /build-gem
+.claude/agents/     syllabus-designer, curriculum-architect, study-session-designer,
+                    lesson-planner, assessment-writer, topic-researcher, gem-builder,
+                    course-critic, material-classifier
+.claude/skills/     writing-a-syllabus, planning-units, writing-guiding-questions, estimating-study-time
+.claude/commands/   /ingest /plan-syllabus /review-syllabus /plan-units /design-unit /write-items
+                    /review-unit /build-gem
 ```
 
 When editing agents:
 
 - **Read the methodology, never hardcode it.** An agent that assumes 4 sessions of 25 minutes
   breaks every other teacher's course (D-011, invariant 2).
-- **Craft shared by more than one agent belongs in a skill**, so the designer and the critic judge
+- **What goes where (D-044, spec §2.1):** the command is the procedure in the teacher's
+  conversation (gates, writing, logging, and the revisions made with the teacher); an agent is sent
+  off for a fresh context or for independence, and returns; a skill is the craft, loaded by the chat
+  and the agents. Every `description` names the command it belongs to.
+- **Craft shared by more than one agent — or by an agent and the chat — belongs in a skill**, so the designer and the critic judge
   by the same standard rather than drifting apart.
 - **Agents must not fabricate resources.** No invented URLs, page numbers, or video titles. A
   fabricated study path validates cleanly and fails a student mid-session.

@@ -1477,3 +1477,355 @@ G-19/G-20 recorded for steps 5/4; unit `objectives` kept required, deliberately.
 **Step 2b — ingest (D-035).** Implementation prompt and review prompt use the 2b scope block. Then
 Avin hand-tests `/ingest` on real, messy materials — the check no document or code review can do.
 
+
+## Session 28 — 2026-10-01 — Step 2b built: ingest (D-035)
+
+A fresh session implemented step 2b from the spec, with the 2b scope block as its brief. Gap report:
+`reviews/impl-gaps-step-2b.md` — 30 entries, **8 needing a decision (⚑)**. Suite: **163 tests,
+green** (+64: 51 in the new `tests/test_ingest.py`, 13 rule tests in `test_course_lifecycle.py`).
+
+Built, layer by layer:
+
+- **Schema** — `schemas/manifest.schema.json`. The spec's table plus `source_hashes`, `removed_at`,
+  `merged_into`, `note`, `duration` (⚑ G-2: each closes a hole the spec's own text opens).
+- **Templates and scaffold** — `materials/source/links.md` (instructions in an HTML comment, so it
+  parses to no links) and `materials/ingested/`. The materials README is rewritten for both layers.
+- **Tooling** — `src/classkit/ingest/`:
+  - `extract.py`: a registry keyed by extension. md, txt, pptx, pdf and docx are built in; pandoc
+    and LibreOffice are used if installed. Statuses `unsupported` / `no-text` / `media`, always with
+    a hint.
+  - `links.py`: parse links.md, `add-url`, best-effort metadata.
+  - `manifest.py`: load, save, never-reused ids.
+  - `core.py`: scan, then **one `reconcile()` shared by pre-flight, the run and the validator**.
+    It handles moves, exact duplicates, detached copies, removals and restores. The manifest is saved
+    after each material, and an orphaned `.md` is adopted on resume.
+  - Hand edits are refused through the write path. `--overwrite ID` and `--keep ID` are the
+    teacher's answers, and the run exits 3.
+- **CLI** — `classkit ingest [--preflight]`, `classkit add-url`, and `classkit material
+  set|merge|duplicates` (⚑ G-1: how the classifier records anything without Write/Edit).
+- **Validator** — `material_locator_resolves` (error, integrity) over the fields in `LOCATOR_FIELDS`:
+  study-path `ref` and activity `materials`. Step 4 adds `answer` as one line. Also
+  `materials_not_ingested` (warn, one finding), and the manifest is schema-checked.
+- **Agent layer** — `/ingest` rewritten as four gated steps, each logged with `classkit log`. New
+  agent `material-classifier` (Read, Grep, Glob, Bash): it sets kind and units through `classkit
+  material set` and *proposes* merges. The command merges only what the teacher confirms.
+- **Docs** — spec §8.7 carries every mechanic decided (listed in the gap report, ⚑ ones marked as
+  provisional). Also updated: `CLAUDE.md`, `GETTING-STARTED.md`, `README.md`, `dev/CLAUDE.md`, and
+  `dev/MANUAL-TESTING.md`, which has a new 2b section for Avin's hand test.
+
+Self-review caught three defects before commit (gap report, last section): a module-level hack for
+found links, a retry loop on corrupt files, and a test passing for the wrong reason. Commits were
+reordered before pushing so each is green on its own, checked in a scratch worktree.
+
+**Untested:** pandoc and LibreOffice when *installed* (neither is on this machine), real-site
+metadata fetching, PDFs from real tools, and scale. **The classifier prompt has never run.**
+
+### Next
+
+1. **Independent review of 2b**, given the same scope block (`reviews/impl-review-step-2b.md`).
+2. **Avin decides the ⚑ entries** G-1 … G-8. The spec edits that write them in are provisional.
+3. **Avin hand-tests `/ingest` on real, messy materials** (`dev/MANUAL-TESTING.md`, "Step 2b").
+4. Then **step 3** (`/plan-units`, folding in D-032). It must also point `curriculum-architect` at
+   `materials/ingested/` rather than `source/` (gap G-30).
+
+## Session 29 — 2026-10-01 — Step 2b reviewed and its outcomes applied (→ D-039)
+
+Read the implementer's gap report and the independent review, verified the review's claims against
+the code, and took Avin through the open items one at a time. Findings on the review: the blocking
+finding (classifier has Bash) pointed at a real hole but overstated it — invariant 5 guarantees the
+write path, not a sandbox, and four other agents have Bash; both missing-test findings were real; it
+accepted G-6 and G-7 without engaging the case against. Avin decided:
+
+- **G-1 (b)** — classifier read-only; returns YAML; new `classkit material apply`, all or nothing.
+- **G-7 (b)** — `classkit ingest` logs every run that changes something; `--why`, `--no-log`.
+- **G-3 (a)** — physical pages, plus: every book citation's `note` gives section, exercise/question
+  number and printed page.
+- **G-6 (b)** — `/plan-units` re-maps materials' `units` (step 3).
+- G-2, G-4, G-5, G-8 ratified.
+
+Built: `material apply`, ingest logging (`log_summary`), the read-only agent and the reworked
+`/ingest` step 3; the two review test gaps (moved/removed sources warn; locators read hand-edited
+anchors). Spec §3.1, §5.1, §6, §8.2, §8.7, §9; `CLAUDE.md`, `GETTING-STARTED.md`, `README.md`,
+`MANUAL-TESTING.md`; D-039 in the decisions and the ledger. 173 tests (+10).
+
+### Next
+
+1. **Avin hand-tests `/ingest`** on real, messy materials (`dev/MANUAL-TESTING.md`, "Step 2b").
+2. Then **step 3** (`/plan-units`, D-032, the `units` re-map, G-30).
+
+## Session 30 — 2026-10-01 — Avin's hand test of 0–2b; private and instructor material (→ D-040)
+
+Avin hand-tested steps 0–2b with real material and wrote `reviews/manual-test-step-0-2b.md`. His
+main concern was privacy, copyright and book PDFs. Claude found that no course file is gitignored,
+so a push publishes every PDF and its full text — not flagged by the report or by earlier sessions.
+Decided with Avin, one at a time: `source/private/` with a committed index and a local full text;
+`audience` with an alert and a hard refusal at export; missing private ≠ removed; a scaffolded
+`course/.gitignore` and `private_material_committed`; `classkit doctor` (Avin's idea) and the
+principle that `validate` judges the course and `doctor` the machine. Spec, D-040, ledger (11 rows),
+handoff; interim warning in `GETTING-STARTED.md`. Nothing built. The rest of the report is still to
+be gone through.
+Continued the same day: went through the rest of the report's design items with Avin — F-11/F-15
+(duplicate detection dropped), F-13 (no link harvesting), F-17 (`units: all`), F-19 (coverage report
+persisted; partial material and the `unit_map` in the syllabus), F-21 (one resource-kind vocabulary),
+F-24 (diff on refusal), F-26 (locators in prose), P-2 (invariant 5's scope; `write --diff`). All
+added to D-040, the spec and the ledger (169 changes; 51 / 5 / 113). Checked F-21's side note
+(schema errors print as warn) — does not reproduce. Remaining: Avin's go-ahead on the plain fixes,
+then step 2c.
+
+
+## Session 31 — 2026-10-01 — Step 2c-1 built: private and instructor-only material; `classkit doctor` (D-040)
+
+A fresh implementation session, working from the spec. Scope: the ten D-040 ledger rows tagged
+[2c-1]. All built.
+
+- **Scaffold:** `course/.gitignore` (create-only, written first). A re-scaffold that creates
+  something on a course that already has a log appends an entry.
+- **Ingest — private material:**
+  - anything under `source/private/` (in any case) is private;
+  - its committed `ingested/` file is an index: `text: index`, every anchor with one-line labels
+    (printed page, outline sections, slide titles, headings), no body text, and no body-derived
+    title;
+  - its full text goes to `materials/private-text/`, protected by `private_text_hash`; both files
+    are checked before either is written;
+  - a missing private source is "not on this machine", never removed;
+  - a source appearing on a machine gets its full text without changing anything committed or
+    writing to the log;
+  - moves into and out of `private/` rewrite the committed copy;
+  - `classkit material remove`;
+  - `audience` in `apply` and `set --audience`;
+  - no link harvesting from private text.
+- **Validator:** `instructor_material_cited` (alert, over `STUDENT_FACING_FIELDS`) and
+  `private_material_committed` (warn, `git ls-files`, `:(icase)`, skipped outside git).
+  `materials_not_ingested` reconciles with `local=False`.
+- **`classkit doctor`** (`src/classkit/doctor.py`): read-only; `ok` / `note` / `ACTION`, each action
+  with its fix; exit 0/1.
+- **Agents:** the classifier proposes `audience` with reasons, flags published books outside
+  `private/`, and reads private text or says "index only here". `/ingest` gains a step 0
+  (`doctor`).
+- **Docs:** `CLAUDE.md`, `GETTING-STARTED.md` (the interim warning replaced), README, the
+  scaffolded `source/README.md`, `dev/CLAUDE.md`, and a 2c-1 section in `MANUAL-TESTING.md`.
+- **Spec:** "(target, D-040)" removed from what was built; the decided details are written into
+  §8.4, §8.7 and §8.8 and into the naming and data-flow tables.
+- **Ledger:** 61 / 5 / 104 of 170.
+- **Tests:** 233, up from 173. New files `test_private_material.py` and `test_doctor.py`, plus
+  lifecycle rule tests. Every fixture, including a PDF with an outline and printed labels written by
+  pypdf, is generated in `tmp_path`.
+
+Running the real CLI end to end in a scratch git repo found two things no unit test had:
+
+- **Avin's `~/.gitignore_global` ignores `.gitignore` itself.** So `course/.gitignore` is never
+  committed and no clone is protected. Locally everything looked fine. `doctor` now checks it (G-4).
+- **A copy (not a move) of a public book into `private/`** leaves the material public. `doctor` says
+  so (G-5).
+
+The test for "no body text in the index" also caught a PDF's first line leaking as its title (G-9).
+
+Gap report: `reviews/impl-gaps-step-2c-1.md` — 23 entries, six ⚑. The weightiest:
+
+- **G-1:** `private_text_hash` is committed, but extraction differs across library versions.
+  Recommended: a self-certifying hash in the full text's own front matter.
+- **G-2:** two machines with different copies of a book.
+- **G-3:** a stale full text is refused, because it cannot be told apart from an edited one.
+
+### Next
+
+1. **Avin:** remove `.gitignore` from `~/.gitignore_global` (or force-add it per course repo), and
+   decide the ⚑ entries G-1 … G-6.
+2. **Step 2c-2** — the rest of the hand test's fixes. Then **one independent review of 2c-1 and
+   2c-2 together**, then Avin re-tests (`MANUAL-TESTING.md`, "Step 2c-1"), then step 3.
+
+## Session 32 — 2026-10-01 — Step 2c-1's gap report decided (→ D-041); 2c-2 prepared
+
+Read the 2c-1 gap report, checked it (233 tests green; G-4's global excludes file, G-22's `0600`
+files and the one `unlink` outside the write path all confirmed). Claude's own spec error surfaced:
+"extraction is the same on every machine" holds for one library version only. Avin decided: G-1/G-3
+(b) self-certifying full text; G-2 (c) last machine wins + `doctor` note; G-4 `course_gitignore_missing`;
+G-5 as built; G-6 (a). Plain fixes added: `write.remove()`, kept permissions, `.DS_Store`, the mode
+check. Avin deleted `~/.gitignore_global`. Spec §8.6/§8.7/§8.4, D-041, ledger (177 changes).
+
+
+## Session 33 — 2026-10-01 — Step 2c-2 built: the rest of the hand test's fixes, and D-041
+
+Built every ledger row tagged [2c-2] (D-040 and D-041 blocks), in four groups, each its own
+commits and green. **289 tests** (+56; new `tests/test_extraction_quality.py`).
+
+- **D-041.**
+  - The private full text certifies itself: `body_hash` = the file's hash without that line. A stale
+    or other-library full text that still matches is refreshed; an edited one is refused.
+    `private_text_hash` is retired (the schema accepts it; a pre-D-041 text is judged by it once).
+  - Ingest's one deletion goes through the new `write.remove(path, expected_hash)`.
+  - Replacing a file keeps its mode; new files get `0666 & ~umask`, not `0600`.
+  - `doctor` reports a differing private copy as a note.
+  - `course_gitignore_missing` (warn, consistency).
+  - `classkit mode developer` refuses when `.gitignore` is untracked.
+  - `.DS_Store` is ignored in both `.gitignore`s.
+- **Removals (D-040).**
+  - Gone: suspected-duplicate detection (name and content), `material duplicates`, and the gate-3
+    question.
+  - Gone: link harvesting. A link harvested by an older version is marked removed by the next ingest,
+    and `add-url` restores its id.
+  - Hyperlinks stay readable in the ingested text as `[text](url)` (the spec had assumed they
+    already were).
+- **Additions (D-040).**
+  - `units: all`.
+  - The coverage report states its scope and is saved by `/ingest` to `materials/coverage.md` through
+    the write path.
+  - `material_locator_in_text` (warn) over Markdown bodies.
+  - A hand-edit refusal shows the diff by anchor.
+  - `classkit write --diff`.
+  - Path kinds `slides` and `notes`.
+  - The classifier mentions two-format relations ("cite the deck") and course-resource links.
+- **Plain fixes.**
+  - F-06: DOCX text boxes, Choice or Fallback.
+  - F-07: Office Math as linear text.
+  - F-08: empty slides/pages and low yield, under "Check these extractions".
+  - F-03/F-10: reader noise captured, reported once by name.
+  - F-09: ligatures expanded, fonttools added.
+  - F-12: file-name metadata titles rejected; no PDF first-line titles.
+  - F-14: the time estimate.
+  - F-23: the pre-flight names what changed.
+  - F-25: validate names `--keep`/`--overwrite`.
+  - F-02: plurals.
+  - F-20: template wording.
+  - Docs: F-01, F-18 and a 2c-2 section in `MANUAL-TESTING.md`; F-27 in `GETTING-STARTED.md`.
+- **Spec:** "(target …)" removed from everything built; the decided details are written into §8.4,
+  §8.6 and §8.7. **Ledger:** 76 / 6 / 95 of 177.
+
+Gap report: `reviews/impl-gaps-step-2c-2.md`. Three ⚑:
+
+- **G-1:** harvested links in an old manifest are retired on the next ingest. Avin's M0011–M0021
+  go; the Gem comes back with `add-url`.
+- **G-2:** a changed private source is now a `doctor` note, not an ACTION.
+- **G-3:** re-ingest never replaces a title, so `manual.dvi` survives in an existing course.
+
+Not verified, and only the re-test can do it: fontTools repairing CLRS's broken characters (F-09);
+the low-yield thresholds; the classifier prompt's new behaviour.
+
+### Next
+
+**One independent review of 2c-1 and 2c-2 together.** Then Avin decides the ⚑ entries of this
+report and re-tests (`MANUAL-TESTING.md`, "Step 2c-1" and "Step 2c-2"; a fresh course shows the
+extraction fixes), then step 3.
+
+## Session 34 — 2026-10-01 — Step 2c-2 checked; its ⚑ entries accepted; review prepared
+
+Pulled 2c-2, 289 tests green. Avin accepted G-1/G-2/G-3 as built (D-041 addendum). G-6 showed a
+second unverified claim of Claude's in the spec (hyperlinks "readable" in the ingested text) — now
+a working rule: verify before writing a claim about the code. Next: one review of 2c-1 + 2c-2.
+
+## Session 35 — 2026-10-01 — The 2c review checked; D-042 built; step 2 ready for re-test
+
+The independent review of 2c-1 + 2c-2 (Gemini) found nothing blocking. Claude checked it: no write
+or delete outside `classkit.write` (only `mode.py`'s developer marker, which is framework-side); the
+removals complete; but a real gap missed by both implementers and the reviewer — agents read a
+private book's full text and write committed files, and nothing stopped them quoting it. Avin chose
+both layers → **D-042**: the rule (root `CLAUDE.md`, classifier, spec §8.7/§9) and
+`doctor.check_quotation` (12-word shingles; ~2.8 s and ~150 MB on a 600k-word text, measured).
+Two test-expectation errors of Claude's own were caught by running the tests (a "short phrase" that
+shared exactly 12 words; a sentence miscounted as 25 words). 294 tests. Step 2 marked built and
+reviewed in the ROADMAP, closing after Avin's re-test.
+
+## Session 36 — 2026-10-02/03 — Core re-oriented; the syllabus increment specified (→ D-043)
+
+Avin proposed moving on from tooling and corner cases to the agents, finishing Core's spec in
+increments he can check on a real course. Claude agreed, with evidence (the classifier was the
+strongest part of the hand test; the class-hour agents have never run) and with its own share of the
+drift named. Found: no syllabus agent or command exists (D-029/D-032 designed, never built). Decided
+with Avin (D-043): `/plan-syllabus` as its own milestone (supersedes D-029's one flow), grading
+draftable, approvals recorded in the file with a hash + `classkit status` (over a progress file),
+one verb per meaning (`/write-items` retired), best effort over completeness, the front-matter/body
+rule, four gated steps. Also fixed a stale order in §5.2 (quiz before the class hour, D-031a). Spec,
+D-043, ledger (rows [3-syllabus], [units]; 194 changes).
+
+## Session 37 — 2026-10-03 — The syllabus increment built ([3-syllabus], D-043)
+
+Built every [3-syllabus] row (18) from a fresh session. Tooling: the syllabus schema (`unit_map`,
+`reading`, `approved {on, hash}`, `assessment` draftable) and template (front matter with commented
+examples; a default body skeleton of descriptor sections, AI-use policy included; the template's
+hardcoded minutes removed, invariant 2); `classkit approve syllabus` (`approve.py`: record in the
+file, hash over parsed front matter + body, textual edit re-parsed before writing, logged);
+`classkit status` (`status.py`: syllabus state, unit map with units present or not, materials,
+last log entry; read-only, committed files only). Found by testing: YAML 1.1 reads the spec's
+`on:` key as `True` — the loader normalises it (gap G-1 ⚑, rename suggested).
+
+The product: `syllabus-designer` (read-only; tasks evidence / draft / revise; returns the whole file;
+TBD rather than invention; AI-use policy always proposed where an AI study path is used; D-042),
+`/plan-syllabus` (status → evidence → draft through the write path → revision rounds by `--diff` →
+`classkit approve syllabus`), `/review-syllabus` and the critic's syllabus section. Narrowed
+`curriculum-architect`'s description; `/ingest` shows status first. Docs, spec (§3.1, §5.1, §5.2,
+§8.2, §8.9 — target marks removed, §8.9's hash and write refined), MANUAL-TESTING section, gap
+report (`reviews/impl-gaps-step-3-syllabus.md`, two ⚑). 318 tests. Ledger 98 / 6 / 91 of 195.
+
+### Next
+
+Avin runs `/ingest` + `/plan-syllabus` on a real course (`MANUAL-TESTING.md`, "Step 3-syllabus") and
+judges the agent's output; prompts revised from what he finds. Decide G-1 and G-2. Meanwhile, the
+spec of the [units] increment.
+
+## Session 38 — 2026-10-03 — Commands vs agents vs skills (→ D-044); the syllabus increment adjusted
+
+Avin asked for the command/agent distinction to be laid out and tightened. Agreed: command =
+procedure in the conversation, agent = fresh context or independence, skill = shared craft; the agent
+drafts, the chat revises. The syllabus build (Session 37) predated it, so Claude adjusted it here: new
+`writing-a-syllabus` skill (craft moved out of the agent and the critic), `rework` replaces `revise`,
+`/plan-syllabus` step 3 revises in the chat. Gap report ⚑: `approved.on` → `date` (Claude's YAML-1.1
+trap, again), unit-map evidence locators warn. Spec §2.1, §5.1, §8.4; D-044; ledger; 320 tests.
+
+## Session 38b — 2026-10-03 — The teacher works in the chat (→ D-045)
+
+Avin preferred working only in the chat UI. Agreed the chat runs `classkit`; made it explicit: spec
+§5.2 principle, root `CLAUDE.md` instructions (how to run it, report faithfully), read-only commands
+pre-allowed in `.claude/settings.json`, `GETTING-STARTED.md` and `MANUAL-TESTING.md` chat-first.
+
+## Session 39 — 2026-10-03 — The units increment specified (→ D-046)
+
+Remaining Core increments laid out (units, home study, class hour with entry quiz, review). Units
+decided with Avin: optional `difficulties` with origin; *planned*/*designed* states; the materials
+re-map moved to `/plan-syllabus`; `unit_map_mismatch` built now; `planning-units` skill. Spec §3.1,
+§5.1, §8.2, §8.4, §8.9; D-046; ledger (219 changes).
+
+
+## Session 40 — 2026-10-03 — The units increment built (every [units] row)
+
+Built from D-046, with the syllabus increment as the model (D-044). **The product:** the
+`planning-units` skill (objectives assessable, few and broad — the methodology's number — each naming
+the Course Outcome it serves and never stretched to fit; prerequisites and home-study order; what a
+lecture week cannot fit, the cut left to the teacher; difficulties specific enough to design against,
+`teacher` vs `proposed`; revising; the rules); `curriculum-architect` rewritten read-only (Read, Grep,
+Glob; tasks `draft` / `rework`; reads `ingested/` and `coverage.md`, never `source/`; returns per unit a
+report, its questions — always "what do your students find hard?" — and the complete `unit.md`;
+proposed difficulties in the report, not the file); `/plan-units N…` rewritten (status → architect →
+gate, corrections and accepted difficulties applied by the chat → scaffold with the map's title + write
+through the write path → validate → revision rounds in the chat → `classkit approve unit N --stage
+planned`); `/plan-syllabus` step 5 (re-map the materials' unit hints against the approved map, the
+teacher's own hints kept, `classkit material apply`); `course-critic` gains a unit-plan section loading
+the skill, and `/review-unit` routes a planned unit to it.
+
+**The tooling:** `unit.md` schema and template (`difficulties`, `approved {date, stage, hash?}`; the
+placeholders name `CO1`/`CO2`, as the D-021 ledger planned); `classkit approve unit N [--stage]` (the
+syllabus's record mechanism generalised; *designed* hashes unit.md, sessions, in-class and entry-quiz
+items in a fixed order, slug-independent); `classkit status` per unit (not started / drafted / planned /
+designed, edited since, a count line); `unit_map_mismatch` (warn) and `objective_maps_to_outcome`
+(alert), both consistency rules. Docs (README, GETTING-STARTED, both CLAUDE.md, spec — targets removed,
+§8.4 and §8.9 made precise), a chat-style MANUAL-TESTING section. Gap report
+`reviews/impl-gaps-step-3-units.md` (three ⚑: the default stage's trap, `objective_coverage` noise on
+planned units, hint provenance). 352 tests (+32). Ledger 127 / 5 / 87 of 219.
+
+Claude's own miss, caught mid-build: it first left the unit template's objectives without `outcomes`
+(so a scaffolded unit alerted), then found the D-021 ledger's recorded plan to scaffold `CO1`/`CO2`
+and followed it.
+
+### Next
+
+One independent review of the syllabus and units builds together (both gap reports; the code from
+`d8a1351`, the syllabus increment's spec, to now). Then Avin checks both on a real course: `/plan-syllabus` to approval, step
+5, then `/plan-units` for the first units with material (`MANUAL-TESTING.md`, "Step 3-syllabus" and
+"Step 3-units"). Decide the three ⚑.
+
+## Session 41 — 2026-10-04 — Step 3 finalized (→ D-047)
+
+Checked the units gap report and the review of both builds (its blocking finding real but overstated;
+one nit stale). Applied with Avin's go-ahead: step 2 split into 2a/2b in both commands, `approve unit`
+requires `--stage`, `objective_coverage` skipped for planned units, CO1-only placeholders. Spec §5.1,
+§8.4, §8.9; D-047; ledger (225); 353 tests. Ready for Avin's real-course check.
+

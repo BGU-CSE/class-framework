@@ -1,9 +1,16 @@
 ---
-description: Adversarially review a designed unit for the problems the validator cannot catch
+description: Adversarially review a designed unit — or a unit's plan — for the problems the validator cannot catch
 argument-hint: "<unit number>"
 ---
 
 Review unit **$1** using the **course-critic** agent.
+
+Run `classkit status` first. **If the unit is planned but not designed** (its sessions are still
+placeholders), the review is of its **plan**: tell the critic so — it has a section for a unit's
+plan and loads the `planning-units` skill — and skip the session and class-hour checks below. Its
+findings go back through `/plan-units $1` as revision requests, only the ones the teacher picks.
+Review is optional and is not a state; log it (`classkit log "/review-unit $1" …`) once the teacher
+has read it.
 
 Run `classkit validate` first and hand the critic its output, so it doesn't spend effort
 re-deriving structural problems the tooling already found.

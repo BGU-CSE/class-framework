@@ -23,6 +23,8 @@ then suppressed, and counted rather than hidden.
 
 from __future__ import annotations
 
+import re
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -42,11 +44,24 @@ DEFAULT_SEVERITY = {
     "outcome_reference": "error",
     "activity_references_guiding_question": "error",
     "item_reference": "error",
+    "material_locator_resolves": "error",
     # -- advisory, high priority: the coverage chain -----------------------
     "objective_coverage": "alert",
+    # D-046, consistency: an objective that rolls up to no Course Outcome — wrong the moment it is
+    # written, so it fires exactly when /plan-units writes objectives. (Its reverse,
+    # outcome_coverage, is a completeness rule and parked.)
+    "objective_maps_to_outcome": "alert",
+    # D-040, consistency: a student-facing place points at instructor-only material. An alert,
+    # not an error — nothing reaches a student until it is published, and every exporter
+    # refuses instructor material in code (the hard guarantee is there).
+    "instructor_material_cited": "alert",
     # -- advisory ----------------------------------------------------------
     "schema_unavailable": "warn",
     "unit_count": "warn",
+    # D-046, consistency: a unit's number and title live in the syllabus's unit map and in its
+    # unit.md — the one place duplication makes drift likely. A map entry with no directory yet is
+    # *not started*, not a mismatch.
+    "unit_map_mismatch": "warn",
     "session_count": "warn",
     "goal_count": "warn",
     "goal_type": "warn",
@@ -65,6 +80,15 @@ DEFAULT_SEVERITY = {
     "guiding_question_assessed": "warn",
     "unknown_rule": "warn",
     "accepted_without_reason": "warn",
+    "materials_not_ingested": "warn",
+    # D-040, consistency: git tracks private material — it is in the repo's history.
+    "private_material_committed": "warn",
+    # D-041, consistency: course/.gitignore is absent or does not keep private material out of git.
+    "course_gitignore_missing": "warn",
+    # D-040, consistency: a `M<NNNN>#anchor` in a Markdown body names something that does not
+    # exist. Integrity in substance, advisory in severity: prose is read by people and may be a
+    # dated snapshot (materials/coverage.md) that legitimately goes stale.
+    "material_locator_in_text": "warn",
 }
 
 # The order findings are printed in: alerts first (spec §8.4), then errors, then warnings.
@@ -78,7 +102,65 @@ SCHEMA_FOR = {
     "in-class": "in-class-session.schema.json",
     "item": "assessment-item.schema.json",
     "methodology": "methodology.schema.json",
+    "manifest": "manifest.schema.json",
 }
+
+# Where a material locator (`M0007`, `M0007#slide-18`, spec §8.1) may appear, per artifact: a
+# path into the front matter, `*` meaning every element of a list. `material_locator_resolves`
+# checks every string these reach. Step 4 adds the guiding question's `answer` (D-019) — and the
+# session-level study-path pool (D-020) — as one line each here; the rule itself does not change.
+LOCATOR_FIELDS: dict[str, tuple[tuple[str, ...], ...]] = {
+    "session": (
+        ("goals", "*", "paths", "*", "ref"),  # a study path's resource
+    ),
+    "in-class": (
+        ("activities", "*", "materials", "*"),  # what an activity uses in the room
+    ),
+}
+
+# The student-facing subset of LOCATOR_FIELDS (D-040): a material cited here is one a student
+# is pointed at, so it must not be `audience: instructor` (`instructor_material_cited`). Step 4
+# adds the guiding question's `answer[].ref` and the session-level `paths[].ref`; later phases a
+# Gem's knowledge files. `activities[].materials` is deliberately absent: the in-class plan is
+# the teacher's, and "discuss the manual's solution on p. 13" is legitimate there.
+STUDENT_FACING_FIELDS: dict[str, tuple[tuple[str, ...], ...]] = {
+    "session": (
+        ("goals", "*", "paths", "*", "ref"),  # a study path's resource
+    ),
+}
+
+# What `course/.gitignore` must list (D-041, `course_gitignore_missing`) — the same two paths
+# `classkit doctor` asks git about.
+GITIGNORE_REQUIRED = ("materials/source/private/", "materials/private-text/")
+
+# What `private_material_committed` asks git about (D-040). `:(icase)` because macOS git ignores
+# `Private/` too, and ingest treats any case of it as private.
+PRIVATE_PATHSPECS = (":(icase)materials/source/private", ":(icase)materials/private-text")
+
+# `M0007` or `M0007#slide-18` inside a string — not part of a longer word, a URL path, or an
+# anchor of its own.
+LOCATOR = re.compile(r"(?<![\w/.#-])(M\d{4})(?!\w)(?:#([\w-]+))?")
+
+# Course files whose Markdown *body* `material_locator_in_text` reads, besides every front-matter
+# document (syllabus, units, sessions, in-class, items). Not LOG.md — history: a locator to a
+# since-removed material is a true record — and not ingested/ or private-text/, derived text.
+PROSE_FILES = (Path("materials") / "coverage.md",)
+
+_HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
+
+
+def _reach(data, path: tuple[str, ...]):
+    """Every value at `path` inside `data`, following `*` into lists."""
+    if not path:
+        yield data
+        return
+    head, rest = path[0], path[1:]
+    if head == "*":
+        if isinstance(data, list):
+            for element in data:
+                yield from _reach(element, rest)
+    elif isinstance(data, dict) and head in data:
+        yield from _reach(data[head], rest)
 
 
 _MARK = {"error": "ERROR", "alert": "ALERT", "warn": "warn "}
@@ -181,10 +263,12 @@ class Validator:
         self.check_rule_names()
         self.check_syllabus()
         self.check_unit_count()
+        self.check_unit_map()
         for unit in self.course.units:
             self.check_unit(unit)
         self.check_items()
         self.check_assessment_coverage()
+        self.check_materials()
         return self.findings
 
     # -- layer 1: schema ---------------------------------------------------
@@ -231,6 +315,9 @@ class Validator:
                 check("in-class", unit.in_class.path, unit.in_class.data)
         for item in self.course.items:
             check("item", item.path, item.data)
+        manifest = self._manifest()
+        if manifest is not None:
+            check("manifest", self.course.root / "materials" / "manifest.yaml", manifest)
 
     # -- layer 2: semantics ------------------------------------------------
 
@@ -317,6 +404,52 @@ class Validator:
                 f"{actual} of {declared} units exist so far.",
             )
 
+    def check_unit_map(self) -> None:
+        """`unit_map_mismatch` (D-040, D-046): the syllabus's unit map and the units disagree — a
+        unit directory whose number is not on the map or whose title differs from its entry, or a
+        map whose length differs from `course.yaml` `units`. A consistency rule. A map entry with
+        no directory yet is *not started*, not a mismatch; a syllabus with no map yet (not drafted)
+        has nothing to disagree with."""
+        syllabus = self.course.syllabus
+        entries = [e for e in (syllabus.data.get("unit_map") or []) if isinstance(e, dict)] \
+            if syllabus is not None and isinstance(syllabus.data.get("unit_map"), list) else []
+        if not entries:
+            return
+
+        declared = self.course.config.get("units")
+        if isinstance(declared, int) and len(entries) != declared:
+            self.report(
+                "unit_map_mismatch",
+                syllabus.path,
+                f"the unit map has {len(entries)} units; course.yaml declares {declared}.",
+            )
+
+        titles = {e.get("number"): str(e.get("title") or "") for e in entries if isinstance(e.get("number"), int)}
+
+        def same(a: str, b: str) -> bool:
+            return " ".join(a.split()).casefold() == " ".join(b.split()).casefold()
+
+        for unit in self.course.units:
+            match = re.match(r"(\d{2})-", unit.directory.name)
+            number = int(match.group(1)) if match else unit.doc.data.get("number")
+            if not isinstance(number, int):
+                continue
+            if number not in titles:
+                self.report(
+                    "unit_map_mismatch",
+                    unit.doc.path,
+                    f"unit {number} is not on the syllabus's unit map. Add it to the map "
+                    "(/plan-syllabus), or remove the unit if it was a mistake.",
+                )
+            elif not same(str(unit.doc.data.get("title") or ""), titles[number]):
+                self.report(
+                    "unit_map_mismatch",
+                    unit.doc.path,
+                    f"unit {number} is titled {unit.doc.data.get('title')!r} here but "
+                    f"{titles[number]!r} on the syllabus's unit map — make them the same, in "
+                    "whichever file is wrong.",
+                )
+
     def check_unit(self, unit: Unit) -> None:
         methodology = self.course.methodology
         home = methodology.get("home_study", {})
@@ -325,12 +458,19 @@ class Validator:
         objective_ids = {o.get("id") for o in unit.objectives if isinstance(o, dict)}
         goal_ids: set[str] = set()
 
-        # --- objectives roll up to Course Outcomes that exist (D-021, D-037). Whether an
-        # objective names any outcome at all is advisory, and lands with the coverage chain.
+        # --- objectives roll up to Course Outcomes that exist (D-021, D-037). Naming one that
+        # does not exist is integrity; naming none at all is advisory — an alert (D-046).
         outcome_ids = {str(o.get("id")) for o in self.course.outcomes}
         for objective in unit.objectives:
             if not isinstance(objective, dict):
                 continue
+            if not objective.get("outcomes"):
+                self.report(
+                    "objective_maps_to_outcome",
+                    unit.doc.path,
+                    f"objective {objective.get('id')} names no Course Outcome, so it rolls up to "
+                    "nothing in the syllabus. Add `outcomes: [CO…]` — the outcome(s) it serves.",
+                )
             for outcome in objective.get("outcomes") or []:
                 if outcome not in outcome_ids:
                     self.report(
@@ -424,15 +564,20 @@ class Validator:
 
             self.check_session_feasibility(session, goals)
 
-        # --- objective coverage
-        covered = {
+        # --- objective coverage — not for a unit whose recorded stage is *planned* (D-047): it asks
+        # whether a guiding question addresses each objective, which has no answer before the unit
+        # is designed (the placeholder sessions name only the first objectives), and an alert that
+        # always fires in that state teaches the teacher to ignore alerts (D-033).
+        record = unit.doc.data.get("approved")
+        planned = isinstance(record, dict) and record.get("stage") == "planned"
+        covered = set() if planned else {
             objective
             for session in unit.sessions
             for goal in (session.data.get("goals") or [])
             if isinstance(goal, dict)
             for objective in (goal.get("objectives") or [])
         }
-        for objective in sorted(o for o in objective_ids if o):
+        for objective in ([] if planned else sorted(o for o in objective_ids if o)):
             if objective not in covered:
                 self.report(
                     "objective_coverage",
@@ -644,6 +789,278 @@ class Validator:
                             session.path,
                             f"{goal_id} is not tested by any assessment item.",
                         )
+
+
+    # -- materials (D-035) ---------------------------------------------------
+
+    def _manifest(self) -> list | None:
+        """The materials manifest, or None if there is none — or if it cannot be read, which
+        is reported once, as an integrity error (an unreadable file)."""
+        if hasattr(self, "_manifest_cache"):
+            return self._manifest_cache
+        from .ingest.manifest import ManifestError, load  # noqa: PLC0415
+
+        path = self.course.root / "materials" / "manifest.yaml"
+        self._manifest_cache = None
+        if path.is_file():
+            try:
+                self._manifest_cache = load(self.course.root)
+            except ManifestError as exc:
+                self.report("schema", path, f"cannot be read: {exc}")
+        return self._manifest_cache
+
+    def check_materials(self) -> None:
+        self.check_course_gitignore()
+        self.check_material_locators()
+        self.check_locators_in_text()
+        self.check_instructor_material()
+        self.check_materials_ingested()
+        self.check_private_material_committed()
+
+    def _cited(self, table: dict[str, tuple[tuple[str, ...], ...]]) -> list[tuple[object, str, str | None]]:
+        """Every material locator in the fields `table` names: (document, material id, anchor)."""
+        documents: list[tuple[str, object]] = []
+        for unit in self.course.units:
+            documents += [("session", s) for s in unit.sessions]
+            if unit.in_class is not None:
+                documents.append(("in-class", unit.in_class))
+        return [
+            (doc, match.group(1), match.group(2))
+            for kind, doc in documents
+            for field_path in table.get(kind, ())
+            for value in _reach(doc.data, field_path)
+            if isinstance(value, str)
+            for match in LOCATOR.finditer(value)
+        ]
+
+    def check_material_locators(self) -> None:
+        """Every `M<NNNN>` / `M<NNNN>#anchor` names a material that exists and, if it names an
+        anchor, a heading that exists in that material's ingested file (D-035). Integrity: a
+        fabricated "slide 18" of a 12-slide deck is a reference to something that does not exist.
+        It proves the place exists — not that the answer is there; that is the critic's job.
+
+        A private material's committed file is its index (D-040), which has every anchor of the
+        full text — so its locators resolve on every clone, with or without the book."""
+        for doc, material_id, anchor in self._cited(LOCATOR_FIELDS):
+            problem = self._locator_problem(material_id, anchor)
+            if problem:
+                locator = material_id + (f"#{anchor}" if anchor else "")
+                self.report("material_locator_resolves", doc.path, f"cites {locator}, but {problem}")
+
+    def check_locators_in_text(self) -> None:
+        """`material_locator_in_text` (D-040): the same check over `M<NNNN>#anchor` in the Markdown
+        bodies of the course's own files. A warning, not an error, though it names something that
+        does not exist: front matter is data tools act on; prose is read by people, and may be a
+        dated snapshot. Only fully qualified locators with an anchor are read — a bare `M0007` in
+        prose may be anything, and the shorthand `#page-39` cannot be told from an ordinary
+        Markdown link. HTML comments (a template's instructions) are skipped. A consistency rule."""
+        bodies: list[tuple[Path, str]] = [(doc.path, doc.body) for doc in self.course.documents()]
+        for relative in PROSE_FILES:
+            path = self.course.root / relative
+            if not path.is_file():
+                continue
+            try:
+                bodies.append((path, _body(path.read_text(encoding="utf-8"))))
+            except (OSError, UnicodeDecodeError):
+                continue
+        for path, body in bodies:
+            seen: set[str] = set()
+            for match in LOCATOR.finditer(_HTML_COMMENT.sub("", body or "")):
+                material_id, anchor = match.group(1), match.group(2)
+                if not anchor or match.group(0) in seen:
+                    continue
+                seen.add(match.group(0))
+                problem = self._locator_problem(material_id, anchor)
+                if problem:
+                    self.report("material_locator_in_text", path,
+                                f"the text cites {match.group(0)}, but {problem}")
+
+        # The syllabus's unit map (D-044): its `evidence` is front matter, but nothing about the
+        # syllabus's content is an error (D-043) — so an invented locator behind a unit's plan is
+        # reported here, at this rule's severity, before `/plan-units` follows it.
+        syllabus = self.course.syllabus
+        if syllabus is not None:
+            for entry in syllabus.data.get("unit_map") or []:
+                if not isinstance(entry, dict):
+                    continue
+                for value in entry.get("evidence") or []:
+                    for match in LOCATOR.finditer(value if isinstance(value, str) else ""):
+                        problem = self._locator_problem(match.group(1), match.group(2))
+                        if problem:
+                            self.report("material_locator_in_text", syllabus.path,
+                                        f"the unit map's evidence for unit {entry.get('number')} "
+                                        f"cites {match.group(0)}, but {problem}")
+
+    def _locator_problem(self, material_id: str, anchor: str | None) -> str | None:
+        """Why `material_id` / `material_id#anchor` does not resolve — or None when it does. The
+        one definition both locator rules share. It proves the place exists, not that the answer
+        is there; that is the critic's job. A private material's committed file is its index
+        (D-040), which has every anchor of the full text, so its locators resolve on every clone."""
+        from .ingest import extract, ingested_file  # noqa: PLC0415
+
+        manifest = self._manifest()
+        if not hasattr(self, "_materials"):
+            self._materials = {str(r.get("id")): r for r in (manifest or []) if isinstance(r, dict)}
+            self._anchors: dict[str, list[str] | None] = {}
+        record = self._materials.get(material_id)
+        if manifest is None:
+            return "no materials have been ingested (there is no materials/manifest.yaml). Run /ingest."
+        if record is None:
+            return f"{material_id} is not in materials/manifest.yaml."
+        if record.get("merged_into"):
+            return (f"{material_id} was merged into {record['merged_into']}; cite "
+                    f"{record['merged_into']} instead (its anchors may differ).")
+        if record.get("removed_at"):
+            return f"the source of {material_id} was removed (marked {record['removed_at']})."
+        if not anchor:
+            return None
+        if record.get("status") not in ("ingested", "no-text"):
+            return (f"{material_id} is a {record.get('status')} material, which has no "
+                    f"anchors; cite {material_id} alone (a timestamp goes in the note).")
+        if material_id not in self._anchors:
+            path = ingested_file(self.course.root, material_id)
+            try:
+                self._anchors[material_id] = extract.anchors(_body(path.read_text(encoding="utf-8"))) if path else None
+            except (OSError, UnicodeDecodeError):
+                self._anchors[material_id] = None
+        known = self._anchors[material_id]
+        if known is None:
+            return f"the ingested file of {material_id} is missing or unreadable. Run /ingest."
+        if anchor.rstrip("-") not in known:
+            return f"{material_id} has no anchor {anchor!r} ({_summarize(known)})."
+        return None
+
+    def check_instructor_material(self) -> None:
+        """A student-facing place (STUDENT_FACING_FIELDS) cites a material whose `audience` is
+        `instructor` — a solutions manual in a study path (D-040). Advisory, high priority: the
+        teacher may mean it, and nothing reaches a student until it is published; the hard
+        guarantee is the exporters' refusal. A consistency rule."""
+        cited = self._cited(STUDENT_FACING_FIELDS)
+        if not cited:
+            return
+        materials = {str(r.get("id")): r for r in (self._manifest() or []) if isinstance(r, dict)}
+        for doc, material_id, anchor in cited:
+            record = materials.get(material_id)
+            if record is None or record.get("audience") != "instructor":
+                continue
+            locator = material_id + (f"#{anchor}" if anchor else "")
+            self.report(
+                "instructor_material_cited",
+                doc.path,
+                f"cites {locator} in a study path, but {material_id} ({record.get('title')}) is "
+                "for instructors only (audience: instructor) — students would be pointed at it. "
+                "Cite it from the in-class plan instead; or, if students may see it, "
+                f"`classkit material set {material_id} --audience student`.",
+            )
+
+    def check_course_gitignore(self) -> None:
+        """`course/.gitignore` is absent, or does not list `materials/source/private/` and
+        `materials/private-text/` (D-041). Committed state, the same on every clone — so it
+        catches the clone that never received the file. It reads the file, so it cannot see one
+        present here but never committed; `classkit doctor`, which asks git, catches that. A
+        consistency rule."""
+        path = self.course.root / ".gitignore"
+        try:
+            text = path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            self.report(
+                "course_gitignore_missing", path,
+                "the course has no .gitignore, so nothing keeps private material "
+                "(materials/source/private/, materials/private-text/) out of git. Re-run "
+                "`classkit scaffold course --code CODE --title TITLE` — it only creates what is missing.",
+            )
+            return
+        except (OSError, UnicodeDecodeError):
+            text = ""
+        listed = {line.strip().lstrip("/").rstrip("/") for line in text.splitlines()
+                  if line.strip() and not line.lstrip().startswith("#")}
+        missing = [p for p in GITIGNORE_REQUIRED if p.rstrip("/") not in listed]
+        if missing:
+            self.report(
+                "course_gitignore_missing", path,
+                f"course/.gitignore does not list {' or '.join(missing)}, so private material "
+                f"there would be committed. Add the line{'s' if len(missing) > 1 else ''} "
+                f"{', '.join(f'`{m}`' for m in missing)}.",
+            )
+
+    def check_private_material_committed(self) -> None:
+        """Git tracks a file under `materials/source/private/` or `materials/private-text/`
+        (D-040): it is in the repository's history, and the .gitignore did not stop it — it was
+        added before, or forced. Detecting is the framework's; cleaning history is the
+        teacher's. Asks git, so every clone gets the same answer; outside a git repository, or
+        without git, it is skipped silently (`classkit doctor` says why). A consistency rule."""
+        try:
+            result = subprocess.run(
+                ["git", "ls-files", "-z", "--", *PRIVATE_PATHSPECS],
+                cwd=self.course.root, capture_output=True, check=False,
+            )
+        except OSError:
+            return
+        if result.returncode != 0:
+            return  # not a git repository
+        tracked = [p for p in result.stdout.decode("utf-8", "replace").split("\0") if p]
+        if not tracked:
+            return
+        shown = ", ".join(tracked[:5]) + (f", and {len(tracked) - 5} more" if len(tracked) > 5 else "")
+        self.report(
+            "private_material_committed",
+            self.course.root / "materials" / "manifest.yaml",
+            f"git tracks {len(tracked)} private file(s): {shown}. They are in the repository's "
+            "history, so anyone with the repo has them. `git rm --cached PATH` stops tracking a "
+            "file from the next commit; removing it from history (e.g. git filter-repo) is your "
+            "decision. Run `classkit doctor` to check that course/.gitignore covers private/.",
+        )
+
+    def check_materials_ingested(self) -> None:
+        """A source file that is new, changed, moved or gone since the last ingest — the
+        manifest, and so every locator check, is out of date. Advisory: the teacher may be
+        mid-way through adding material.
+
+        Ignores `source/private/` (D-040): what is there differs per machine, and `validate`
+        must give the same answer on every clone. `classkit doctor` reports it."""
+        from .ingest import core, links  # noqa: PLC0415
+        from .ingest.manifest import ManifestError, load  # noqa: PLC0415
+
+        try:
+            records = load(self.course.root)
+        except ManifestError:
+            return  # already reported as unreadable
+        files = core.scan(self.course.root)
+        listed = links.read(self.course.root / "materials" / "source")
+        _state, plan = core.reconcile(self.course.root, [r for r in records if isinstance(r, dict)],
+                                      files, listed, local=False)
+        outstanding = plan.outstanding()
+        if not outstanding:
+            return
+        shown = "; ".join(outstanding[:5]) + (f"; and {len(outstanding) - 5} more" if len(outstanding) > 5 else "")
+        self.report(
+            "materials_not_ingested",
+            self.course.root / "materials" / "manifest.yaml",
+            f"{len(outstanding)} change(s) in materials/source/ since the last ingest — {shown}."
+            + (" Run /ingest (or `classkit ingest`)." if plan.needs_ingest() else ""),
+        )
+
+
+def _body(text: str) -> str:
+    """An ingested file's body — anchors are its headings, never its front matter."""
+    from .frontmatter import FrontMatterError, parse  # noqa: PLC0415
+
+    try:
+        return parse(text)[1]
+    except FrontMatterError:
+        return text  # a hand edit that dropped the front matter still has its headings
+
+
+def _summarize(anchors: list[str]) -> str:
+    """What anchors a material does have, briefly: 'slide-1 … slide-12', or the first few."""
+    if not anchors:
+        return "it has no anchors"
+    for prefix in ("slide", "page"):
+        numbered = [a for a in anchors if re.fullmatch(rf"{prefix}-\d+", a)]
+        if numbered and len(numbered) == len(anchors):
+            return f"it has {numbered[0]} … {numbered[-1]}"
+    head = ", ".join(anchors[:6])
+    return f"it has {head}" + (f", … ({len(anchors)} in all)" if len(anchors) > 6 else "")
 
 
 def validate(course: Course, framework_root: Path) -> list[Finding]:

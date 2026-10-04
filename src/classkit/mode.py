@@ -60,6 +60,23 @@ def is_ignored(framework_root: Path, path: Path) -> bool | None:
     return result.returncode == 0
 
 
+def is_tracked(framework_root: Path, path: Path) -> bool | None:
+    """Does git track `path`? None when git is missing or this is not a repository."""
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", str(path)],
+            cwd=framework_root,
+            capture_output=True,
+            check=False,
+        )
+    except (OSError, FileNotFoundError):
+        return None
+    # 0 = tracked, 1 = not tracked, 128 = not a git repository.
+    if result.returncode not in (0, 1):
+        return None
+    return result.returncode == 0
+
+
 class UnsafeMarker(RuntimeError):
     """The marker would not be ignored, so creating it risks committing it."""
 
@@ -86,6 +103,14 @@ def set_mode(framework_root: Path, mode: str) -> ModeChange:
             "and a committed marker would put every teacher's clone into "
             "framework-developer mode. Add `dev/.developer` to .gitignore (and make sure "
             ".gitignore itself is tracked) before switching."
+        )
+    # The rule protects other checkouts only if .gitignore itself is committed (D-041): a global
+    # excludes file that ignores `.gitignore` keeps the rule on this machine alone.
+    if ignored and is_tracked(framework_root, Path(".gitignore")) is False:
+        raise UnsafeMarker(
+            ".gitignore is not tracked by git, so the rule that keeps dev/.developer out of "
+            "commits exists on this machine only — a global excludes file may be ignoring it. "
+            "Run `git add -f .gitignore` and commit it before switching."
         )
 
     marker.parent.mkdir(parents=True, exist_ok=True)

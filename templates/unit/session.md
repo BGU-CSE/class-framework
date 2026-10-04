@@ -10,7 +10,7 @@ duration_minutes: {{session_minutes}}
 # "Why is amortized append O(1) when some appends cost O(n)?" rather than "Amortized analysis".
 #
 # `paths` are CANDIDATE routes. The student picks one; none is mandatory. At least one
-# complete path through all goals must fit inside duration_minutes, or the validator fails.
+# complete path through all goals should fit inside duration_minutes, or the validator warns.
 goals:
   - id: {{session_id}}-G1
     type: question

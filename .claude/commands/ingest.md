@@ -1,31 +1,220 @@
 ---
 description: Read the teacher's existing course materials and report what the course actually covers
-argument-hint: "[optional: path to materials]"
+argument-hint: "[optional: what to focus on]"
 ---
 
-Read the teacher's existing materials and work out what this course actually is, before anything
-is designed.
+Turn the teacher's existing materials into something every later agent can read and cite, then
+report what the course actually is — before anything is designed.
 
-Materials are in `course/materials/source/` (or `$1` if given). Read `course/course.yaml` for
-context. If the directory is empty, say so and stop — ask the teacher to add their syllabus,
-slides, or lecture notes first. Do not invent a course.
+The materials are in `course/materials/source/`, in any state: one folder of everything or a tidy
+tree, any formats, duplicates included. Links are in `course/materials/source/links.md`.
+**Nothing in `source/` is ever modified, moved or deleted** — by you, by an agent, or by a tool.
 
-Produce a report, not files. The teacher approves the picture before any structure is built.
+**How this command behaves.** It runs in steps. At each step: say what you are about to do, do
+only that, show the result, and **wait for the teacher's approval or correction** before the next
+one. The gates live here, between steps — a subagent cannot ask the teacher anything. Every approved
+step is logged with `classkit log`. Never write a file directly: the tools below are the only way
+anything is recorded.
 
-Cover:
+First show where the course stands — read-only, the same overview every command starts with:
 
-1. **What the course covers** — the topic inventory as it exists today, in the order currently
-   taught, with the weight each currently gets.
-2. **Existing structure** — how many weeks, what the assessment scheme is, which textbook.
-3. **Volume reality check.** This is the important part. Three lecture hours per week typically
-   carry more material than 100 minutes of home study plus a 50-minute application hour. Estimate
-   how much of the current content actually fits, and name what would have to be cut, made
-   optional, or moved. Be specific and be honest — a cheerful "it all fits" here is how the
-   home-study budget silently doubles later.
-4. **Ordering problems.** Lectures can defer motivation; independent home study cannot. Flag
-   anything currently introduced before the reason it matters.
-5. **Gaps.** What you'd need from the teacher that the materials don't say — assumed
-   prerequisites, which topics are examinable, which weeks are already known to be hard.
+```bash
+classkit status
+```
 
-End with a proposed unit map (week → subject) as a suggestion for `/plan-units`, clearly marked as
-a proposal for the teacher to correct.
+Then read `course/course.yaml` and the recent entries in `course/LOG.md`, so you know what was
+ingested and decided last time.
+
+**Private material.** Files the teacher must not commit — a published textbook's PDF, a solutions
+manual — go in `course/materials/source/private/`, which `course/.gitignore` keeps out of git. For
+each, ingest commits only an **index** (its pages or slides with their labels, no body text) and
+writes the full text to `course/materials/private-text/`, on this machine only. Never move a file
+into or out of `private/` yourself; suggest it, and the teacher moves it.
+
+---
+
+## Step 0 — Check this machine.
+
+```bash
+classkit doctor
+```
+
+It is read-only, and each line that needs action names the fix. Show the teacher every `ACTION`
+line — above all a missing or ineffective `.gitignore`, which would let private material be
+committed — and fix nothing yourself: anything that changes a file is the teacher's call. `note`
+lines are information. Remember which private materials are **not on this machine** ("index only
+here"): you pass that on in step 3. The pre-flight below does not repeat these checks.
+
+If doctor lists a private source as not on this machine and the teacher says it is **gone for
+good**, remove it on their confirmation (only then — on a TA's clone a missing book is normal):
+
+```bash
+classkit material remove M0005
+classkit log "/ingest, M0005 removed" --changed "M0005 marked removed" --why "<what the teacher said>" \
+  --file materials/manifest.yaml
+```
+
+## Step 1 — Pre-flight. No processing.
+
+```bash
+classkit ingest --preflight
+```
+
+Show the teacher the report: files by format, slides and pages, how many are private, the links
+in `links.md`, what changed since the last ingest (by name and id), exact copies (merged
+automatically), what cannot be read and why, and the time estimate.
+
+- If `source/` is empty and `links.md` lists nothing, **stop**. Ask the teacher to add their
+  syllabus, slides or notes first. Do not invent a course.
+- If files cannot be read, say what would fix each (export to PDF; install pandoc or LibreOffice;
+  OCR a scan). The teacher may fix them first or go ahead without them.
+
+**Wait for approval to convert.**
+
+## Step 2 — Convert.
+
+```bash
+classkit ingest --no-log
+```
+
+`--no-log` because this command writes its own, fuller log entry below; run by hand, `classkit
+ingest` logs itself. Only new or changed sources are converted; an interrupted run resumes. Show the summary: what was
+added (with ids), updated, moved (same id), and removed (marked, not forgotten). Links are recorded
+only from `links.md` — nothing is harvested from inside slides or documents.
+**Show every line under "Check these extractions"** — a document that came out far smaller than
+its source, slides or pages with no text, a file the reader complained about — and pass them to the
+classifier in step 3: thin extraction is not thin teaching. Where a teacher had corrected a bad
+extraction by hand and a newer framework version now extracts it properly (Word text boxes, for
+one), they may prefer `--overwrite` for it once.
+A private material is written twice: its index to `ingested/` and its full text to `private-text/`
+(this machine only). A `full text` line means only this machine's copy was written — nothing
+committed changed, so it is not part of the log entry.
+
+**If it exits with code 3**, some files may hold **edits made by hand** — an ingested file, or a
+private material's full text — and replacing them would lose those edits. Each refusal says why
+(edited by hand, and its source changed). For each one the output shows **what `--overwrite` would
+change**, anchor by anchor ("Slide 9: …") — the current file against a fresh extraction of the new
+source; it holds both the teacher's edit and the source's change. Show the teacher that (and
+`git diff` on a committed file, if it helps) and ask: replace it with a fresh extraction, or keep it? Then
+run exactly what they chose:
+
+```bash
+classkit ingest --no-log --overwrite M0007    # replace the edit
+classkit ingest --no-log --keep M0007         # keep the edit; mark the changed source as seen
+```
+
+Never choose for them.
+
+Log the approved step:
+
+```bash
+classkit log "/ingest, conversion approved" --changed "M0001..M0023 ingested (…); M0004 moved; …" \
+  --why "<what the teacher added and why>" --file materials/manifest.yaml
+```
+
+## Step 3 — Classify.
+
+Use the **material-classifier** agent. Tell it which ids are new or updated this run, give it the "Check these extractions" lines
+from step 2, **tell it which private materials are index-only on this machine** (from step
+0), and pass on anything the teacher said they care about (`$1`). It has no tool that writes or
+runs anything: it **returns** a classification table with the same values as a YAML block —
+including each material's `audience`, with a reason for every `instructor` — any published book it
+noticed outside `private/`, two-format relations it noticed ("M0012 is the PDF of M0007"), links
+inside materials that look like course resources, and the coverage report for step 4.
+
+Show the teacher the classification table and **ask for corrections — and ask them to confirm each
+`audience: instructor`** (a solutions manual, a past exam): that is what keeps it from being cited
+to students. If the agent flagged a published book outside `private/`, tell the teacher; moving it
+is their decision (then run `classkit ingest --no-log` again, which turns its committed copy into an
+index). Then record the block —
+with the teacher's corrections applied to it — in one call. It is all or nothing: if it is rejected,
+fix the entry it names and run it again.
+
+```bash
+classkit material apply <<'YAML'
+- id: M0007
+  kind: slides
+  units: [U03, U04]
+  audience: student
+- id: M0012
+  kind: exam
+  units: []
+  audience: instructor
+YAML
+```
+
+**Two formats of one material** (a deck and its PDF export) stay two materials, and you do not ask
+about them: both are valid to cite. Pass the agent's remark on as information — later agents cite the
+deck. `classkit material merge ID --into ID` exists, optional, for a teacher who asks for it; never
+prompt it.
+
+**Links the agent noticed** inside materials (the course Gem in a deck): show them, and add one only
+if the teacher says so — `classkit add-url URL --note "…"`, then `classkit ingest --no-log` records it.
+
+Then log:
+
+```bash
+classkit log "/ingest, classification approved" --changed "kinds, units and audience set for M…" \
+  --why "…" --file materials/manifest.yaml
+```
+
+## Step 4 — Report what the course covers.
+
+Present the agent's report: **its scope first** — which units the ingested material reaches, and
+"no material yet" (not "thin") for the rest; what the course covers, in the order taught, with its
+weight; where it is thin; the volume reality check and ordering problems (only over what is
+covered); what you need from the teacher; and a proposed unit map for `/plan-syllabus`, clearly marked
+as a proposal. Cite materials by locator, **always in full** (`M0007#slide-3`, never `#slide-3`),
+never by a page or slide you have not seen in the ingested file.
+
+Run `classkit validate`. Nothing should cite materials yet, but `materials_not_ingested` must now be
+silent; if it is not, say why.
+
+**When the teacher has read the report, save it** — `/plan-syllabus` and `/plan-units` read it as
+input. Write it to
+`course/materials/coverage.md` through the write path, headed by today's date and the material ids
+it covered:
+
+```bash
+classkit write course/materials/coverage.md <<'MD'
+# Coverage report — 2026-10-01
+
+Written by /ingest after the teacher read it. A dated snapshot: /plan-syllabus and /plan-units read
+it as input, not as truth. Materials covered: M0001–M0021.
+
+## Scope
+…the report, as the teacher approved it, with the teacher's corrections…
+MD
+```
+
+**If it exits with code 3**, an earlier report is there — and it may hold notes the teacher added.
+Show what replacing it would change, without writing:
+
+```bash
+classkit write course/materials/coverage.md --diff <<'MD'
+…the new report…
+MD
+```
+
+Ask the teacher: replace it, or keep the old one (or merge their notes into the new report and show
+the diff again). Only on their word, write with `--overwrite`. Never choose for them.
+
+Run `classkit validate` again: every `M<NNNN>#anchor` in the saved report is checked
+(`material_locator_in_text`, a warning). Fix any the report got wrong before the teacher relies on
+it.
+
+Then log it:
+
+```bash
+classkit log "/ingest, coverage report saved" --changed "materials/coverage.md (M0001–M0021); proposed unit map" \
+  --why "<the main finding — e.g. 'weeks 7–9 thin; volume ~1.5× the budget'>" --file materials/coverage.md
+```
+
+---
+
+**Next:** `/plan-syllabus` drafts the syllabus — goal, outcomes, the unit map — from this
+evidence.
+
+**Later runs.** Run `/ingest` again whenever material is added or changed. Only what is new or
+changed is converted; a renamed or moved file keeps its id, so nothing that cites it breaks.
+To add a link: `classkit add-url URL --note "…"`.

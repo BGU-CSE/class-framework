@@ -1234,3 +1234,401 @@ reading one schema file surfaced two things it missed (findings 1–2 below).
   objectives the coverage chain cannot even be expressed for that unit — shape, not pedagogy.
 
 99 tests (92 + 7).
+## D-039 — Step 2b review outcomes: a read-only classifier; ingest logs itself; book citations
+**Date:** 2026-10-01 · **Status:** locked (design + implemented) · sources:
+`reviews/impl-gaps-step-2b.md` (implementer), `reviews/impl-review-step-2b.md` (Gemini review)
+
+Step 2b (ingest, D-035) was implemented in a fresh session and reviewed by an independent agent.
+Avin decided the open items one by one. Claude's assessment of the review: its blocking finding
+pointed at a real hole but overstated it ("breaks the entire safety model": the orchestrating
+session has every tool anyway, and four other agents have Bash, so invariant 5 guarantees the write
+path, not a sandbox). Both test gaps it named were real, and verified. It accepted G-7 and G-6
+without engaging the reasons against; Claude disagreed with both, and Avin sided with Claude.
+
+**Decided:**
+
+- **G-1 → the classifier is read-only.** `material-classifier` has `Read, Grep, Glob` only — no
+  Bash. It *returns* its classification as a YAML block; `/ingest` shows it, applies the teacher's
+  corrections, and records it with the new **`classkit material apply`** (all or nothing). Why this
+  agent first: it reads more untrusted text than any other (the teacher's files and what they
+  quote), so it is the strongest case for a structural guarantee, and the price was small. Costs: one
+  more CLI verb; the agent cannot check its own recording; the command passes it the suspected
+  pairs. Side benefit: the teacher sees the classification *before* it is recorded. The other
+  agents' Bash is decided as each is rewritten (G-4 carry-over), not now.
+- **G-7 → `classkit ingest` logs itself.** Every run that changes something appends an entry (title
+  `classkit ingest`, what changed by material id, `--why`, default "run by hand"); a run that changes
+  nothing, or only refuses, does not. `/ingest` passes `--no-log` and writes its own entries. The
+  implementer had argued by analogy with `validate` (D-038); that does not hold, since `validate`
+  changes nothing while ingest assigns ids, adds and removes materials — and §8.8 says "so is each
+  ingest run". Cost: one more flag; a forgotten `--no-log` doubles an entry (noise, not loss).
+- **G-3 → PDF anchors stay physical pages**, plus Avin's rule: **every book citation carries the
+  book's own coordinates in its `note`** — section, exercise or question number where there is one,
+  and the printed page: `ref: "M0003#page-63"`, `note: "CLRS §6.2, Exercise 6.2-3 (printed p. 45)"`.
+  Why: a wrong physical page still validates (the page exists); the note is what a student with a
+  paper copy, or a teacher checking, can verify. Cost: a prompt-level convention until step 4, where
+  an advisory rule (a locator to a `textbook` material without a `note` → warn) is proposed.
+- **G-6 → `/plan-units` re-maps the materials' `units`** once the unit map is approved — a gated
+  step, recorded through `classkit material apply`. The reviewer called this churn; Claude argued
+  that a confidently wrong hint ("Lecture 3" → U03 after units were merged) is worse than none,
+  because the designer agent trusts it. How to protect a hint the teacher corrected by hand is
+  decided in step 3.
+- **Ratified:** G-2 (five extra manifest fields), G-4 (merge keeps the target's anchors; the
+  retired `.md` stays), G-5 (a changed merged copy is split off; only an identical copy inherits a
+  deleted canonical's id), G-8 (lxml/Pillow wheels). G-22 (declined duplicates not remembered) and
+  G-26 (manifest comments lost) left as they are until the hand test shows whether they matter.
+- **Review test gaps, fixed:** `materials_not_ingested` on a moved and on a removed source; a locator
+  checked against a hand-edited `.md` (an added heading resolves, a removed one fails).
+
+173 tests (163 + 10).
+
+## D-040 — Private and instructor-only material; `validate` judges the course, `doctor` the machine
+**Date:** 2026-10-01 · **Status:** locked (design) · sources: `reviews/manual-test-step-0-2b.md`
+(Avin's hand test of steps 0–2b: F-04, F-05, F-16, F-22, P-4, F-09)
+
+The hand test ingested CLRS 4e (1312 pp.), its instructor's manual and its selected solutions.
+Two problems surfaced, and a third neither the test nor earlier sessions had flagged: **nothing in a
+course repo is gitignored**, so the first `git push` puts every book PDF *and its full extracted
+text* on GitHub, permanently in history. Avin's question — does a famous book need an ingested
+`.md` at all, given Claude cites CLRS well from memory? Claude's answer: memory is good for content
+and section numbers of famous books, unreliable for pages and editions (the test itself found a
+3rd/4th-edition mix), and useless for less famous material; the test's best classifier results (the
++22 page offset checked on 40 sections, the manual→deck derivation, the "posted publicly" markers)
+needed the text. But citing and checking need only an **index**, and reading needs the text only
+locally. Decided (Avin, one at a time):
+
+1. **Storage — `source/private/`, gitignored.** Its materials get a committed **index** in
+   `ingested/` (every anchor, printed page label, sections from the PDF outline — no body text) and
+   their **full text in `materials/private-text/`**, gitignored, this machine only. Locators
+   validate against the index everywhere. Cost accepted: on another clone agents can cite and
+   validate a private book but not read it.
+2. **Audience — `audience: student | instructor`** in the manifest, default `student`, proposed by
+   the classifier and confirmed at gate 3. Independent of `private` (CLRS is private but `student`).
+   Citing an instructor material from a **student-facing** place (study path, `answer`, later the
+   Gem) is an **alert**, `instructor_material_cited` — not the in-class plan or a model answer.
+   **The hard guarantee is at publication:** every exporter refuses, in code, to bundle instructor
+   or private material. Claude first suggested an alert in `validate` alone, then argued for the
+   export gate: a study path in the repo reaches no student until it is published, so that is where
+   the guarantee belongs; an `error` in `validate` would add little (the teacher may accept it,
+   G-12) and fail every run over something that is not yet a leak.
+3. **A missing private source is "not on this machine", never "removed"** — a TA's clone and a
+   deleted file are indistinguishable from inside a checkout. Removal is explicit:
+   `classkit material remove ID`. Cost: a book deleted on the teacher's own machine keeps its record
+   until removed.
+4. **Scaffold writes `course/.gitignore`** (in `course/`, so it never conflicts with a framework
+   update) covering `private/` and `private-text/`; and `private_material_committed` (warn) reports
+   anything git already tracks there. Detecting is the framework's; cleaning history is the
+   teacher's.
+5. **`classkit doctor`** (Avin's proposal: a local-consistency check), with the principle it made
+   explicit: **`validate` judges the course** — committed state, the same answer on every clone —
+   **and `doctor` judges this machine**: private sources and full texts present or stale, the
+   `.gitignore`, dependencies importable (would have caught F-09's missing fontTools), optional
+   converters, the mode. Read-only; `/ingest` runs it first. So `materials_not_ingested` now ignores
+   `private/`.
+
+Meanwhile `GETTING-STARTED.md` warns teachers not to commit book PDFs until this is built.
+
+**Added to D-040 the same day — two-format duplicates are no longer detected (reverses part of
+D-035).** The hand test's 13 suspected pairs were all false (F-11): the content check compared
+vocabularies with no size limit, so any short document "duplicated" a 1312-page book. Claude first
+proposed a narrower detector plus remembered dismissals (F-15). Avin asked what a duplicate actually
+breaks. Claude's analysis: nothing — `M0007#slide-18` and `M0012#page-18` are both correct citations;
+the rest (a slightly less precise page, a stale export, a redundant study path, a bigger Gem) is
+preference, critic territory, or an exporter's concern. Claude had treated "detect duplicates" as a
+requirement because D-035 listed it, without asking what it protects. **Decided:** drop
+suspected-duplicate detection (name and content) and its gate-3 question; keep the silent merge of
+exact copies; keep `classkit material merge` as an optional, never-prompted tool; the classifier may
+*mention* a two-format relation; agents cite the deck over its PDF. F-15 and G-22 are moot. Cost: the
+manifest keeps both copies, the classifier reads both; deduplication, if ever needed, happens in the
+exporter.
+
+**Added to D-040 — links are not harvested from materials (F-13).** Ingest recorded every URL found
+inside slides and documents as a material: in the hand test, 10 of 11 came from the book's and
+manual's bibliography, two were truncated at line wraps, and the course Gem link was buried. Same
+question as for duplicates — what does harvesting protect? Little: a link inside a deck is already
+readable in its ingested text. **Decided (a):** a link becomes a material only when the teacher lists
+it (`links.md` / `add-url`); the classifier *mentions* links that look like course resources and
+suggests `add-url`. Rejected: (b) harvest only from the teacher's own materials — `kind` is not known
+at conversion time, so it needs a second pass; (c) a separate link pool — still noise nobody asked
+for. Cost: an unlisted link is not a citable material; `found_in` and the harvesting code retire.
+
+**Added to D-040 — `units: all` (F-17).** The classifier could not say "course-wide" for the textbook
+or the course Gem: `[]` reads as "no unit", and listing every unit looks per-unit and gives the D-039
+re-map twelve entries meaning one thing. Low stakes, but both readings mislead a designer filtering
+by unit. **Decided (a):** `units` is a list of units or the word `all`; `[]` keeps meaning "no
+particular unit". Rejected: (b) a separate `scope` field — two fields that can contradict; (c) a
+convention on `[]` + `kind: textbook` — fails for a course-wide item that is not a book. Cost: a
+two-shaped field every consumer must handle.
+
+**Added to D-040 — the coverage report is persisted, and planning works on partial material (F-19,
+Avin).** F-19: the coverage report existed only in chat, though `/plan-units` needs it. Decided:
+`/ingest` writes it to `materials/coverage.md` after the teacher has read it (write path; a later run
+replaces it only on confirmation; a dated snapshot, input not truth). Avin then raised the normal
+case the spec ignored: material for only some units, and wanting to start on the syllabus and the
+first unit. Decided:
+
+- The report **states its scope**: which units the material reaches; "no material yet", never
+  "thin", for the rest.
+- **The course level is always whole but needs evidence** (Avin): goal, outcomes and the **unit
+  map** come from something ingested that spans the course — an old syllabus, a book's table of
+  contents — plus the teacher; with none, `/plan-units` asks rather than drafting from memory. **The
+  unit level is incremental**: objectives come later, from each unit's own slides or the book's
+  chapters read in depth; `/plan-units 4 5` plans more units as material arrives.
+- **Where an unplanned unit lives — (ii), the syllabus.** A `unit_map` (number, title, summary,
+  evidence) in the syllabus front matter, authoritative for which units exist; a `units/NN-slug/`
+  directory only once a unit is planned. Rejected (i), a `unit.md` with no objectives: it reverses
+  D-038's deliberate "objectives required", and eleven unplanned units would each fire session and
+  in-class warnings unless those rules learned "unplanned". Cost of (ii): a unit's title lives in the
+  map and in `unit.md` (and the count in `course.yaml`) — `unit_map_mismatch` (warn) catches drift;
+  D-032's "overview derived from the units" becomes "from the map and the units".
+
+**Added to D-040 — one resource-kind vocabulary (F-21).** A study path could not be of kind `slide`;
+there were three overlapping lists (material kinds, path kinds, D-019's planned answer kinds, with
+`slide` vs `slides`). And when `ref` is a material locator, the manifest already knows the kind, so a
+`kind` there can only repeat or contradict it. **Decided:** now (2c) add `slides` and `notes` to
+path kinds; in step 4, one vocabulary (material kinds + `gem`, `web`) for paths and answers, and
+`kind` optional when `ref` is a locator. Cost: an agent reading a path must look up the manifest to
+know its kind. (F-21's side note — schema violations print as `warn` — did not reproduce: they are
+`error`.)
+
+**Added to D-040 — a refusal shows what replacing would change (F-24).** The hand-edit refusal
+previewed the file's first lines (its front matter), not the edit. The old extraction is not kept
+(only its hash), so the teacher's edit alone cannot be shown. **Decided (a):** show the diff between
+the current file and a fresh extraction of the new source, grouped by anchor — exactly what
+`--overwrite` would change. Cost: it cannot attribute differences to the teacher or the source.
+Rejected for now: (b) per-anchor hashes to label sections (extra state; 1312 hashes for one book);
+(c) keeping full copies of every extraction. (b) can be added later if this confuses.
+
+**Added to D-040 — locators in prose are checked (F-26).** `material_locator_resolves` reads only
+front matter, but locators also appear in prose — 65 in the hand test's coverage report, now a
+permanent file — and the agent once wrote shorthand (`#page-39`) that resolves against the wrong
+material. **Decided:** agents always write locators fully qualified (instruction only: `#section` is
+also an ordinary Markdown link, so code cannot catch the shorthand); and a new
+`material_locator_in_text` (**warn**) checks `M<NNNN>#anchor` in the bodies of the course's own files
+and `coverage.md`, not `LOG.md` or `ingested/`. A deliberate departure from D-037's mechanical line —
+front matter is data tools act on, prose is read by people and may be a dated snapshot that
+legitimately goes stale. Cost: a non-locator string like "M2024" warns (acceptable, and acceptable
+per file).
+
+**Added to D-040 — invariant 5's scope, and `classkit write --diff` (P-2).** In the hand test the
+agent edited `course.yaml` at the teacher's request with its own Edit tool and `sed`, outside the
+write path, because `classkit write` replaces whole files. Claude's analysis: invariant 5 protects
+against *silent loss of the teacher's work* by the framework's own writes; a targeted edit the
+teacher asked for, made with a tool that shows its diff, is not that. **Decided:** (1) invariant 5's
+scope is stated — the framework's commands and agents; a direct teacher-requested edit is the
+teacher's. (2a) `classkit write --diff` prints exactly what `--overwrite` would change; a command
+changing part of a file shows it, then writes on approval. Rejected (2b), a key-level YAML editor:
+keeping a commented `course.yaml`'s comments needs a new dependency and a path syntax. Cost: the
+invariant now openly says what it never covered.
+
+## D-041 — Step 2c-1 outcomes: the local full text certifies itself; several machines; one more guard
+**Date:** 2026-10-01 · **Status:** locked (design) · sources: `reviews/impl-gaps-step-2c-1.md`
+
+Step 2c-1 (privacy and `doctor`, D-040) was implemented in a fresh session (233 tests). Its gap
+report found that D-040's spec reasoned about one machine plus a clone without the file, not about
+several machines with the file. It also caught an error of Claude's: the spec claimed extraction "is
+the same on every machine", true only for one library version. The review is deferred to after 2c-2
+(Avin: two implementation rounds, one review). Avin decided:
+
+- **G-1/G-3 (b) — the local full text certifies itself.** Its front matter carries `body_hash`; a
+  body that matches is ingest's output and is replaced freely, including a stale one (refreshed, no
+  longer refused); one that does not is an edit, protected. `private_text_hash` retires from the
+  committed manifest. Why: it follows D-040's own principle — what differs per machine stays on the
+  machine. Cost: one front-matter field; an edit to that front matter counts as an edit.
+- **G-2 (c) — last machine wins, plus a `doctor` note** when this machine's copy differs from the
+  one the index was built from. Accepted while one person usually ingests; an explicit
+  `ingest --reindex ID` (b) is on record if several people do.
+- **G-4 — `course_gitignore_missing` (warn).** "Is `course/.gitignore` there and does it cover
+  `private/`" is committed state, so `validate` checks it too; `doctor` (asking git) still catches
+  "present but never committed". Found: Avin's `~/.gitignore_global` ignored `.gitignore` itself, so
+  no course created on his machine would have shipped its ignore rules. Avin deleted the file.
+  Follow-ups: `.DS_Store` into the framework's and the course's `.gitignore` (it surfaced at once);
+  `classkit mode developer`'s safety check must verify `.gitignore` is tracked.
+- **G-5 — accepted as built**, now stated in the spec: an identical copy across the `private/`
+  boundary leaves the material public; `doctor` says delete the public copy.
+- **G-6 (a) — `material remove` does not log itself**, like the other `material` verbs; `/ingest`
+  logs it. Claude leaned (b) for a simpler rule; Avin kept the smaller surface.
+- **Plain fixes:** G-16 — a guarded `write.remove()` so the one deletion goes through the write
+  path; G-22 — replacing a file keeps its permissions (the write path was leaving `0600`).
+- Ratified as built: G-7 … G-15, G-17 (recorded in the spec by the implementer).
+
+**Added to D-041 — step 2c-2's ⚑ items, accepted as built** (`reviews/impl-gaps-step-2c-2.md`):
+G-1 — links harvested by an earlier version are marked removed on the next ingest unless
+`links.md` lists them; `add-url` restores one under its old id (cost: eleven materials disappear
+from the test course; the Gem must be re-added). G-2 — a changed private source is a `doctor`
+**note**, not an ACTION (follows from D-041; cost: a teacher who really updated the book gets exit
+0). G-3 — re-ingest never replaces a title, including ingest's own bad ones (cost: the re-test uses a
+fresh course). Also recorded: the spec's claim that hyperlinks were readable in the ingested text was
+false — Claude's error, the second unverified claim about the code in two rounds (after "extraction
+is the same on every machine"); the implementer fixed the extraction. Claude now verifies a claim
+about the code before writing it into the spec.
+
+## D-042 — Agents never copy private text into course files; `doctor` checks for it
+**Date:** 2026-10-01 · **Status:** locked (design + implemented) · sources:
+`reviews/impl-review-step-2c.md` (Gemini review of 2c-1 + 2c-2) and Claude's own check of it
+
+The independent review of 2c-1 and 2c-2 found nothing blocking or should-fix (two nits, both
+already resolved or known). Claude's assessment: thin — it did not say how it searched committed
+files for the book's text, and it missed the one real gap although the review prompt named the place.
+**The gap:** D-040's guarantee ("no body text of a private material reaches a committed file") is
+enforced in code only for what *code* writes. Agents read the full text and write committed files —
+the coverage report (now saved, `materials/coverage.md`), and from steps 4–6 sessions, answers'
+notes, activities — and nothing told them not to quote. Neither implementer nor the reviewer caught
+it. **Decided (Avin):** both layers —
+1. **the rule**, in the root `CLAUDE.md`, the classifier and §8.7: cite by locator, own words, at
+   most a short quoted phrase;
+2. **the check**, in `classkit doctor` (only a machine with the full text can make it): any
+   committed course Markdown file sharing **12+ consecutive words** with a private full text is an
+   ACTION naming the file, material and anchor; the course log is included; skipped, and said so,
+   where no full text is present.
+Cost: catches verbatim copying only; 12 is a first guess; a few seconds and ~150 MB on a book-sized
+text. 294 tests (+5). Review nits: (1) the deletion is already through `write.remove()`; (2) a
+globally-ignored `.gitignore` is caught only by `doctor` — the stated cost of D-041.
+
+## D-043 — The syllabus is its own milestone; approvals; one verb scheme for commands
+**Date:** 2026-10-03 · **Status:** locked (design) — spec §3.1, §5.1, §5.2, §8.2, §8.9; ledger D-043
+
+Context: Avin re-oriented Core (2026-10-02): finish the spec incrementally **in the order a teacher
+can check it**, stopping to build and test on a real course; agents are the point, scripts and
+corner cases are not; the teacher manages consistency, as before the framework. Claude agreed, and
+named its own share of the drift (turning each finding into a mechanism). First increment: the
+syllabus, because it is established — and often uploaded to the university — before any unit.
+
+Decided so far (Avin):
+1. **A separate command for the syllabus, `/plan-syllabus`.** It drafts, revises and approves the
+   whole syllabus: goal, Course Outcomes, the unit map (D-040), every descriptor field.
+   `/plan-units N…` then plans unit objectives against it. **Supersedes D-029's "one flow"**: its
+   reason (outcomes and objectives drifting apart) no longer holds once D-040 put the unit map in
+   the syllabus and made unit objectives incremental.
+2. **Grading may be drafted by the agent.** `assessment` is no longer "reserved, leave empty in
+   Core": the agent proposes a grading scheme (from the old syllabus, or by asking); nothing
+   validates its content; approving or editing it is the teacher's responsibility. Cost: the
+   Assessment phase's later structure may require converting what was written freely.
+3. **Approval is recorded in the approved file itself** — a status, the date and a hash of the
+   content at approval — and **`classkit status`** assembles the course's overview from those;
+   every command shows it at start. Chosen over a separate progress file (b over a/c), which would
+   duplicate state and drift. The hash lets the overview say "approved 5 Oct — edited since"
+   instead of un-approving behind the teacher's back. Unit states are decided with the unit steps.
+4. **One meaning per verb.** *ingest* — read the materials; *plan* — what is taught and in what
+   order (`/plan-syllabus`, `/plan-units N…`); *design* — how students learn it
+   (`/design-unit N [session K | quiz | class]`, a part revisable alone); *review* — an independent
+   critique (`/review-syllabus`, `/review-unit N`); *build* — something produced for others
+   (Exports: `/build-gem`, later the syllabus PDF and slides). **`/write-items` is retired from
+   Core** (the entry quiz is `/design-unit N quiz`); writing homework and exam items returns with
+   the Assessment phase. A study session has no command of its own.
+5. **Best effort, not a form (Avin).** The agent drafts as well as the evidence allows; the teacher
+   edits in conversation or by hand; approval may come by hand, in conversation or at a command's
+   gate; **downstream works with what is approved, even if not 100% consistent** — `validate`
+   reports, nothing waits; an unapproved syllabus makes a command ask, not refuse.
+6. **Front matter holds what tools or agents use; body sections what only people read.** D-032's
+   `level`, `course_type`, `offered`, `teaching_methods` move to body sections (unbuilt, unused);
+   the agent mirrors the institution's form (old syllabus, else a default skeleton); it always
+   proposes an AI-use policy where AI study paths are used. Cost: body sections are unchecked; a
+   future PDF export works from Markdown sections.
+7. **`/plan-syllabus` runs in four gated steps:** evidence and open questions → a full draft →
+   revision rounds in conversation → approval (`classkit approve syllabus`, hash recorded);
+   `/review-syllabus` optional. **Uploading to the university**: copy from `syllabus.md` for now;
+   a formatted document stays in Exports.
+
+**The re-oriented process (Avin, 2026-10-02/03):** the remaining Core spec is written in increments,
+in the order a teacher can check them — syllabus, then units, then the unit's design — each one
+specified, built in a fresh session, and checked by Avin **on a real course**, the agents' output
+judged by him and the prompts revised. New validation rules only where the real course shows a
+need; already-designed unbuilt rules are parked, not cut. One independent review at the end of Core,
+not per increment.
+
+## D-044 — Commands, agents, skills: what goes where; the chat revises; `approved.date`
+**Date:** 2026-10-03 · **Status:** locked (design + implemented) · sources: Avin's question
+("commands vs agents keep confusing me"), `reviews/impl-gaps-step-3-syllabus.md`
+
+Avin asked to see the command/agent split in line with Claude before the teacher-facing tools grow.
+Claude laid it out (a command is the procedure in the teacher's conversation and can hold gates; an
+agent is a worker with a fresh context and its own tools that cannot talk to the teacher; a skill is
+craft either can load) and named where it was loose — including that commands, like agents, can be
+started by Claude Code itself when a request matches (`plan-syllabus` appears among the skills).
+Decided (Avin):
+
+1. **What goes where.** Command = procedure, gates, writing, logging, and the revisions made with the
+   teacher. Agent = work needing a fresh context (heavy reading, a first draft, a structural rework)
+   or independence (the critic); it returns, and the command writes. Skill = the craft, loaded by the
+   chat and the agents, so all work to one standard. Every description names its command. Spec §2.1.
+2. **The agent drafts; the chat revises.** An agent re-sent for every revision starts cold and loses
+   the conversation's nuance; the chat has it. Applied to the just-built syllabus increment:
+   **`writing-a-syllabus`** skill (the craft moved out of `syllabus-designer` and the critic's
+   syllabus section, into one place); `syllabus-designer`'s `revise` task became **`rework`**, for
+   structural changes only; `/plan-syllabus` step 3 — the chat loads the skill and revises itself;
+   `course-critic` loads the skill for `/review-syllabus`.
+3. **Gap report ⚑, accepted:** G-1 — `approved.on` renamed **`approved.date`**: YAML 1.1 reads a
+   bare `on` as `true`. Claude's spec error, the same trap as `off` in step 2a, walked into again; an
+   old `on:` record is still read. G-2 — the unit map's `evidence` locators are checked by
+   `material_locator_in_text` (warn): the one place code beats a prompt is catching an invented
+   reference. The rest of the report accepted as built.
+
+320 tests (+2).
+
+## D-045 — The teacher works in the chat; the chat runs `classkit`
+**Date:** 2026-10-03 · **Status:** locked (design + implemented)
+
+Avin asked whether every `classkit` command must be run in a terminal: in his hand tests he preferred
+to work only in the chat. Claude's view: the chat can run any of them (its Bash tool), and should be
+the default — it reads the output and explains it, which is the framework's premise. Found: the docs
+were terminal-first, nothing told the chat how to run `classkit` (`.venv`), and no permission rules
+existed, so every check prompted. Costs named: the chat may summarise findings away (→ a "report
+faithfully" rule); the first `git clone` stays outside. **Decided (Avin):**
+1. **Principle: the teacher never needs the terminal** — spec §5.2, the root `CLAUDE.md`,
+   `GETTING-STARTED.md` (a "You work in the chat" section; setup and scaffold as requests).
+2. **The root `CLAUDE.md` tells the chat** how to run `classkit`, to report every alert and error
+   and count the warnings, and to show the full output on request.
+3. **`.claude/settings.json` pre-allows read-only commands** — `validate`, `status`, `doctor`,
+   `ingest --preflight`, `mode` alone; anything that writes still asks.
+4. **`dev/MANUAL-TESTING.md`**: a "work in the chat" convention for every section; the syllabus
+   section rewritten that way (and its stale "nothing checks the evidence locators" corrected, D-044).
+
+## D-046 — The units increment: what a planned unit holds; unit states
+**Date:** 2026-10-03 · **Status:** locked (design) — spec §3.1, §5.1, §8.2, §8.4, §8.9; ledger D-046
+
+The second increment of the re-oriented Core (D-043). Decided with Avin:
+1. **`difficulties`, optional** — what students find hard in the unit. Avin: in a newly flipped
+   course the teacher may not know them yet; planning continues without. The agent may **propose**
+   classic ones for a well-known subject, recorded only if the teacher accepts and marked
+   `origin: proposed` (vs `teacher`), so the quiz and class-hour agents know which are guesses.
+2. **Two unit states, the syllabus's mechanism:** *planned* (objectives approved at `/plan-units`)
+   and *designed* (the whole unit approved at the end of `/design-unit`, the hash over unit.md,
+   sessions, in-class and entry-quiz items). *Not started* = on the map, no directory. Review is not
+   a state; nothing is blocked by state. One approval per milestone, over per-part approvals.
+3. **Re-mapping the materials' unit hints (D-039) moves to `/plan-syllabus`**, an optional step
+   after the map is approved — the map now lives in the syllabus.
+4. **`unit_map_mismatch` (warn) is built now** — a unit's number and title live in the map and in
+   `unit.md`; the one place duplication makes drift likely. A map entry with no directory is *not
+   started*, not a mismatch.
+5. **`planning-units` skill** (D-044): objectives, sequencing, load, difficulties; loaded by
+   `curriculum-architect` (rewritten read-only, reading `ingested/` and `coverage.md`), the chat
+   revising, and the critic.
+Also: retiring `/write-items` and `/design-unit N [part]` move to the design increments.
+6. **Coverage alerts (Avin):** `objective_maps_to_outcome` (alert) is built with this increment — it
+   fires exactly when `/plan-units` writes objectives; `outcome_coverage` stays **parked** — a
+   completeness rule that can say nothing until every unit is planned, and it needs D-033's
+   completeness mechanism first. Then: the units build, one independent review of the syllabus and
+   units builds together, then Avin tests both on a real course (syllabus; planning the first units).
+
+## D-047 — Step 3 finalized for the teacher's check: review outcomes
+**Date:** 2026-10-04 · **Status:** locked (design + implemented) · sources:
+`reviews/impl-gaps-step-3-units.md`, `reviews/impl-review-step-3.md` (Gemini, syllabus + units)
+
+The units increment was built (Session 40) and one independent review covered both the syllabus
+and units builds. Claude's check of the review: its "blocking" finding (two waits in one step) is
+real but overstated — a muddled structure, not a correctness bug; its nit (unit-map evidence
+unchecked) was stale — D-044 had built it. Avin approved the consolidated fixes:
+1. **Step 2 split into 2a / 2b** in `/plan-syllabus` and `/plan-units`: 2a asks before writing over
+   the placeholders and ends the turn; 2b writes, validates, fixes what it caused, shows, waits.
+2. **G-1 — `classkit approve unit N` requires `--stage`.** The default "next stage" made a second
+   "approve unit 3" mark a placeholder unit *designed*. Changes §8.9's "defaults to the next one".
+   The chat picks the stage from the status and asks if unsure.
+3. **G-2 — `objective_coverage` is skipped for a unit whose recorded stage is *planned*.** It asks
+   whether guiding questions address each objective — no answer before design; an alert that
+   always fires in that state trains teachers to ignore alerts (D-033). Cost: one rule depends on
+   state.
+4. **G-4 — the scaffolded unit's placeholders name `CO1` only**: every real syllabus has a CO1, so
+   `scaffold unit` alone never raises `outcome_reference`.
+5. **G-3 kept as built** (step 5 asks the teacher which hints they set; no provenance field — a new
+   mechanism for a low-stakes hint). G-5 … G-11 accepted as built.
+353 tests.

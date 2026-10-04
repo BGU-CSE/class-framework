@@ -69,10 +69,13 @@
               "required": ["kind", "ref"],
               "additionalProperties": false,
               "properties": {
-                "kind": { "enum": ["gem", "video", "textbook", "article", "exercise", "other"] },
+                "kind": {
+                  "enum": ["gem", "video", "textbook", "slides", "notes", "article", "exercise", "other"],
+                  "description": "slides and notes added by D-040 (a teacher's own deck is the material most likely to be cited); the full resource-kind vocabulary lands in step 4."
+                },
                 "ref": {
                   "type": "string",
-                  "description": "URL, or a textbook key with locator, e.g. 'CLRS ch.3 pp.45-52'."
+                  "description": "Prefer a material locator, written in full ('M0007#slide-18'), which the validator checks; else a URL, or a textbook key with locator, e.g. 'CLRS ch.3 pp.45-52'."
                 },
                 "est_minutes": {
                   "type": "number",
