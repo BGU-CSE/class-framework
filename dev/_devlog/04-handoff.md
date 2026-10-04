@@ -91,7 +91,7 @@ approve syllabus` (`approved: {date, hash}`), `classkit status`. Suite: **320 te
   (`objective_maps_to_outcome`, `outcome_coverage`) are built now or parked.
 - **Then** the home-study and class-hour increments ([design]) — the heart of Core.
 
-## Current state — 2026-10-03 (the syllabus increment built)
+## State when the syllabus increment was built — 2026-10-03 (kept for history)
 
 **The syllabus increment is built** (Session 37): every [3-syllabus] row. Suite: **318 tests**,
 green. Ledger: 98 built, 6 in progress, 91 not started — `../ROADMAP.md` is authoritative. Gap
