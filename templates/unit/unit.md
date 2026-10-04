@@ -17,7 +17,7 @@ objectives:
   - id: {{unit_id}}-O2
     statement: "TODO"
     bloom: apply
-    outcomes: [CO2]
+    outcomes: [CO1]
 
 # DIFFICULTIES — optional: what students find hard in this unit. Add them whenever you
 # know them (after teaching the unit once is fine). `origin: proposed` marks one an agent

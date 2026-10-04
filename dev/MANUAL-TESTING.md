@@ -440,6 +440,9 @@ Everything below is said in the chat.
 4. **"Approve unit 1."** Then:
    - "where does the course stand?" → `U01  …  planned 2026-…`, and a count line (`1 planned, 1
      drafted, 11 not started`)
+   - "check the course" → the `objective_coverage` alerts for unit 1 are **gone**: a planned unit is
+     not checked for it (D-047)
+   - the chat ran `classkit approve unit 1 --stage planned` — the stage is always named (D-047)
    - edit one objective's wording by hand → `planned … — edited since`
    - "approve unit 1 again" → re-approved as **planned** (the plan changed), the record replaced in
      place; the log says what it was
@@ -479,7 +482,7 @@ cannot be tracked", and checking the course gives no error. Without `stage` it i
 | Many `guiding_question_assessed` warnings (12 for one unit) | Only entry-quiz items exist in Core, and a short quiz cannot test every guiding question. Decided to be `off` in Core — not yet implemented | D-031c, step 5 |
 | `syllabus_workload_missing` | `workload` is optional by design so a syllabus validates before credits are settled | D-031d |
 | `unit_count`: "N of 13 units exist so far" | Informational while the course is being built | — |
-| `objective_coverage` ALERT for U0N-O3 or -O4 on a planned unit | The placeholder sessions name only the first two objectives; `/design-unit` writes the guiding questions that address the rest | D-046 |
+| `objective_coverage` ALERT for U0N-O3 or -O4 **before** the plan is approved | The placeholder sessions name only the first two objectives. Once you approve the plan (*planned*), the rule is skipped for that unit until it is designed | D-046, D-047 |
 | No `outcome_coverage` check (an outcome no objective serves) | Parked: a completeness rule, useful only once every unit is planned | D-046 |
 | A material's `kind` is `other` right after `classkit ingest` | Kind is only guessed from the format; the classifier sets it in `/ingest` step 3 | D-035 |
 | Link titles are their URL or note | Metadata fetching is best-effort; offline, or a site that blocks it, gives no title | D-035 |

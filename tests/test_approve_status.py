@@ -368,7 +368,7 @@ def test_the_schema_rejects_malformed_difficulties_and_records(course_root: Path
 
 
 def test_approve_unit_records_planned_with_the_hash_of_unit_md_and_logs_it(course_root: Path):
-    approval = approve_unit(course_root, 1, on="2026-10-05", why="step 4 of /plan-units")
+    approval = approve_unit(course_root, 1, stage="planned", on="2026-10-05", why="step 4 of /plan-units")
 
     data, body = read(unit_md(course_root).read_text(encoding="utf-8"))
     assert data["approved"] == {"date": "2026-10-05", "stage": "planned", "hash": approval.hash}
@@ -384,7 +384,7 @@ def test_approve_unit_records_planned_with_the_hash_of_unit_md_and_logs_it(cours
 
 def test_approve_unit_changes_nothing_but_the_record(course_root: Path):
     before = unit_md(course_root).read_text(encoding="utf-8")
-    approve_unit(course_root, 1, on="2026-10-05")
+    approve_unit(course_root, 1, stage="planned", on="2026-10-05")
     after = unit_md(course_root).read_text(encoding="utf-8")
 
     removed = [line for line in difflib.ndiff(before.splitlines(), after.splitlines()) if line.startswith("- ")]
@@ -393,7 +393,7 @@ def test_approve_unit_changes_nothing_but_the_record(course_root: Path):
 
 
 def test_a_planned_unit_edited_since_says_so(course_root: Path):
-    approve_unit(course_root, 1, on="2026-10-05")
+    approve_unit(course_root, 1, stage="planned", on="2026-10-05")
     touch(unit_md(course_root), 'statement: "TODO"', 'statement: "Analyse a loop"')
     line = unit_line(course_root)
     assert line.state == PLANNED and line.edited
@@ -401,22 +401,24 @@ def test_a_planned_unit_edited_since_says_so(course_root: Path):
 
 
 def test_editing_a_session_does_not_touch_a_planned_units_hash(course_root: Path):
-    approve_unit(course_root, 1, on="2026-10-05")
+    approve_unit(course_root, 1, stage="planned", on="2026-10-05")
     touch(unit_dir(course_root) / "sessions" / "01.md", "TODO", "What is a loop invariant?")
     assert not unit_line(course_root).edited
 
 
-def test_the_stage_defaults_to_the_next_one(course_root: Path):
-    assert approve_unit(course_root, 1, on="2026-10-05").stage == "planned"
-    # the plan approved and unchanged → the next approval is the design
-    assert approve_unit(course_root, 1, on="2026-10-20").stage == "designed"
-    assert unit_line(course_root).state == DESIGNED
+def test_a_unit_approval_needs_its_stage(course_root: Path, capsys):
+    """D-047: no default stage — a default "next one" turned a second "approve unit 1" into
+    *designed* while the sessions were still placeholders."""
+    with pytest.raises(ApproveError, match="which stage"):
+        approve_unit(course_root, 1, on="2026-10-05")
+    assert main(["approve", "unit", "1", "--course", str(course_root)]) == 2
+    assert "--stage planned" in capsys.readouterr().err
 
 
-def test_a_plan_edited_since_its_approval_defaults_to_planned_again(course_root: Path):
-    approve_unit(course_root, 1, on="2026-10-05")
+def test_re_approving_an_edited_plan_records_it_again(course_root: Path):
+    approve_unit(course_root, 1, stage="planned", on="2026-10-05")
     touch(unit_md(course_root), 'statement: "TODO"', 'statement: "Analyse a loop"')
-    approval = approve_unit(course_root, 1, on="2026-10-06")
+    approval = approve_unit(course_root, 1, stage="planned", on="2026-10-06")
     assert approval.stage == "planned"
     assert "was planned 2026-10-05" in log_entries(course_root)[-1].changed
 
@@ -518,7 +520,7 @@ def test_approve_unit_cli_needs_a_number_and_the_syllabus_takes_none(course_root
 
 
 def test_approving_a_unit_with_no_directory_fails_cleanly(course_root: Path, capsys):
-    assert main(["approve", "unit", "7", "--course", str(course_root)]) == 2
+    assert main(["approve", "unit", "7", "--stage", "planned", "--course", str(course_root)]) == 2
     assert "Run /plan-units 7" in capsys.readouterr().err
 
 

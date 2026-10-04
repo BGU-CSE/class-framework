@@ -1604,3 +1604,26 @@ Also: retiring `/write-items` and `/design-unit N [part]` move to the design inc
    completeness mechanism first. Then: the units build, one independent review of the syllabus and
    units builds together, then Avin tests both on a real course (syllabus; planning the first units).
 
+## D-047 — Step 3 finalized for the teacher's check: review outcomes
+**Date:** 2026-10-04 · **Status:** locked (design + implemented) · sources:
+`reviews/impl-gaps-step-3-units.md`, `reviews/impl-review-step-3.md` (Gemini, syllabus + units)
+
+The units increment was built (Session 40) and one independent review covered both the syllabus
+and units builds. Claude's check of the review: its "blocking" finding (two waits in one step) is
+real but overstated — a muddled structure, not a correctness bug; its nit (unit-map evidence
+unchecked) was stale — D-044 had built it. Avin approved the consolidated fixes:
+1. **Step 2 split into 2a / 2b** in `/plan-syllabus` and `/plan-units`: 2a asks before writing over
+   the placeholders and ends the turn; 2b writes, validates, fixes what it caused, shows, waits.
+2. **G-1 — `classkit approve unit N` requires `--stage`.** The default "next stage" made a second
+   "approve unit 3" mark a placeholder unit *designed*. Changes §8.9's "defaults to the next one".
+   The chat picks the stage from the status and asks if unsure.
+3. **G-2 — `objective_coverage` is skipped for a unit whose recorded stage is *planned*.** It asks
+   whether guiding questions address each objective — no answer before design; an alert that
+   always fires in that state trains teachers to ignore alerts (D-033). Cost: one rule depends on
+   state.
+4. **G-4 — the scaffolded unit's placeholders name `CO1` only**: every real syllabus has a CO1, so
+   `scaffold unit` alone never raises `outcome_reference`.
+5. **G-3 kept as built** (step 5 asks the teacher which hints they set; no provenance field — a new
+   mechanism for a low-stakes hint). G-5 … G-11 accepted as built.
+353 tests.
+

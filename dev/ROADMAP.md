@@ -470,6 +470,17 @@ Tags: **[units]** this increment · **[design]** the home-study and class-hour i
 | ✅ | docs, `dev/MANUAL-TESTING.md` | **[units]** `/plan-units`, unit states; a chat-style hand-test section |
 | ✅ | `tests/` | **[units]** approve unit (both stages; the whole-unit hash; edited since), status per unit, `unit_map_mismatch` at warn, schema accepts `difficulties` |
 
+## D-047 — Step 3 finalized: review outcomes
+
+| | Artifact | Change |
+|---|---|---|
+| ✅ | `.claude/commands/plan-syllabus.md`, `plan-units.md` | step 2 split: 2a asks (turn boundary), 2b writes, validates, shows, waits |
+| ✅ | `src/classkit/approve.py`, `cli.py` | `approve unit N` requires `--stage`; no default |
+| ✅ | `src/classkit/validate.py` | `objective_coverage` skipped for a unit at stage *planned* |
+| ✅ | `templates/unit/unit.md` | placeholders name `CO1` only |
+| ✅ | spec §5.1, §8.4, §8.9; `GETTING-STARTED.md`, `dev/MANUAL-TESTING.md` | the above |
+| ✅ | `tests/` | stage required (API and CLI); a planned unit is not checked for coverage; fixtures follow the CO1 placeholders |
+
 ## Cross-cutting
 
 | | Artifact | Change |
@@ -478,10 +489,10 @@ Tags: **[units]** this increment · **[design]** the home-study and class-hour i
 | ✅ | `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block was scaffolded and documented although Exports is deferred (G-16). **Removed from the template and the settings table** — shipping configuration for a feature that does not exist confuses a teacher reading their own `course.yaml`. The optional field stays in `course.schema.json`, so a course that sets it still validates |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-10-03 (after the units build, Session 40):** 22 decision blocks, 219 artifact changes,
-**127 built, 5 in progress, 87 not started** — counted from the table. Every [3-syllabus] and
-[units] row is built; next, one independent review of both builds, then Avin checks both on a real
-course. (After D-046 was designed: 111 / 6 / 102.) (After the syllabus build,
+**Count as of 2026-10-04 (after D-047, step 3 finalized):** 23 decision blocks, 225 artifact changes,
+**133 built, 5 in progress, 87 not started** — counted from the table. Every [3-syllabus] and
+[units] row is built, reviewed (`reviews/impl-review-step-3.md`) and its outcomes applied (D-047);
+next, Avin checks both on a real course. (After the units build, Session 40: 219; 127 / 5 / 87.) (After D-046 was designed: 111 / 6 / 102.) (After the syllabus build,
 Session 37: 195; 98 / 6 / 91.) (After D-043 was designed:
 80 / 6 / 109.) Step 2 is built and
 reviewed; it closes after Avin's re-test with a fresh course. (After step 2c-2: 177; 76 / 6 / 95.) Step 2c-2 (every [2c-2] row in

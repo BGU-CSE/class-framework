@@ -584,7 +584,7 @@ def unit_md(course_root: Path) -> Path:
 
 
 def test_an_objective_naming_a_declared_outcome_is_fine(course_root: Path):
-    # The scaffolded placeholders name CO1 and CO2, the scaffolded syllabus's two outcomes.
+    # The scaffolded placeholders name CO1 only — every real syllabus has a CO1 (D-047).
     assert levels(course_root, "outcome_reference") == set()
     assert errors(course_root) == []
 
@@ -602,7 +602,8 @@ def test_an_objective_naming_no_outcome_is_not_a_schema_error(course_root: Path)
 # -- objective_maps_to_outcome (alert, consistency; D-046) ----------------------
 
 def test_an_objective_naming_no_outcome_is_an_alert(course_root: Path):
-    edit(unit_md(course_root), "    outcomes: [CO1]\n", "")
+    text = unit_md(course_root).read_text(encoding="utf-8")
+    unit_md(course_root).write_text(text.replace("    outcomes: [CO1]\n", "", 1), encoding="utf-8")
     found = [f for f in findings(course_root) if f.code == "objective_maps_to_outcome"]
     assert [f.level for f in found] == ["alert"]
     assert "U01-O1" in found[0].message and found[0].where.endswith("unit.md")
@@ -610,14 +611,17 @@ def test_an_objective_naming_no_outcome_is_an_alert(course_root: Path):
 
 
 def test_an_empty_outcomes_list_is_the_same_as_none(course_root: Path):
-    edit(unit_md(course_root), "outcomes: [CO2]", "outcomes: []")
+    text = unit_md(course_root).read_text(encoding="utf-8")
+    head, _, tail = text.partition("-O2")
+    unit_md(course_root).write_text(head + "-O2" + tail.replace("outcomes: [CO1]", "outcomes: []", 1),
+                                    encoding="utf-8")
     found = [f for f in findings(course_root) if f.code == "objective_maps_to_outcome"]
     assert len(found) == 1 and "U01-O2" in found[0].message
 
 
 def test_a_scaffolded_unit_raises_no_outcome_alert(course_root: Path):
-    # Its placeholders name the scaffolded syllabus's CO1 and CO2, so the coverage chain lands on
-    # a clean skeleton (D-021's plan for step 3).
+    # Its placeholders name CO1 only — every real syllabus has one (D-047) — so the coverage
+    # chain lands on a clean skeleton.
     assert levels(course_root, "objective_maps_to_outcome") == set()
 
 
@@ -1031,3 +1035,19 @@ def test_a_study_path_may_be_of_kind_slides_or_notes(course_root: Path):
     edit(session(course_root, 1), 'kind: gem\n        ref: "U01"', 'kind: slides\n        ref: "M0001#slide-1"')
     edit(session(course_root, 2), "kind: gem", "kind: notes")
     assert "schema" not in {f.code for f in findings(course_root)}
+
+
+def test_a_planned_unit_is_not_checked_for_objective_coverage(course_root: Path):
+    """D-047: whether a guiding question addresses each objective has no answer before the unit is
+    designed; an alert that always fires in the planned state teaches teachers to ignore alerts."""
+    from classkit.approve import approve_unit
+
+    text = unit_md(course_root).read_text(encoding="utf-8")
+    third = '  - id: U01-O3\n    statement: "Compare two algorithms"\n    outcomes: [CO1]\n'
+    unit_md(course_root).write_text(text.replace("\n# DIFFICULTIES", "\n" + third + "\n# DIFFICULTIES", 1)
+                                    if "\n# DIFFICULTIES" in text else text, encoding="utf-8")
+    assert "U01-O3" in unit_md(course_root).read_text(encoding="utf-8"), "fixture drifted"
+    assert "objective_coverage" in {f.code for f in findings(course_root)}  # not yet planned
+
+    approve_unit(course_root, 1, stage="planned", on="2026-10-05")
+    assert "objective_coverage" not in {f.code for f in findings(course_root)}

@@ -78,17 +78,24 @@ SYLLABUS
 ```
 
 **It will exit with code 3** when the file already has content — always true here, since scaffold
-wrote the placeholders. Nothing is written. Then:
+wrote the placeholders. Nothing is written.
 
-- if step 0 said **not started**, the file holds only the scaffolded placeholders: tell the teacher
-  so (the refusal quotes the opening) and, on their go-ahead, write again with `--overwrite`;
-- otherwise the teacher has content there — show `classkit write course/syllabus/syllabus.md --diff`
-  with the same content, and write with `--overwrite` only on their word.
+### Step 2a — ask before writing. (A turn boundary: end your turn here.)
 
-Run `classkit validate`. **Fix what the draft caused** — a schema error, a locator that does not
-resolve (`material_locator_in_text`) — by correcting the draft and writing it again (`--diff`, then
-`--overwrite`), and say what you fixed. Expect `syllabus_workload_missing` if workload is TBD:
-that is information, not something to fix. Never add `accepted:` or change `rules:`.
+- If step 0 said **not started**, the file holds only the scaffolded placeholders: tell the teacher
+  so (the refusal quotes the opening) and ask for the go-ahead to replace them.
+- Otherwise the teacher has content there: show `classkit write course/syllabus/syllabus.md --diff`
+  with the same content, and ask.
+
+**Wait for the teacher's answer.** Nothing else happens in this turn.
+
+### Step 2b — on the go-ahead: write, check, show.
+
+Write with `--overwrite`. Then run `classkit validate`. **Fix what the draft caused** — a schema
+error, a locator that does not resolve (`material_locator_in_text`) — by correcting the draft and
+writing it again (`--diff`, then `--overwrite`), and say what you fixed. Expect
+`syllabus_workload_missing` if workload is TBD: that is information, not something to fix. Never add
+`accepted:` or change `rules:`.
 
 Show the teacher:
 

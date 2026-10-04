@@ -241,8 +241,8 @@ def build_parser() -> argparse.ArgumentParser:
                              help="the unit's number, for `approve unit N`")
     approve_cmd.add_argument(
         "--stage", choices=list(approve.STAGES),
-        help="a unit's milestone: planned (its objectives — /plan-units) or designed (the whole "
-             "unit — /design-unit). Default: the next one",
+        help="a unit's milestone, required for a unit: planned (its objectives — /plan-units) or "
+             "designed (the whole unit — /design-unit). No default (D-047)",
     )
     approve_cmd.add_argument(
         "--diff", action="store_true",

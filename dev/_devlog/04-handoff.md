@@ -19,7 +19,23 @@ Then, for history and what is still open:
 6. `02-progress.md` (last block) — where we stopped.
 7. `03-open-questions.md` — what's unresolved.
 
-## Current state — 2026-10-03 (the syllabus and units increments built; next, one review)
+## Current state — 2026-10-04 (step 3 — syllabus and units — ready for Avin's check)
+
+**The syllabus and units increments are built, reviewed and finalized** (Sessions 37, 40; review
+`../reviews/impl-review-step-3.md`; outcomes D-047). Suite: **353 tests**, green.
+
+- **What a teacher can do now, in the chat:** `/ingest` → `/plan-syllabus` (evidence → draft → revise
+  in the chat → approve) → `/plan-units 1 2` (objectives with their outcomes, optional difficulties →
+  revise → approve as *planned*) → `classkit status`; `/review-syllabus`, `/review-unit N` on a plan.
+- **D-047:** step 2 of both commands split (2a asks and ends the turn; 2b writes and checks);
+  `approve unit N` requires `--stage`; `objective_coverage` skipped for *planned* units; unit
+  placeholders name CO1 only.
+- **Next — Avin checks both on a real course** (possibly from a university computer): a fresh clone,
+  `/ingest`, `/plan-syllabus` to approval, `/plan-units 1 2` (planning only). `dev/MANUAL-TESTING.md`,
+  sections "Step 3-syllabus" and "Step 3-units". Then the [design] increments (home study, the class
+  hour with the entry quiz) — the heart of Core.
+
+## State before D-047 (kept for history) — 2026-10-03 (the syllabus and units increments built; next, one review)
 
 **The units increment is built** (Session 40, every [units] row; gap report
 `../reviews/impl-gaps-step-3-units.md`). Suite: **352 tests**, green. Ledger: 127 built, 5 in

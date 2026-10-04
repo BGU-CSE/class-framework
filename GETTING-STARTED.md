@@ -257,8 +257,9 @@ flipping for the first time), say so: planning goes on, and you can add them aft
 The agent may *propose* classic difficulties of a well-known subject; one is recorded only if you
 accept it, and stays marked `proposed` so later agents know it is a guess.
 
-Approve each unit when its plan is good enough ("approve unit 3"); `classkit approve unit 3` records
-it in `unit.md` as **planned**. Later, approving the finished unit at the end of `/design-unit`
+Approve each unit when its plan is good enough ("approve unit 3"); `classkit approve unit 3 --stage planned` records
+it in `unit.md` as **planned** (the stage is always named, so a second "approve" can never mark an
+unplanned unit as designed — the chat picks it from where the unit stands, and asks if unsure). Later, approving the finished unit at the end of `/design-unit`
 records it as **designed** — and editing any part of it afterwards shows "designed — edited since".
 In `classkit status` each unit reads *not started* (on the map, nothing yet), *drafted, not
 approved*, *planned* or *designed*. Nothing is blocked by these states; they tell you where you are.

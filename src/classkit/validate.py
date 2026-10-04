@@ -564,15 +564,20 @@ class Validator:
 
             self.check_session_feasibility(session, goals)
 
-        # --- objective coverage
-        covered = {
+        # --- objective coverage — not for a unit whose recorded stage is *planned* (D-047): it asks
+        # whether a guiding question addresses each objective, which has no answer before the unit
+        # is designed (the placeholder sessions name only the first objectives), and an alert that
+        # always fires in that state teaches the teacher to ignore alerts (D-033).
+        record = unit.doc.data.get("approved")
+        planned = isinstance(record, dict) and record.get("stage") == "planned"
+        covered = set() if planned else {
             objective
             for session in unit.sessions
             for goal in (session.data.get("goals") or [])
             if isinstance(goal, dict)
             for objective in (goal.get("objectives") or [])
         }
-        for objective in sorted(o for o in objective_ids if o):
+        for objective in ([] if planned else sorted(o for o in objective_ids if o)):
             if objective not in covered:
                 self.report(
                     "objective_coverage",

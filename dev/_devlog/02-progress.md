@@ -1821,3 +1821,11 @@ One independent review of the syllabus and units builds together (both gap repor
 `d8a1351`, the syllabus increment's spec, to now). Then Avin checks both on a real course: `/plan-syllabus` to approval, step
 5, then `/plan-units` for the first units with material (`MANUAL-TESTING.md`, "Step 3-syllabus" and
 "Step 3-units"). Decide the three ⚑.
+
+## Session 41 — 2026-10-04 — Step 3 finalized (→ D-047)
+
+Checked the units gap report and the review of both builds (its blocking finding real but overstated;
+one nit stale). Applied with Avin's go-ahead: step 2 split into 2a/2b in both commands, `approve unit`
+requires `--stage`, `objective_coverage` skipped for planned units, CO1-only placeholders. Spec §5.1,
+§8.4, §8.9; D-047; ledger (225); 353 tests. Ready for Avin's real-course check.
+

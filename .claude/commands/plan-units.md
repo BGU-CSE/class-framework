@@ -99,13 +99,20 @@ For each unit, in order:
    UNIT
    ```
 
-   **It will exit with code 3** — the file always exists by now. Nothing is written. Then:
-   - if the file holds **only the scaffolded placeholders** (`statement: "TODO"`; status said
-     *drafted, not approved* and nobody has edited it), tell the teacher so — the refusal quotes the
-     opening — and, on their go-ahead, write again with `--overwrite`;
-   - otherwise the teacher has content there: show `classkit write <path> --diff` with the same
-     content, and write with `--overwrite` only on their word.
+   **It will exit with code 3** — the file always exists by now. Nothing is written.
 
+### Step 2a — ask before writing. (A turn boundary: end your turn here.)
+
+For each unit: if the file holds **only the scaffolded placeholders** (`statement: "TODO"`; status
+said *drafted, not approved* and nobody has edited it), say so — the refusal quotes the opening;
+otherwise the teacher has content there: show `classkit write <path> --diff` with the same content.
+Ask for the go-ahead — one question for all the units written in this run.
+
+**Wait for the teacher's answer.** Nothing else happens in this turn.
+
+### Step 2b — on the go-ahead: write, check, show.
+
+Write each `unit.md` with `--overwrite`.
 Then run `classkit validate` and **fix what the plans caused** — a schema error, an outcome id the
 syllabus does not declare (`outcome_reference`), a locator that does not resolve, a title differing
 from the map (`unit_map_mismatch`), an objective naming no outcome (`objective_maps_to_outcome`)
@@ -113,7 +120,8 @@ unless the teacher decided to leave it so — by correcting the plan and writing
 then `--overwrite`), and say what you fixed. Report every alert and error, and count the warnings.
 **Expected at this stage** — the unit is planned, not designed, so say what these are rather than
 fixing them: `objective_coverage` for an objective no guiding question addresses yet (the
-placeholder sessions name only the first objectives), `guiding_question_assessed` on the placeholder
+placeholder sessions name only the first objectives) — **it stops once the plan is approved in step
+4**: a *planned* unit is not checked for it (D-047) — `guiding_question_assessed` on the placeholder
 sessions, `unit_count`. Never add `accepted:` or change `rules:`.
 
 Show the teacher that the files are on disk — `course/units/NN-slug/unit.md` — to read and edit by

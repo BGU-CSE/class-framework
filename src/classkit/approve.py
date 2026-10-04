@@ -248,19 +248,6 @@ def find_unit(course_root: Path, number: int) -> Path:
                        f"approve. Run /plan-units {number}.")
 
 
-def next_stage(record: dict | None, planned_hash: str) -> str:
-    """The stage `approve unit N` records when none is given — the next one (§8.9): `planned` for a
-    unit never approved; `designed` once its plan is approved and unchanged, or if it was designed
-    already. A plan edited since its approval is re-approved as `planned`: the edit is to the plan."""
-    if not isinstance(record, dict):
-        return "planned"
-    if record.get("stage") == "designed":
-        return "designed"
-    if record.get("stage") == "planned" and record.get("hash") == planned_hash:
-        return "designed"
-    return "planned"
-
-
 def approve_unit(course_root: Path, number: int, *, stage: str | None = None, on: str | None = None,
                  dry_run: bool = False, why: str = "") -> Approval:
     """Record the teacher's approval of unit `number` at `stage` in its `unit.md`, and log it.
@@ -269,8 +256,12 @@ def approve_unit(course_root: Path, number: int, *, stage: str | None = None, on
     records nothing; `dry_run` only computes the change (`--diff`). Nothing is blocked by state —
     a unit may be approved as designed without having been planned, or re-planned after it was
     designed (§8.9)."""
-    if stage is not None and stage not in STAGES:
-        raise ApproveError(f"the stage is one of {', '.join(STAGES)}, not {stage!r}")
+    if stage not in STAGES:
+        # No default (D-047): a default "next stage" turned a second "approve unit 3" into
+        # *designed* while the sessions were still placeholders. Say where the unit stands.
+        raise ApproveError(f"which stage? `--stage planned` (its objectives) or `--stage designed` "
+                           f"(the whole unit){'' if stage is None else f' — not {stage!r}'}. "
+                           f"`classkit status` shows where unit {number} stands.")
     directory = find_unit(course_root, number)
     path = directory / "unit.md"
     try:
@@ -279,7 +270,6 @@ def approve_unit(course_root: Path, number: int, *, stage: str | None = None, on
         raise ApproveError(f"{path}: cannot be read: {exc}") from exc
     data, _body = read(text)
     previous = data.get("approved") if isinstance(data.get("approved"), dict) else None
-    stage = stage or next_stage(previous, unit_hash(course_root, directory, number, "planned"))
     digest = unit_hash(course_root, directory, number, stage)
     on = on or datetime.date.today().isoformat()
 

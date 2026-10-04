@@ -438,10 +438,11 @@ Course-level setup runs once; then units are designed one at a time.
                       serves (never an invented outcome id), and DIFFICULTIES — what
                       students find hard — asked of the teacher, optionally proposed by the
                       agent and marked `proposed` → WAIT
-                   2. the command scaffolds the unit if needed and writes unit.md through
-                      the write path → validate
+                   2. the command scaffolds the unit if needed; 2a asks before writing over
+                      the placeholders (a turn boundary); 2b writes unit.md through the write
+                      path → validate → shows → WAIT (D-047; the same split in /plan-syllabus)
                    3. REVISION IN CONVERSATION by the chat with planning-units (D-044)
-                   4. APPROVAL → `classkit approve unit N` records the unit as PLANNED (§8.9)
+                   4. APPROVAL → `classkit approve unit N --stage planned` records it as PLANNED (§8.9)
                    (Before D-043 this was one flow with the syllabus, D-029; the syllabus
                    became its own milestone once D-040 put the unit map in it.)
 
@@ -936,7 +937,7 @@ Severity is the default; **(target)** means not built yet. Every rule is also a 
 | `item_reference` | an item's `unit` and `guiding_questions` exist | integrity | error |
 | `material_locator_resolves` | every `M<NNNN>` / `M<NNNN>#anchor` locator names a real material and anchor (D-035; which fields are read: §8.7) | integrity | error |
 | `outcome_coverage` | every Course Outcome is covered by ≥1 unit objective. Completeness rule | advisory | **alert** **(target, D-021/D-033/D-037 — parked, D-046: useful only once every unit exists; needs the completeness mechanism)** |
-| `objective_coverage` | every unit objective is addressed by ≥1 guiding question | advisory | **alert** |
+| `objective_coverage` | every unit objective is addressed by ≥1 guiding question. **Skipped for a unit whose recorded stage is *planned*** (D-047): it has no answer before the unit is designed, and an alert that always fires in that state teaches the teacher to ignore alerts | advisory | **alert** |
 | `objective_maps_to_outcome` | every unit objective names ≥1 Course Outcome | advisory | **alert** (D-021/D-037; built with the units increment, D-046). Consistency rule |
 | `syllabus_missing` | the course has no `syllabus/syllabus.md` | advisory | **alert** **(target, D-033/D-037)** |
 | `unit_count` | units on disk vs `course.yaml` `units` | advisory | warn |
@@ -1593,10 +1594,10 @@ never in a separate progress file, which would duplicate state and drift (a dele
   items (`assessments/items/U<NN>-I*.md` with `usage: in-class-quiz`), each file hashed as above and
   combined in a fixed order (unit.md, sessions by number, in-class.md, items by id), each named
   relative to the unit so renaming its directory's slug is not an edit — so editing any part shows
-  "designed, edited since". Recorded by **`classkit approve unit N [--stage planned|designed]`**.
-  The stage defaults to the next one: *planned* for a unit never approved, or whose approved plan
-  was edited since; *designed* once the plan is approved and unchanged. The commands always pass
-  `--stage` explicitly. **Review is not a state**: `/review-unit` is optional and logged. **Nothing
+  "designed, edited since". Recorded by **`classkit approve unit N --stage planned|designed`**.
+  **The stage is required** (D-047): a default "next stage" turned a second "approve unit 3" into
+  *designed* while the sessions were still placeholders. The chat picks the stage from where the
+  unit stands (`classkit status`) and asks if unsure. **Review is not a state**: `/review-unit` is optional and logged. **Nothing
   is blocked by state**: `/design-unit 3` on a unit not yet planned asks whether to go on.
 - **Three routes, one record.** The teacher approves at a command's gate ("approve"), in
   conversation ("approve the syllabus" — the chat runs it), or by hand. The first two run
