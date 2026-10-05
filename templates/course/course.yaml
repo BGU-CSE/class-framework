@@ -2,9 +2,11 @@
 code: "{{code}}"
 title: "{{title}}"
 institution: "{{institution}}"
-instructors:
-  - "{{instructor}}"
-language: en
+instructors:{{instructors}}
+# The language the agents write course content in — the syllabus body, guiding questions,
+# study paths, the class hour, assessment items. A BCP-47 tag: en, he, … Only English is
+# supported for now (D-001): the templates are in English and right-to-left text is untested.
+language: {{language}}
 
 # Selects the study-session design contract (D-011). See methodologies/.
 methodology: "{{methodology}}"

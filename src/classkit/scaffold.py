@@ -11,6 +11,7 @@ Two properties, both decided deliberately (Q-008):
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -84,6 +85,10 @@ COURSE_DIRECTORIES = [
     "assessments/homework",
     "assessments/exams",
     "materials/ingested",
+    # Created with the others, so the private option is visible from day one (the teacher's
+    # request). It is gitignored, so its .gitkeep is never committed and a clone starts without
+    # it — `classkit doctor` notes that, and re-running `scaffold course` creates it.
+    "materials/source/private",
     "policies",
 ]
 
@@ -117,6 +122,7 @@ def scaffold_course(
     instructor: str,
     units: int,
     methodology: str,
+    language: str = "en",
 ) -> Result:
     result = Result()
     log_existed = (course_root / log.LOG_FILE).is_file()
@@ -152,7 +158,10 @@ def scaffold_course(
                 "code": code,
                 "title": title,
                 "institution": institution,
-                "instructor": instructor,
+                # `[]` with no instructor, not a list holding one empty string.
+                "instructors": (f"\n  - {json.dumps(instructor, ensure_ascii=False)}"
+                                if instructor.strip() else " []"),
+                "language": language,
                 "units": units,
                 "methodology": methodology,
             },
@@ -246,6 +255,17 @@ def scaffold_unit(
         render(_template(framework_root, "unit", "in-class.md"), values),
         result,
     )
+
+    # A new unit is a change to the course, so it is logged like `scaffold course` (teacher
+    # test); a re-run that created nothing is not an entry.
+    if result.created:
+        files = [path.relative_to(course_root).as_posix() for path in result.created]
+        log.append(course_root, log.Entry(
+            title=f"classkit scaffold unit {number}",
+            changed=f"{unit_id} \"{unit_title}\": created {', '.join(files)}",
+            why="placeholders for /plan-units and /design-unit to fill",
+            files=files,
+        ))
     return result
 
 

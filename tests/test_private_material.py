@@ -387,7 +387,7 @@ def test_moving_a_file_into_private_turns_its_committed_copy_into_an_index(cours
     run(course)
     assert BODY[1] in index_of(course)
 
-    private(course).mkdir()
+    private(course).mkdir(exist_ok=True)
     (source(course) / "clrs.pdf").rename(private(course) / "clrs.pdf")
     report = run(course)
 

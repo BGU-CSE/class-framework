@@ -114,6 +114,74 @@ def test_scaffold_fills_in_only_what_is_missing(course_root: Path):
     assert len(result.skipped) == 5
 
 
+# -- scaffold course: private/, instructors, language, a .gitignore git ignores ----------
+
+def new_course(tmp_path: Path, *extra: str) -> tuple[int, Path]:
+    root = tmp_path / "fresh"
+    code = main(["scaffold", "course", "--code", "T-1", "--title", "T", "--path", str(root), *extra])
+    return code, root
+
+
+def test_scaffold_course_creates_the_private_folder_and_says_what_it_is_for(tmp_path: Path, capsys):
+    code, root = new_course(tmp_path)
+    assert code == 0
+    assert (root / "materials" / "source" / "private").is_dir()
+    out = capsys.readouterr().out
+    assert "materials/source/private/.gitkeep" in out
+    assert "in materials/source/private/ — it is gitignored" in out
+
+
+def test_no_instructor_is_an_empty_list(tmp_path: Path):
+    import yaml
+
+    _, root = new_course(tmp_path)
+    assert yaml.safe_load((root / "course.yaml").read_text(encoding="utf-8"))["instructors"] == []
+    assert [f for f in validate(load_course(root, FRAMEWORK_ROOT), FRAMEWORK_ROOT) if f.level == "error"] == []
+
+
+def test_an_instructor_is_listed(tmp_path: Path):
+    import yaml
+
+    _, root = new_course(tmp_path, "--instructor", 'Chen "C." Avin')
+    assert yaml.safe_load((root / "course.yaml").read_text(encoding="utf-8"))["instructors"] == ['Chen "C." Avin']
+
+
+def test_the_language_flag_sets_the_course_language(tmp_path: Path):
+    import yaml
+
+    _, root = new_course(tmp_path, "--language", "he")
+    text = (root / "course.yaml").read_text(encoding="utf-8")
+    assert yaml.safe_load(text)["language"] == "he"
+    assert "The language the agents write course content in" in text
+
+
+def test_a_language_that_is_not_a_tag_is_refused(tmp_path: Path):
+    with pytest.raises(SystemExit):
+        new_course(tmp_path, "--language", "Hebrew please")
+
+
+def test_scaffold_course_warns_when_git_ignores_its_gitignore(tmp_path: Path, capsys):
+    import shutil
+    import subprocess
+
+    if shutil.which("git") is None:
+        pytest.skip("git is not installed")
+    excludes = tmp_path / "global-excludes"
+    excludes.write_text(".gitignore\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "core.excludesFile", str(excludes)], cwd=tmp_path, check=True)
+
+    new_course(tmp_path)
+    out = capsys.readouterr().out
+    assert "WARNING: course/.gitignore is itself ignored by git" in out
+    assert "fix: git add -f course/.gitignore" in out
+
+
+def test_scaffold_course_does_not_warn_without_reason(tmp_path: Path, capsys):
+    new_course(tmp_path)
+    assert "WARNING" not in capsys.readouterr().out
+
+
 # -- the syllabus, the course-level top layer (D-021) -----------------------
 
 def test_scaffold_creates_a_syllabus(course_root: Path):

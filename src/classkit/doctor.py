@@ -101,16 +101,25 @@ def _gitignore_lines(course_root: Path) -> set[str]:
     return {line.strip().lstrip("/") for line in text.splitlines()}
 
 
+def gitignore_ignored(course_root: Path) -> Line | None:
+    """The ACTION when git ignores `course/.gitignore` itself (a global excludes file listing
+    `.gitignore`), else None — also asked by `scaffold course`, at creation time."""
+    rule = _git(course_root, "check-ignore", "-v", ".gitignore")
+    if rule is None or rule.returncode != 0:
+        return None
+    source = rule.stdout.decode("utf-8", "replace").split("\t")[0].strip()
+    return Line(ACTION, f"course/.gitignore is itself ignored by git ({source}), so it is never "
+                        "committed: this machine is protected, but no clone of the course is",
+                "git add -f course/.gitignore, and commit it")
+
+
 def _gitignore_travels(course_root: Path) -> list[Line]:
     """The rules protect every clone only if `course/.gitignore` is itself committed. A global
     excludes file that ignores `.gitignore` (it happens) keeps it on this machine alone: here
     everything looks fine, and the next clone has no protection at all."""
-    rule = _git(course_root, "check-ignore", "-v", ".gitignore")
-    if rule is not None and rule.returncode == 0:
-        source = rule.stdout.decode("utf-8", "replace").split("\t")[0].strip()
-        return [Line(ACTION, f"course/.gitignore is itself ignored by git ({source}), so it is never "
-                             "committed: this machine is protected, but no clone of the course is",
-                     "git add -f course/.gitignore, and commit it")]
+    ignored = gitignore_ignored(course_root)
+    if ignored is not None:
+        return [ignored]
     tracked = _git(course_root, "ls-files", "--error-unmatch", ".gitignore")
     if tracked is not None and tracked.returncode != 0:
         return [Line(NOTE, "course/.gitignore is not committed yet — commit it, so every clone of "

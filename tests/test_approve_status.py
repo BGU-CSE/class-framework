@@ -309,7 +309,7 @@ def test_status_reports_materials_and_the_last_log_entry(course_root: Path, caps
     assert "NOT STARTED" in out
     assert "none ingested yet" in out
     assert "no coverage report saved yet" in out
-    assert "classkit scaffold course" in out
+    assert "classkit scaffold unit 1" in out  # the fixture scaffolds a unit last, and that is logged
     assert "13 in course.yaml" in out
 
 

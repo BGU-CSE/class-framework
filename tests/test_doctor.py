@@ -119,6 +119,7 @@ def test_outside_git_doctor_says_why_the_commit_check_is_skipped(course: Path):
 
 
 def test_a_private_folder_in_another_case_must_be_renamed(course: Path):
+    shutil.rmtree(private(course))  # scaffolded; on a case-insensitive disk it would be "Private"
     make_pdf(course / "materials" / "source" / "Private" / "clrs.pdf", ["Heaps"])
     (found,) = find(course, doctor.ACTION, "Private/", "case-sensitive")
     assert "rename it" in found.fix
@@ -279,7 +280,7 @@ def test_a_private_copy_of_a_committed_file_does_not_make_it_private(course: Pat
     stays public and its source stays committed. Doctor says so, and how to fix it."""
     make_pdf(course / "materials" / "source" / "clrs.pdf", ["Heaps body"])
     ingest.run(course, fetch=False)
-    private(course).mkdir()
+    private(course).mkdir(exist_ok=True)
     shutil.copy(course / "materials" / "source" / "clrs.pdf", private(course) / "clrs.pdf")
     ingest.run(course, fetch=False)
 

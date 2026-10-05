@@ -77,6 +77,27 @@ def test_scaffolding_a_course_that_predates_the_log_says_only_what_it_created(tm
     assert entry.files == ["LOG.md"]
 
 
+def test_scaffolding_a_unit_is_logged_naming_the_unit_and_its_files(course_root: Path):
+    """Teacher test: `scaffold course` wrote an entry, `scaffold unit 1` (6 files) none."""
+    from classkit.scaffold import scaffold_unit
+
+    scaffold_unit(course_root, FRAMEWORK_ROOT, 3, "Heaps")
+    entry = log.parse(log_text(course_root))[-1]
+    assert entry.title == "classkit scaffold unit 3"
+    assert 'U03 "Heaps"' in entry.changed
+    assert "units/03-heaps/unit.md" in entry.files and "units/03-heaps/in-class.md" in entry.files
+    assert len(entry.files) == 6
+
+
+def test_rescaffolding_a_unit_that_creates_nothing_is_not_logged(course_root: Path):
+    from classkit.scaffold import scaffold_unit
+
+    scaffold_unit(course_root, FRAMEWORK_ROOT, 3, "Heaps")
+    before = log_text(course_root)
+    scaffold_unit(course_root, FRAMEWORK_ROOT, 3, "Heaps")
+    assert log_text(course_root) == before
+
+
 # -- append-only -----------------------------------------------------------
 
 def test_append_adds_an_entry_at_the_end_and_keeps_everything_before_it(course_root: Path):
