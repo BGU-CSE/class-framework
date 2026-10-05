@@ -248,6 +248,19 @@ def repair_ligatures(text: str) -> str:
     return _WORD.sub(fix, text)
 
 
+def _fi_substitutions(texts: list[str]) -> int:
+    """How many words `repair_ligatures` would change — `û` inside an otherwise-ASCII word."""
+    count = 0
+    for text in texts:
+        if _FI_SUBSTITUTE not in text:
+            continue
+        for word in _WORD.findall(text):
+            rest = word.replace(_FI_SUBSTITUTE, "")
+            if _FI_SUBSTITUTE in word and rest and rest.isascii():
+                count += 1
+    return count
+
+
 def _looks_garbled(word: str) -> bool:
     """ASCII letters but for exactly one Latin non-ASCII letter, with at least two ASCII letters
     beside it: `efûcient`. Greek (Θ, π — mathematics) and other scripts are not counted."""
@@ -679,6 +692,17 @@ def extract_pdf(path: Path) -> Extraction:
     sections = _outline_by_page(reader)
     labels: dict[str, list[str]] = {}
 
+    # Read every page's text first: the `û` → `fi` repair applies only when the substitution is
+    # systematic across the document (a font-encoding fault, CLRS 4e: ~4,700 words), so a French
+    # "sûr" or "flûte" quoted in an English book is left alone (D-048).
+    raw: list[str] = []
+    for page in reader.pages:
+        try:
+            raw.append((page.extract_text() or "").translate(LIGATURES))
+        except Exception:  # one bad page must not lose the rest of the document
+            raw.append("")
+    systematic = _fi_substitutions(raw) >= GARBLED_MIN_WORDS
+
     empty = 0
     for index, page in enumerate(reader.pages):
         number = index + 1
@@ -693,10 +717,7 @@ def extract_pdf(path: Path) -> Extraction:
             labels.setdefault(anchor, []).append(f"*(printed page {label(page_label)})*")
         for title in sections.get(index, []):
             labels.setdefault(anchor, []).append(f"*(section: {label(title.translate(LIGATURES))})*")
-        try:
-            text = repair_ligatures((page.extract_text() or "").translate(LIGATURES))
-        except Exception:  # one bad page must not lose the rest of the document
-            text = ""
+        text = repair_ligatures(raw[index]) if systematic else raw[index]
         page_characters = len("".join(text.split()))
         characters += page_characters
         empty += page_characters == 0

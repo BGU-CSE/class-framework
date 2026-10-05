@@ -692,7 +692,7 @@ def test_apply_echoes_every_field_including_unchanged_ones(course: Path, monkeyp
     assert main(["material", "apply", "--course", str(course)]) == 0
     out = capsys.readouterr().out
     assert f"M0001  kind={kind} (unchanged)  units=U02\n" in out
-    assert "1 materials changed, 0 already so." in out
+    assert "1 material changed, 0 already so." in out
 
 
 def log_text(course: Path) -> str:

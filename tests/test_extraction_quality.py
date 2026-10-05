@@ -422,6 +422,18 @@ def test_the_pdf_text_is_repaired_on_ingest(course: Path, monkeypatch):
     assert "efficient way to find" in text_of(course) and "û" not in text_of(course)
 
 
+def test_an_occasional_french_word_in_an_english_pdf_is_not_repaired(course: Path, monkeypatch):
+    """D-048: the repair runs only when the substitution is systematic (a font-encoding fault),
+    so a real "sûr" or "flûte" quoted in an English book survives."""
+    from pypdf import PageObject
+
+    monkeypatch.setattr(PageObject, "extract_text",
+                        lambda self, *a, **k: "the flûte is sûr " + "plain English words " * 200)
+    make_pdf(source(course) / "book.pdf", ["placeholder"])
+    ingest.run(course, fetch=False)
+    assert "flûte" in text_of(course) and "sûr" in text_of(course)
+
+
 def test_the_probe_counts_words_with_one_stray_latin_letter():
     text = "an eÿcient algorithm " * 30 + "plain words " * 100
     assert extract.garbled(text) == (30, "eÿcient")

@@ -529,7 +529,8 @@ def run_material(args) -> int:
                 )
                 print(f"{material_id}  {shown}")
             changes = sum(1 for _id, _fields, changed in results if changed)
-            print(f"{changes} materials changed, {len(results) - changes} already so.")
+            rest = len(results) - changes
+            print(f"{changes} material{'' if changes == 1 else 's'} changed, {rest} already so.")
     except ingest.MaterialError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
