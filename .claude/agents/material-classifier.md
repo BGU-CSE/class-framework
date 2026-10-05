@@ -145,8 +145,8 @@ bibliography, publisher pages and references: they are not course materials. The
    plus in-class minutes per unit can hold. Estimate what fits and name what would have to be cut,
    made optional, or moved. Be specific — a cheerful "it all fits" is how the home-study budget
    silently doubles later. **An old schedule's week counts and lecture hours are history, not a
-   target**: in the flipped course every unit is one teaching week, with the methodology's minutes
-   (the methodology says so). "Last year this took 1.5 weeks" tells you the material is heavy for
+   target**: in the flipped course every unit is one teaching week (a Unit is one week's subject),
+   with the methodology's minutes. "Last year this took 1.5 weeks" tells you the material is heavy for
    one unit; it is not a plan to give it 1.5 units.
 5. **Ordering problems.** Lectures can defer motivation; independent home study cannot. Flag
    anything introduced before the reason it matters — **as a signpost for the home study** (what a
