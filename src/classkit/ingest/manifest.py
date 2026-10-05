@@ -36,17 +36,21 @@ KINDS = ("slides", "textbook", "notes", "exam", "exercise", "syllabus", "reading
          "video", "other")
 AUDIENCES = ("student", "instructor")
 
+#: What a material is for in planning (D-048): `scope` — the teacher's material that sets what is
+#: taught and how deep; `reference` — the fuller source. Either, both, or neither.
+ROLES = ("scope", "reference")
+
 #: Field order in the written file — identity first, bookkeeping last.
 FIELDS = (
     "id", "title", "kind", "format", "status", "status_reason", "units", "sources", "canonical",
     "source_hash", "source_hashes", "ingested_hash", "found_in", "note", "duration",
-    "ingested_at", "removed_at", "merged_into", "private", "private_text_hash", "audience",
+    "ingested_at", "removed_at", "merged_into", "private", "private_text_hash", "audience", "roles",
 )
 
 HEADER = """\
 # Materials manifest — written by `classkit ingest` (spec §8.7). One record per material.
 #
-# You may correct `title`, `kind`, `units` and `audience` here (or with `classkit material set`);
+# You may correct `title`, `kind`, `units`, `audience` and `roles` here (or with `classkit material set`);
 # a later ingest keeps your values. Leave the ids, paths, hashes and `private` to the tool.
 # Records are never deleted: a removed source is marked `removed_at`, a merged duplicate
 # `merged_into`.

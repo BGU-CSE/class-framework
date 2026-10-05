@@ -137,6 +137,11 @@ GITIGNORE_REQUIRED = ("materials/source/private/", "materials/private-text/")
 # `Private/` too, and ingest treats any case of it as private.
 PRIVATE_PATHSPECS = (":(icase)materials/source/private", ":(icase)materials/private-text")
 
+# The id a finding is about (D-048): a course id (U01, U01-O3, U01-S02, U01-S02-G1, U01-IC, U01-A1,
+# U01-I01, CO2) or a material locator (M0007, M0007#slide-18) — the first one its message names.
+ITEM_ID = re.compile(r"\b(?:U\d{2}(?:-(?:O\d+|S\d{2}(?:-G\d+)?|IC|A\d+|I\d+))?|CO\d+)\b"
+                     r"|(?<![\w/.#-])M\d{4}(?:#[\w-]+)?")
+
 # `M0007` or `M0007#slide-18` inside a string — not part of a longer word, a URL path, or an
 # anchor of its own.
 LOCATOR = re.compile(r"(?<![\w/.#-])(M\d{4})(?!\w)(?:#([\w-]+))?")
@@ -172,6 +177,9 @@ class Finding:
     code: str
     where: str
     message: str
+    #: the item the finding is about (D-048) — an objective, a guiding question, an activity, an
+    #: assessment item, a unit, a material locator — so an `accepted:` entry can name just it
+    item: str | None = None
 
     def __str__(self) -> str:
         return f"{_MARK[self.level]}  {self.where}\n       [{self.code}] {self.message}"
@@ -184,6 +192,8 @@ class Acceptance:
     path: Path
     rule: str
     reason: str
+    #: the one item this exception covers (D-048); None — the whole file
+    item: str | None = None
     #: findings this entry suppressed in the last run — 0 means it no longer matches anything
     suppressed: list[Finding] = field(default_factory=list)
 
@@ -204,7 +214,8 @@ class Validator:
             **_as_dict(course.config.get("rules")),
         }
         self.acceptances: list[Acceptance] = [
-            Acceptance(doc.path.resolve(), str(entry["rule"]), str(entry.get("reason") or "").strip())
+            Acceptance(doc.path.resolve(), str(entry["rule"]), str(entry.get("reason") or "").strip(),
+                       str(entry["id"]).strip() if entry.get("id") else None)
             for doc in course.documents()
             for entry in doc.accepted
         ]
@@ -217,7 +228,10 @@ class Validator:
         level = self.rules.get(code, DEFAULT_SEVERITY[code])
         return level if level in SEVERITIES else DEFAULT_SEVERITY[code]
 
-    def report(self, code: str, where: str | Path, message: str) -> None:
+    def report(self, code: str, where: str | Path, message: str, *, item: str | None = None) -> None:
+        """Record a finding. `item` is what it is about (D-048); when not given, it is the first
+        id the message names — every rule's message leads with its subject ("objective U01-O3 …",
+        "U01-S02-G1: …", "cites M0007#slide-3 …"), and a test pins that per rule."""
         level = self.severity(code)
         if level == "off":
             return
@@ -227,12 +241,17 @@ class Validator:
             where_str = str(Path(where_str).relative_to(self.course.root.parent))
         except (ValueError, OSError):
             pass
-        finding = Finding(level, code, where_str, message)
+        if item is None:
+            found = ITEM_ID.search(message)
+            item = found.group(0) if found else None
+        finding = Finding(level, code, where_str, message, item)
 
         # A teacher's accepted exception for this rule in this file suppresses it — but it
-        # is recorded against the acceptance, so `validate` can still count it.
+        # is recorded against the acceptance, so `validate` can still count it. An entry naming
+        # an `id` covers only that item (D-048).
         for acceptance in self.acceptances:
-            if acceptance.rule == code and acceptance.path == finding_path:
+            if acceptance.rule == code and acceptance.path == finding_path \
+                    and (acceptance.item is None or acceptance.item == item):
                 acceptance.suppressed.append(finding)
                 return
         self.findings.append(finding)
@@ -440,6 +459,7 @@ class Validator:
                     unit.doc.path,
                     f"unit {number} is not on the syllabus's unit map. Add it to the map "
                     "(/plan-syllabus), or remove the unit if it was a mistake.",
+                    item=unit.id,
                 )
             elif not same(str(unit.doc.data.get("title") or ""), titles[number]):
                 self.report(
@@ -448,6 +468,7 @@ class Validator:
                     f"unit {number} is titled {unit.doc.data.get('title')!r} here but "
                     f"{titles[number]!r} on the syllabus's unit map — make them the same, in "
                     "whichever file is wrong.",
+                    item=unit.id,
                 )
 
     def check_unit(self, unit: Unit) -> None:

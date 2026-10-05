@@ -46,6 +46,7 @@ from . import extract as ex
 from . import links as linkfile
 from .manifest import (
     AUDIENCES,
+    ROLES,
     INGESTED_DIR,
     KINDS,
     PRIVATE_TEXT_DIR,
@@ -964,21 +965,32 @@ class MaterialError(ValueError):
 
 def set_fields(course_root: Path, material_id: str, *, kind: str | None = None,
                units: list[str] | None = None, title: str | None = None,
-               audience: str | None = None) -> dict:
+               audience: str | None = None, roles: list[str] | None = None) -> dict:
     """Set a material's `kind`, `units`, `title` or `audience` — how the classifying agent's
     decisions, and the teacher's corrections, are recorded without editing a file by hand."""
     records = load(course_root)
     record = by_id(records).get(material_id)
     if record is None:
         raise MaterialError(f"no material {material_id} in the manifest")
-    _set(record, _checked(material_id, kind, units, title, audience))
+    _set(record, _checked(material_id, kind, units, title, audience, roles))
     save(course_root, records)
     return record
 
 
-def _checked(material_id: str, kind, units, title, audience=None) -> dict:
+def _checked(material_id: str, kind, units, title, audience=None, roles=None) -> dict:
     """The fields to set, validated; raises MaterialError naming the material."""
     fields: dict = {}
+    if roles is not None:
+        # D-048: `scope` and/or `reference`; an empty list clears them (neither).
+        if isinstance(roles, str):
+            roles = [roles]
+        if not isinstance(roles, list):
+            raise MaterialError(f"{material_id}: roles must be a list, e.g. [scope] or [scope, reference]")
+        roles = [str(r).strip().lower() for r in roles]
+        bad = [r for r in roles if r not in ROLES]
+        if bad:
+            raise MaterialError(f"{material_id}: a role is one of {', '.join(ROLES)}, not {', '.join(bad)}")
+        fields["roles"] = [r for r in ROLES if r in roles]
     if audience is not None:
         if audience not in AUDIENCES:
             raise MaterialError(f"{material_id}: audience must be one of {', '.join(AUDIENCES)}, "
@@ -1017,7 +1029,7 @@ def _set(record: dict, fields: dict) -> None:
     record.update(fields)
 
 
-APPLY_KEYS = {"id", "kind", "units", "title", "audience"}
+APPLY_KEYS = {"id", "kind", "units", "title", "audience", "roles"}
 
 
 def apply(course_root: Path, entries) -> list[tuple[str, dict]]:
@@ -1031,7 +1043,7 @@ def apply_all(course_root: Path, entries) -> list[tuple[str, dict, set[str]]]:
     `/ingest` (D-039). All or nothing: every entry is checked before any is recorded, so a typo
     in entry 40 does not leave 39 recorded and the rest not.
 
-    Each entry is `{id, kind?, units?, title?, audience?}`. Returns, for every entry, (id, every
+    Each entry is `{id, kind?, units?, title?, audience?, roles?}`. Returns, for every entry, (id, every
     field it set, the names of those that changed) — so the teacher sees what was confirmed as
     well as what changed.
     """
@@ -1058,7 +1070,7 @@ def apply_all(course_root: Path, entries) -> list[tuple[str, dict, set[str]]]:
         if record.get("merged_into") or record.get("removed_at"):
             raise MaterialError(f"{material_id} is merged or removed; classify the material it became")
         fields = _checked(material_id, entry.get("kind"), entry.get("units"), entry.get("title"),
-                          entry.get("audience"))
+                          entry.get("audience"), entry.get("roles"))
         planned.append((record, fields))
 
     results = []

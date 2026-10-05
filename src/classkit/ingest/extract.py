@@ -97,6 +97,8 @@ class Extraction:
     low_yield: str = ""
     #: (count, example) — words that look garbled by a font-encoding problem; see `garbled()`
     garbled: tuple[int, str] | None = None
+    #: (highlights, comments, stamps) — the teacher's PDF annotations found (D-048)
+    annotations: tuple[int, int, int] = (0, 0, 0)
 
     def quality(self) -> list[str]:
         """One line per thing the teacher should know about this extraction — low yield, empty
@@ -113,6 +115,11 @@ class Extraction:
             notes.append(f"~{count:,} words look garbled (e.g. \"{example}\") — a font-encoding "
                          "problem; check the extraction (ignore this if the material is in a "
                          "language with accented letters)")
+        if any(self.annotations):
+            found = [f"{n} {name}{'' if n == 1 else 's'}"
+                     for n, name in zip(self.annotations, ("highlight", "comment", "stamp")) if n]
+            notes.append(f"{', '.join(found)} — the teacher's annotations, extracted page by page; "
+                         "an annotated document is likely scope material (roles: scope)")
         if self.warnings:
             first = self.warnings[0]
             notes.append(f"the reader reported {len(self.warnings)} problem(s), e.g. \"{first}\" — "
@@ -704,6 +711,7 @@ def extract_pdf(path: Path) -> Extraction:
     systematic = _fi_substitutions(raw) >= GARBLED_MIN_WORDS
 
     empty = 0
+    totals = [0, 0, 0]
     for index, page in enumerate(reader.pages):
         number = index + 1
         anchor = f"page-{number}"
@@ -730,6 +738,15 @@ def extract_pdf(path: Path) -> Extraction:
         for uri in _link_annotations(page):
             if uri not in text:
                 lines += [f"*(link: {uri})*", ""]
+        # The teacher's annotations (D-048): a block after the page's text; the counts become a
+        # label, which is all a private material's committed index carries of them.
+        block, counts = _annotation_block(page)
+        if block:
+            lines += block + [""]
+            found = [f"{n} {name}{'' if n == 1 else 's'}"
+                     for n, name in zip(counts, ("highlight", "comment", "stamp")) if n]
+            labels.setdefault(anchor, []).append(f"*(teacher's annotations: {', '.join(found)})*")
+            totals = [a + b for a, b in zip(totals, counts)]
 
     pages = len(reader.pages)
     # A PDF's title is its metadata title, else the file name — never its first line of text,
@@ -745,7 +762,101 @@ def extract_pdf(path: Path) -> Extraction:
                                  "pages are anchored, the text is empty", labels=labels)
 
     return Extraction(INGESTED, body=body, title=metadata_title, labels=labels,
-                      empty=(empty, pages, "pages"))
+                      empty=(empty, pages, "pages"), annotations=tuple(totals))
+
+
+# Annotation subtypes (D-048). Marks over text — the text under them is what the teacher pointed
+# at; notes and free-text boxes — the teacher's own words; stamps — "Show on cards", "Approved".
+MARKED = ("/Highlight", "/Underline", "/Squiggly")
+COMMENTED = ("/Text", "/FreeText")
+ANNOTATION_CHARS = 300  # one annotation's text, at most — a block line, not a page
+
+
+def _one_line(value, limit: int = ANNOTATION_CHARS) -> str:
+    text = " ".join(str(value or "").split())
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+
+def _boxes(obj) -> list[tuple[float, float, float, float]]:
+    """A marking annotation's areas, (x0, y0, x1, y1): one per quadrilateral of /QuadPoints (a
+    highlight across lines has several), else its /Rect."""
+    try:
+        quads = [float(v) for v in (obj.get("/QuadPoints") or [])]
+        if len(quads) >= 8:
+            boxes = []
+            for i in range(0, len(quads) - 7, 8):
+                xs, ys = quads[i:i + 8:2], quads[i + 1:i + 8:2]
+                boxes.append((min(xs), min(ys), max(xs), max(ys)))
+            return boxes
+        rect = [float(v) for v in (obj.get("/Rect") or [])]
+        return [(min(rect[0], rect[2]), min(rect[1], rect[3]), max(rect[0], rect[2]),
+                 max(rect[1], rect[3]))] if len(rect) == 4 else []
+    except Exception:
+        return []
+
+
+def _text_fragments(page) -> list[tuple[float, float, str]]:
+    """The page's text with positions, (x, y, text), one per text-showing operation — the
+    granularity pypdf reports. A highlight's text is the fragments that start inside it."""
+    fragments: list[tuple[float, float, str]] = []
+
+    def visit(text, cm, tm, _font, _size):
+        if text and text.strip():
+            x = cm[0] * tm[4] + cm[2] * tm[5] + cm[4]
+            y = cm[1] * tm[4] + cm[3] * tm[5] + cm[5]
+            fragments.append((x, y, text))
+
+    try:
+        page.extract_text(visitor_text=visit)
+    except Exception:
+        return []
+    return fragments
+
+
+def _under(boxes, fragments) -> str:
+    """The text of the fragments that start inside any of `boxes` (with a little slack: a
+    baseline sits near a highlight's bottom edge), in reading order."""
+    picked = [(-y, x, text) for x, y, text in fragments
+              if any(x0 - 2 <= x <= x1 + 2 and y0 - 4 <= y <= y1 + 2 for x0, y0, x1, y1 in boxes)]
+    return " ".join(text for _y, _x, text in sorted(picked))
+
+
+def _annotation_block(page) -> tuple[list[str], tuple[int, int, int]]:
+    """The teacher's annotations on a page, as the lines of a block, and (highlights, comments,
+    stamps). The text under a highlight is approximate — whole fragments as the PDF stores them —
+    and a highlight carrying a note shows both. A malformed annotation is skipped."""
+    marks: list[str] = []
+    comments: list[str] = []
+    stamps: list[str] = []
+    fragments: list | None = None
+    try:
+        annotations = [a.get_object() for a in (page.get("/Annots") or [])]
+    except Exception:
+        return [], (0, 0, 0)
+    for obj in annotations:
+        try:
+            subtype = str(obj.get("/Subtype"))
+            note = _one_line(obj.get("/Contents"))
+            if subtype in MARKED:
+                if fragments is None:
+                    fragments = _text_fragments(page)
+                under = _one_line(_under(_boxes(obj), fragments))
+                line = f'- highlighted: "{under}"' if under else "- highlighted: (text not recovered)"
+                marks.append(line + (f' — note: "{note}"' if note else ""))
+            elif subtype in COMMENTED and note:
+                comments.append(f'- comment: "{note}"')
+            elif subtype == "/Stamp":
+                name = note or str(obj.get("/Name") or "").lstrip("/")
+                stamps.append(f'- stamp: "{_one_line(name)}"' if name else "- stamp")
+        except Exception:
+            continue
+    counts = (len(marks), len(comments), len(stamps))
+    if not any(counts):
+        return [], counts
+    found = [f"{n} {name}{'' if n == 1 else 's'}"
+             for n, name in zip(counts, ("highlight", "comment", "stamp")) if n]
+    return [f"**Teacher's annotations on this page** ({', '.join(found)}):", *marks, *comments,
+            *stamps], counts
 
 
 def _link_annotations(page) -> list[str]:

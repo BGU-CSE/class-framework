@@ -519,3 +519,52 @@ def test_a_short_bold_label_ending_in_a_colon_is_an_anchor(course: Path):
     assert extract.anchors(text) == ["assessment", "learning-outcomes-of-the-module"]
     assert "## Assessment\n" in text
     assert load(course)[0]["title"] == "syllabus"  # a label is not the document's title
+
+
+# -- the teacher's PDF annotations (D-048) ------------------------------------------
+
+def test_annotations_are_extracted_as_a_block_after_the_page(course: Path):
+    from materials_fixtures import make_annotated_pdf
+
+    make_annotated_pdf(source(course) / "notes.pdf", ["Merge sort runs in n lg n time", "Second page"])
+    ingest.run(course, fetch=False)
+    text = text_of(course)
+    page1 = text.split("## Page 2")[0]
+    assert "**Teacher's annotations on this page** (1 highlight, 2 comments, 1 stamp):" in page1
+    assert '- highlighted: "Merge sort runs in n lg n time" — note: "prove this on the board"' in page1
+    assert '- comment: "Ask in class what the running time is"' in page1
+    assert '- comment: "Show on cards"' in page1
+    assert '- stamp: "Approved"' in page1
+    assert "Teacher's annotations" not in text.split("## Page 2")[1]
+
+
+def test_annotations_are_reported_in_check_these_extractions(course: Path, capsys):
+    from materials_fixtures import make_annotated_pdf
+
+    make_annotated_pdf(source(course) / "notes.pdf", ["Merge sort runs in n lg n time"])
+    main(["ingest", "--no-fetch", "--course", str(course)])
+    out = capsys.readouterr().out
+    assert "1 highlight, 2 comments, 1 stamp — the teacher's annotations" in out
+
+
+def test_a_private_materials_annotations_stay_out_of_its_committed_index(course: Path):
+    """D-048: a highlight is publisher text and a comment may quote it — the committed index
+    carries only the counts; the text is in the local full text."""
+    from materials_fixtures import make_annotated_pdf
+
+    from classkit.ingest.manifest import ingested_file, private_text_file
+
+    make_annotated_pdf(source(course) / "private" / "notes.pdf", ["Merge sort runs in n lg n time"])
+    ingest.run(course, fetch=False)
+    index = ingested_file(course, "M0001").read_text(encoding="utf-8")
+    full = private_text_file(course, "M0001").read_text(encoding="utf-8")
+    assert "*(teacher's annotations: 1 highlight, 2 comments, 1 stamp)*" in index
+    for words in ("Merge sort", "prove this", "Ask in class", "Show on cards"):
+        assert words not in index
+    assert '- comment: "Show on cards"' in full and "Merge sort runs" in full
+
+
+def test_a_pdf_without_annotations_has_no_block(course: Path):
+    make_pdf(source(course) / "plain.pdf", ["Just text"])
+    ingest.run(course, fetch=False)
+    assert "Teacher's annotations" not in text_of(course)

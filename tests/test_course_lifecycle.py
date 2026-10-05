@@ -1160,3 +1160,54 @@ def test_without_jsonschema_the_schema_layer_is_skipped_with_a_warning(course_ro
     assert [f.level for f in found] == ["warn"]
     assert "not schema-checked" in found[0].message
     assert "schema" not in {f.code for f in findings(course_root)}
+
+
+# -- accepted: for one item (D-048) ------------------------------------------------------
+
+def _no_outcomes(course_root: Path) -> None:
+    text = unit_md(course_root).read_text(encoding="utf-8")
+    unit_md(course_root).write_text(text.replace("    outcomes: [CO1]\n", ""), encoding="utf-8")
+
+
+def _accept(course_root: Path, entry: str) -> None:
+    text = unit_md(course_root).read_text(encoding="utf-8")
+    unit_md(course_root).write_text(text.replace("---\n", "---\naccepted:\n" + entry, 1), encoding="utf-8")
+
+
+def test_an_accepted_entry_naming_one_item_covers_only_that_item(course_root: Path):
+    _no_outcomes(course_root)
+    _accept(course_root, '  - {rule: objective_maps_to_outcome, id: U01-O1, reason: "landscape"}\n')
+    found = [f for f in findings(course_root) if f.code == "objective_maps_to_outcome"]
+    assert [f.item for f in found] == ["U01-O2"]  # O1 accepted; O2 still reported
+
+
+def test_an_accepted_entry_without_an_id_still_covers_the_whole_file(course_root: Path):
+    _no_outcomes(course_root)
+    _accept(course_root, '  - {rule: objective_maps_to_outcome, reason: "all deliberate"}\n')
+    assert levels(course_root, "objective_maps_to_outcome") == set()
+
+
+def test_an_accepted_id_that_matches_nothing_is_counted_as_stale(course_root: Path):
+    from classkit.model import load_course
+    from classkit.validate import Validator
+
+    _no_outcomes(course_root)
+    _accept(course_root, '  - {rule: objective_maps_to_outcome, id: U01-O9, reason: "renamed?"}\n')
+    validator = Validator(load_course(course_root, FRAMEWORK_ROOT), FRAMEWORK_ROOT)
+    validator.run()
+    [acceptance] = validator.acceptances
+    assert acceptance.item == "U01-O9" and acceptance.suppressed == []
+    assert {f.item for f in validator.findings if f.code == "objective_maps_to_outcome"} == {"U01-O1", "U01-O2"}
+
+
+def test_each_kind_of_finding_carries_the_id_of_what_it_is_about(course_root: Path):
+    """The item id is the first id a rule's message names (D-048) — pinned here per kind, so a
+    reworded message cannot silently break per-item acceptance."""
+    _no_outcomes(course_root)
+    edit(in_class(course_root), "[U01-S03-G1]", "[U01-S09-G7]")
+    by_code: dict = {}
+    for f in findings(course_root):
+        by_code.setdefault(f.code, f.item)  # the first finding of each kind
+    assert by_code["objective_maps_to_outcome"] == "U01-O1"
+    assert by_code["activity_references_guiding_question"].startswith("U01-A")
+    assert by_code["guiding_question_assessed"].startswith("U01-S")

@@ -12,7 +12,7 @@ import yaml
 from . import approve, doctor, ingest, log, status
 from .frontmatter import FrontMatterError
 from .ingest import links as linkfile
-from .ingest.manifest import AUDIENCES, KINDS, SOURCE_DIR, ManifestError
+from .ingest.manifest import AUDIENCES, KINDS, ROLES, SOURCE_DIR, ManifestError
 from .ingest.report import log_summary, plural, preflight_text, run_text
 from .mode import DEVELOPER, TEACHER, UnsafeMarker, current_mode, set_mode
 from .model import LayoutError, find_course_root, find_framework_root, load_course
@@ -197,6 +197,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--audience", choices=AUDIENCES,
         help="who may be pointed at it: student (the default) or instructor (never cited to students)",
     )
+    set_cmd.add_argument(
+        "--role", dest="roles", action="append", choices=ROLES,
+        help="what it is for in planning: scope (sets what is taught and how deep) and/or reference "
+             "(the fuller source); repeatable, replaces the list",
+    )
+    set_cmd.add_argument("--no-roles", action="store_true", help="clear the roles (neither)")
     set_cmd.add_argument("--course", help="course directory (default: search upward)")
     merge_cmd = actions.add_parser(
         "merge", help="optional: merge one material into another the teacher says is the same "
@@ -207,7 +213,7 @@ def build_parser() -> argparse.ArgumentParser:
     merge_cmd.add_argument("--course", help="course directory (default: search upward)")
     apply_cmd = actions.add_parser(
         "apply",
-        help="record a batch of classifications (YAML list of {id, kind, units, title, audience}); "
+        help="record a batch of classifications (YAML list of {id, kind, units, title, audience, roles}); "
              "all or nothing",
     )
     apply_cmd.add_argument(
@@ -487,12 +493,14 @@ def run_material(args) -> int:
     try:
         if args.action == "set":
             units = [] if args.no_units else (list(args.units) if args.units else None)
+            roles = [] if args.no_roles else (list(args.roles) if args.roles else None)
             record = ingest.set_fields(course_root, args.id.upper(), kind=args.kind, units=units,
-                                       title=args.title, audience=args.audience)
+                                       title=args.title, audience=args.audience, roles=roles)
             shown_units = record.get("units") or []
             shown_units = shown_units if isinstance(shown_units, str) else ",".join(shown_units) or "-"
             print(f"{record['id']}  kind={record.get('kind')}  units={shown_units}"
-                  f"  audience={record.get('audience') or 'student'}  title={record.get('title')!r}")
+                  f"  audience={record.get('audience') or 'student'}"
+                  f"  roles={','.join(record.get('roles') or []) or '-'}  title={record.get('title')!r}")
         elif args.action == "merge":
             record = ingest.merge(course_root, args.id.upper(), args.into.upper())
             print(f"merged {args.id.upper()} into {record['id']}: sources {', '.join(record['sources'])}")

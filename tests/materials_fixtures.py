@@ -113,3 +113,29 @@ def make_book(path: Path, pages: list[str], *, outline: list[tuple[str, int]] = 
     with path.open("wb") as stream:
         writer.write(stream)
     return path
+
+
+def make_annotated_pdf(path: Path, pages: list[str]) -> Path:
+    """`make_pdf`'s pages, annotated as a teacher marks lecture notes (D-048): on page 1 a
+    highlight over the line of text (with a note), a sticky note, a free-text box and a stamp;
+    the other pages unannotated. The text sits at (72, 720), 12 pt, so the highlight covers it."""
+    from pypdf import PdfWriter
+    from pypdf.annotations import FreeText, Highlight, Text
+    from pypdf.generic import ArrayObject, DictionaryObject, FloatObject, NameObject, TextStringObject
+
+    make_pdf(path, pages)
+    writer = PdfWriter(clone_from=str(path))
+    quads = ArrayObject([FloatObject(v) for v in (70, 734, 400, 734, 70, 716, 400, 716)])
+    highlight = Highlight(rect=(70, 716, 400, 734), quad_points=quads)
+    highlight[NameObject("/Contents")] = TextStringObject("prove this on the board")
+    writer.add_annotation(0, highlight)
+    writer.add_annotation(0, Text(rect=(450, 700, 470, 720), text="Ask in class what the running time is"))
+    writer.add_annotation(0, FreeText(text="Show on cards", rect=(72, 600, 300, 630)))
+    stamp = DictionaryObject({NameObject("/Type"): NameObject("/Annot"),
+                              NameObject("/Subtype"): NameObject("/Stamp"),
+                              NameObject("/Rect"): ArrayObject([FloatObject(v) for v in (300, 500, 400, 540)]),
+                              NameObject("/Name"): NameObject("/Approved")})
+    writer.add_annotation(0, stamp)
+    with path.open("wb") as stream:
+        writer.write(stream)
+    return path
