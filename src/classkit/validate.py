@@ -469,7 +469,10 @@ class Validator:
                     "objective_maps_to_outcome",
                     unit.doc.path,
                     f"objective {objective.get('id')} names no Course Outcome, so it rolls up to "
-                    "nothing in the syllabus. Add `outcomes: [CO…]` — the outcome(s) it serves.",
+                    "nothing in the syllabus. Add `outcomes: [CO…]` — the outcome(s) it serves; "
+                    "or, if no outcome fits, say so: add an outcome in the syllabus, or accept "
+                    "the exception (`accepted:` in unit.md). Never attach the nearest outcome "
+                    "just to silence this.",
                 )
             for outcome in objective.get("outcomes") or []:
                 if outcome not in outcome_ids:

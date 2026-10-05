@@ -675,6 +675,8 @@ def test_an_objective_naming_no_outcome_is_an_alert(course_root: Path):
     found = [f for f in findings(course_root) if f.code == "objective_maps_to_outcome"]
     assert [f.level for f in found] == ["alert"]
     assert "U01-O1" in found[0].message and found[0].where.endswith("unit.md")
+    # Not "attach an outcome" alone: the planning standard forbids the nearest one to silence it.
+    assert "if no outcome fits, say so: add an outcome in the syllabus, or accept" in found[0].message
     assert errors(course_root) == []
 
 
