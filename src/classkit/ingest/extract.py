@@ -24,6 +24,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import unicodedata
 import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -54,6 +55,19 @@ NOISY_LOGGERS = ("pypdf", "PyPDF2", "pptx", "docx", "fontTools")
 LIGATURES = str.maketrans({"\ufb00": "ff", "\ufb01": "fi", "\ufb02": "fl", "\ufb03": "ffi",
                            "\ufb04": "ffl", "\ufb05": "st", "\ufb06": "st"})
 
+#: A letter run — a word, for the ligature repair and the garbled-text probe.
+_WORD = re.compile(r"[^\W\d_]+")
+#: Some PDFs' fonts map the "fi" ligature to `û` (CLRS 4e: `efûcient`, `ûnd` — ~4,700 words),
+#: and fontTools does not help (teacher test). Repaired only inside a word whose other letters
+#: are all ASCII, so a real `û` beside other accented letters (a French name) survives.
+_FI_SUBSTITUTE = "\u00fb"
+
+#: The garbled-text probe (teacher test): a material is reported when at least this many words…
+GARBLED_MIN_WORDS = 20
+#: …and at least this share of its words are ASCII but for one Latin non-ASCII letter (`efûcient`).
+#: CLRS 4e unrepaired ran ~1%; ordinary English text with a few names (`Erdős`, `naïve`) runs far below.
+GARBLED_MIN_SHARE = 0.005
+
 MEDIA_EXTENSIONS = {
     ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".wmv",
     ".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac",
@@ -81,6 +95,8 @@ class Extraction:
     empty: tuple[int, int, str] | None = None
     #: set when the text is far smaller than the source (F-06): what to tell the teacher
     low_yield: str = ""
+    #: (count, example) — words that look garbled by a font-encoding problem; see `garbled()`
+    garbled: tuple[int, str] | None = None
 
     def quality(self) -> list[str]:
         """One line per thing the teacher should know about this extraction — low yield, empty
@@ -92,6 +108,11 @@ class Extraction:
         if self.empty and self.empty[0]:
             empty, total, unit = self.empty
             notes.append(f"{empty} of {total} {unit} have no text (pictures? OCR is not done in Core)")
+        if self.garbled:
+            count, example = self.garbled
+            notes.append(f"~{count:,} words look garbled (e.g. \"{example}\") — a font-encoding "
+                         "problem; check the extraction (ignore this if the material is in a "
+                         "language with accented letters)")
         if self.warnings:
             first = self.warnings[0]
             notes.append(f"the reader reported {len(self.warnings)} problem(s), e.g. \"{first}\" — "
@@ -204,7 +225,56 @@ def extract(path: Path) -> Extraction:
                                  "try exporting it to PDF", warnings=captured)
     result.warnings = result.warnings + captured
     result.title = _clean(result.title) or title_from_name(path)
+    if result.status == INGESTED:
+        result.garbled = garbled(result.body)
     return result
+
+
+def repair_ligatures(text: str) -> str:
+    """`û` → `fi` inside a word whose other letters are ASCII (`efûcient` → `efficient`); a word
+    with another non-ASCII letter is left alone. See `_FI_SUBSTITUTE`."""
+    if _FI_SUBSTITUTE not in text:
+        return text
+
+    def fix(match: re.Match) -> str:
+        word = match.group(0)
+        if _FI_SUBSTITUTE not in word:
+            return word
+        rest = word.replace(_FI_SUBSTITUTE, "")
+        if rest and rest.isascii():
+            return word.replace(_FI_SUBSTITUTE, "fi")
+        return word
+
+    return _WORD.sub(fix, text)
+
+
+def _looks_garbled(word: str) -> bool:
+    """ASCII letters but for exactly one Latin non-ASCII letter, with at least two ASCII letters
+    beside it: `efûcient`. Greek (Θ, π — mathematics) and other scripts are not counted."""
+    if word.isascii():
+        return False
+    foreign = [c for c in word if not c.isascii()]
+    if len(foreign) != 1 or len(word) - 1 < 2:
+        return False
+    return unicodedata.name(foreign[0], "").startswith("LATIN")
+
+
+def garbled(text: str) -> tuple[int, str] | None:
+    """The garbled-text probe: (how many words look garbled, the commonest one), or None when
+    there are too few to matter (GARBLED_MIN_WORDS, GARBLED_MIN_SHARE). Run on what extraction
+    produced, after any repair — it reports what is still broken, whatever the cause."""
+    from collections import Counter  # noqa: PLC0415
+
+    total = 0
+    bad: Counter = Counter()
+    for match in _WORD.finditer(text):
+        total += 1
+        if _looks_garbled(match.group(0)):
+            bad[match.group(0)] += 1
+    count = sum(bad.values())
+    if count < GARBLED_MIN_WORDS or count < GARBLED_MIN_SHARE * total:
+        return None
+    return count, bad.most_common(1)[0][0]
 
 
 def probe(path: Path) -> Probe:
@@ -624,7 +694,7 @@ def extract_pdf(path: Path) -> Extraction:
         for title in sections.get(index, []):
             labels.setdefault(anchor, []).append(f"*(section: {label(title.translate(LIGATURES))})*")
         try:
-            text = (page.extract_text() or "").translate(LIGATURES)
+            text = repair_ligatures((page.extract_text() or "").translate(LIGATURES))
         except Exception:  # one bad page must not lose the rest of the document
             text = ""
         page_characters = len("".join(text.split()))

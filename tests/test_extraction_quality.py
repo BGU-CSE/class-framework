@@ -399,3 +399,57 @@ def test_a_deck_with_a_boilerplate_slide_1_title_uses_its_file_name(course: Path
 ])
 def test_a_title_from_a_file_name_is_readable(name: str, title: str):
     assert extract.title_from_name(name) == title
+
+
+# -- ligature damage: the `û` repair and the garbled-text probe (teacher test, CLRS 4e) ------
+
+def test_a_fi_substitute_is_repaired_inside_an_ascii_word():
+    assert extract.repair_ligatures("an efûcient way to ûnd the Ûrst") == "an efficient way to find the Ûrst"
+
+
+def test_a_real_accented_word_keeps_its_letter():
+    assert extract.repair_ligatures("crème brûlée and Brûlé") == "crème brûlée and Brûlé"
+
+
+def test_the_pdf_text_is_repaired_on_ingest(course: Path, monkeypatch):
+    from pypdf import PageObject
+
+    monkeypatch.setattr(PageObject, "extract_text", lambda self, *a, **k: "an efûcient way to ûnd it " * 50)
+    make_pdf(source(course) / "book.pdf", ["placeholder"])
+    ingest.run(course, fetch=False)
+    assert "efficient way to find" in text_of(course) and "û" not in text_of(course)
+
+
+def test_the_probe_counts_words_with_one_stray_latin_letter():
+    text = "an eÿcient algorithm " * 30 + "plain words " * 100
+    assert extract.garbled(text) == (30, "eÿcient")
+
+
+def test_the_probe_ignores_a_few_names_and_greek_mathematics():
+    text = "Erdős and the naïve bound " + "Θn and πr and Θlgn " * 40 + "plain words " * 2000
+    assert extract.garbled(text) is None
+
+
+def test_the_probe_needs_a_material_share_not_only_a_count():
+    text = "an eÿcient algorithm " * 25 + "plain words here " * 3000
+    assert extract.garbled(text) is None  # 25 of ~9,075 words: under 0.5%
+
+
+def test_garbled_text_is_reported_in_check_these_extractions(course: Path, monkeypatch, capsys):
+    from pypdf import PageObject
+
+    monkeypatch.setattr(PageObject, "extract_text", lambda self, *a, **k: "an eÿcient sort " * 40)
+    make_pdf(source(course) / "book.pdf", ["placeholder"])
+    main(["ingest", "--no-fetch", "--course", str(course)])
+    out = capsys.readouterr().out
+    assert "Check these extractions" in out
+    assert 'M0001  ~40 words look garbled (e.g. "eÿcient") — a font-encoding problem' in out
+
+
+def test_repaired_text_is_not_reported(course: Path, monkeypatch, capsys):
+    from pypdf import PageObject
+
+    monkeypatch.setattr(PageObject, "extract_text", lambda self, *a, **k: "an efûcient sort " * 40)
+    make_pdf(source(course) / "book.pdf", ["placeholder"])
+    main(["ingest", "--no-fetch", "--course", str(course)])
+    assert "garbled" not in capsys.readouterr().out
