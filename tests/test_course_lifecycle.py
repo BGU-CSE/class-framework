@@ -146,18 +146,16 @@ def test_an_instructor_is_listed(tmp_path: Path):
     assert yaml.safe_load((root / "course.yaml").read_text(encoding="utf-8"))["instructors"] == ['Chen "C." Avin']
 
 
-def test_the_language_flag_sets_the_course_language(tmp_path: Path):
+def test_the_course_language_is_english_with_a_comment_and_no_option(tmp_path: Path):
+    """D-001: English only for now; no scaffold option invites a language nothing supports (D-048)."""
     import yaml
 
-    _, root = new_course(tmp_path, "--language", "he")
+    _, root = new_course(tmp_path)
     text = (root / "course.yaml").read_text(encoding="utf-8")
-    assert yaml.safe_load(text)["language"] == "he"
+    assert yaml.safe_load(text)["language"] == "en"
     assert "The language the agents write course content in" in text
-
-
-def test_a_language_that_is_not_a_tag_is_refused(tmp_path: Path):
     with pytest.raises(SystemExit):
-        new_course(tmp_path, "--language", "Hebrew please")
+        new_course(tmp_path / "other", "--language", "he")
 
 
 def test_scaffold_course_warns_when_git_ignores_its_gitignore(tmp_path: Path, capsys):

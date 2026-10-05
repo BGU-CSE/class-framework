@@ -68,7 +68,7 @@ Expect **14 files created**, among them `course/syllabus/syllabus.md`, `course/c
 `course/LOG.md`, `course/.gitignore` (step 2c-1: it keeps private material out of git) and
 `course/materials/source/private/.gitkeep` — the private folder exists from the start, and the
 output ends by saying what it is for. `course.yaml` has `instructors: []` when no `--instructor` was
-given, and a comment on `language:` (`--language`, default `en`). If your global git config ignores
+given, and a comment on `language:` saying what it controls (English only for now, D-001; no option). If your global git config ignores
 `.gitignore` files, the output ends with a **WARNING** naming the fix (`git add -f
 course/.gitignore`).
 

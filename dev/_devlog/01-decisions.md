@@ -1660,4 +1660,8 @@ handed to a background implementation; and five **decisions**, taken with Avin:
 boundary; a class meeting repeated for groups, the weekly TA session, protective quizzes.
 **Declined:** `status` cross-checking approval hashes against the log (restoring files outside the
 tools is rare; the log is history, not state).
+6. **No `--language` scaffold option (Avin, b).** The plain-fix build had added one; it conflicts with
+   D-001 (English only, for now) and would invite a value no agent or template handles. Removed; the
+   comment on `language:` in `course.yaml` stays, saying what it will control and that other
+   languages are deferred, not rejected. Hebrew comes back as one decision when wanted.
 

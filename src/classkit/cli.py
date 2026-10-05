@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import datetime
-import re
 import sys
 from pathlib import Path
 
@@ -57,9 +56,6 @@ def build_parser() -> argparse.ArgumentParser:
     new_course.add_argument("--instructor", default="")
     new_course.add_argument("--units", type=int, default=13)
     new_course.add_argument("--methodology", default="question-driven-25")
-    new_course.add_argument("--language", default="en", type=_language,
-                            help="the language agents write course content in, a BCP-47 tag "
-                                 "(default: en; only English is supported for now)")
     new_course.add_argument("--path", help="where to create it (default: ./course)")
 
     new_unit = kinds.add_parser("unit", help="create a unit with its sessions and lesson plan")
@@ -281,12 +277,6 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _language(value: str) -> str:
-    if not re.fullmatch(r"[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*", value):
-        raise argparse.ArgumentTypeError(f"{value!r} is not a language tag like en or he")
-    return value
-
-
 def report_scaffold(result: Result, root: Path) -> None:
     def display(path: Path) -> str:
         try:
@@ -358,7 +348,6 @@ def run_scaffold(args, framework_root: Path) -> int:
             instructor=args.instructor,
             units=args.units,
             methodology=args.methodology,
-            language=args.language,
         )
         report_scaffold(result, root.parent)
         print("\nPut material that must not be committed (a published book, a solutions manual) "
