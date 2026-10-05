@@ -139,8 +139,12 @@ def format_of(path: Path) -> str:
 
 
 def title_from_name(path: Path | str) -> str:
-    """A title from a file name: the stem, `_` read as a space — `Unit_2_Heaps.pptx` → `Unit 2 Heaps`."""
-    return _clean(Path(path).stem.replace("_", " ")) or Path(path).stem
+    """A title from a file name: the stem, with `_`, `-` and `.` read as spaces —
+    `Unit_2_Heaps.pptx` → `Unit 2 Heaps`, `Introduction.to.Algorithms.pdf` → `Introduction to
+    Algorithms`. A dot between two digits stays (`ch6.2` → `ch6.2`): it is a section number."""
+    stem = Path(path).stem
+    readable = re.sub(r"(?<!\d)\.|\.(?!\d)", " ", stem.replace("_", " ").replace("-", " "))
+    return _clean(readable) or stem
 
 
 class _Collect(logging.Handler):
@@ -397,7 +401,8 @@ def extract_pptx(path: Path) -> Extraction:
         title = (_clean(" ".join(_pptx_paragraph_text(p) for p in title_shape.text_frame.paragraphs))
                  if title_shape is not None and title_shape.has_text_frame else "")
         if title:
-            first_title = first_title or title
+            if number == 1:
+                first_title = _title_from_metadata(title)  # the same boilerplate rejected
             lines += [f"**{title}**", ""]
             labels.setdefault(anchor, []).append(f"**{label(title)}**")
 
@@ -427,9 +432,11 @@ def extract_pptx(path: Path) -> Extraction:
         if not any(line.strip() and line != "*(hidden slide)*" for line in lines[start:]):
             empty += 1
 
-    title = first_title or _title_from_metadata(deck.core_properties.title)
+    # A deck's title is slide 1's title, else its file name (F-12, teacher test): never a later
+    # slide's — a section, a digression or a tribute slide — and not the metadata title, which
+    # is the authoring tool's or the template's as often as the author's.
     body = "\n".join(lines).rstrip() + "\n"
-    return Extraction(INGESTED, body=body, title=title, labels=labels,
+    return Extraction(INGESTED, body=body, title=first_title, labels=labels,
                       empty=(empty, len(deck.slides), "slides"),
                       low_yield=_low_yield(path, body, r"ppt/slides/slide\d+\.xml", "deck"))
 

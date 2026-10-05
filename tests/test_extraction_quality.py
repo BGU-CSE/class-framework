@@ -368,3 +368,34 @@ def test_the_links_template_does_not_promise_harvesting():
     template = (FRAMEWORK_ROOT / "templates" / "course" / "links.md").read_text(encoding="utf-8")
     assert "collected automatically" not in template
     assert "NOT\ncollected" in template or "not collected" in template.lower().replace("\n", " ")
+
+
+# -- deck titles: slide 1 or the file name (teacher test, F-12 follow-up) -------------------
+
+def test_a_deck_title_comes_from_slide_1(course: Path):
+    make_pptx(source(course) / "Unit_2_Heaps.pptx", [("Heaps and heapsort", "Today"), ("Max-heapify", "x")])
+    ingest.run(course, fetch=False)
+    assert load(course)[0]["title"] == "Heaps and heapsort"
+
+
+def test_a_deck_title_never_comes_from_a_later_slide(course: Path):
+    """The teacher's Unit 4 deck was titled from slide 2, a tribute slide."""
+    make_pptx(source(course) / "Unit_4_Divide-and-Conquer_board.pptx",
+              [("", "Last Week"), ("In Memoriam: Michael O. Rabin", "1931–2026")])
+    ingest.run(course, fetch=False)
+    assert load(course)[0]["title"] == "Unit 4 Divide and Conquer board"
+
+
+def test_a_deck_with_a_boilerplate_slide_1_title_uses_its_file_name(course: Path):
+    make_pptx(source(course) / "unit_3.pptx", [("PowerPoint Presentation", "x")])
+    ingest.run(course, fetch=False)
+    assert load(course)[0]["title"] == "unit 3"
+
+
+@pytest.mark.parametrize("name, title", [
+    ("Introduction.to.Algorithms.4th.Edition.2022.4.pdf", "Introduction to Algorithms 4th Edition 2022.4"),
+    ("Lecture-Notes-for-Chapter-1.pdf", "Lecture Notes for Chapter 1"),
+    ("notes_ch6.2.pdf", "notes ch6.2"),
+])
+def test_a_title_from_a_file_name_is_readable(name: str, title: str):
+    assert extract.title_from_name(name) == title
