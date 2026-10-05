@@ -1021,11 +1021,19 @@ APPLY_KEYS = {"id", "kind", "units", "title", "audience"}
 
 
 def apply(course_root: Path, entries) -> list[tuple[str, dict]]:
+    """`apply_all`, returning only (id, fields that changed) for the materials that changed."""
+    return [(mid, {k: fields[k] for k in changed}) for mid, fields, changed in apply_all(course_root, entries)
+            if changed]
+
+
+def apply_all(course_root: Path, entries) -> list[tuple[str, dict, set[str]]]:
     """Record a batch of classifications — the classifying agent's returned block, applied by
     `/ingest` (D-039). All or nothing: every entry is checked before any is recorded, so a typo
     in entry 40 does not leave 39 recorded and the rest not.
 
-    Each entry is `{id, kind?, units?, title?, audience?}`. Returns (id, fields that changed).
+    Each entry is `{id, kind?, units?, title?, audience?}`. Returns, for every entry, (id, every
+    field it set, the names of those that changed) — so the teacher sees what was confirmed as
+    well as what changed.
     """
     if not isinstance(entries, list):
         raise MaterialError("expected a list of entries, each with an `id`")
@@ -1053,15 +1061,14 @@ def apply(course_root: Path, entries) -> list[tuple[str, dict]]:
                           entry.get("audience"))
         planned.append((record, fields))
 
-    changes = []
+    results = []
     for record, fields in planned:
-        changed = {k: v for k, v in fields.items() if record.get(k) != v}
+        changed = {k for k, v in fields.items() if record.get(k) != v}
         _set(record, fields)
-        if changed:
-            changes.append((record["id"], changed))
-    if changes:
+        results.append((record["id"], fields, changed))
+    if any(changed for _id, _fields, changed in results):
         save(course_root, records)
-    return changes
+    return results
 
 
 def merge(course_root: Path, material_id: str, into: str) -> dict:

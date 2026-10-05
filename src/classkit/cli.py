@@ -500,13 +500,17 @@ def run_material(args) -> int:
                 entries = yaml.safe_load(text)
             except yaml.YAMLError as exc:
                 raise ingest.MaterialError(f"not valid YAML: {exc}") from exc
-            changes = ingest.apply(course_root, entries or [])
-            for material_id, fields in changes:
+            results = ingest.apply_all(course_root, entries or [])
+            # Every field set is echoed, unchanged ones marked, so the teacher sees what was
+            # confirmed as well as what changed (teacher test: `kind` was silent when already so).
+            for material_id, fields, changed in results:
                 shown = "  ".join(
-                    f"{k}={','.join(v) if isinstance(v, list) else v}" for k, v in fields.items()
+                    f"{k}={','.join(v) if isinstance(v, list) else v}"
+                    + ("" if k in changed else " (unchanged)") for k, v in fields.items()
                 )
                 print(f"{material_id}  {shown}")
-            print(f"{len(changes)} materials changed, {len(entries or []) - len(changes)} already so.")
+            changes = sum(1 for _id, _fields, changed in results if changed)
+            print(f"{changes} materials changed, {len(results) - changes} already so.")
     except ingest.MaterialError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

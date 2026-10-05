@@ -680,6 +680,21 @@ def test_apply_reads_yaml_from_the_cli(course: Path, monkeypatch, capsys):
     assert main(["material", "apply", "--course", str(course)]) == 2
 
 
+def test_apply_echoes_every_field_including_unchanged_ones(course: Path, monkeypatch, capsys):
+    """Teacher test: a kind already guessed right was not echoed, so its confirmation was invisible."""
+    import io
+
+    make_pdf(source(course) / "a.pdf", ["A"])
+    run(course)
+    kind = records(course)["M0001"]["kind"]
+    monkeypatch.setattr("sys.stdin", io.StringIO(f"- id: M0001\n  kind: {kind}\n  units: [U02]\n"))
+
+    assert main(["material", "apply", "--course", str(course)]) == 0
+    out = capsys.readouterr().out
+    assert f"M0001  kind={kind} (unchanged)  units=U02\n" in out
+    assert "1 materials changed, 0 already so." in out
+
+
 def log_text(course: Path) -> str:
     return (course / "LOG.md").read_text(encoding="utf-8")
 
