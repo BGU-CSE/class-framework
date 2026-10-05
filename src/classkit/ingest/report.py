@@ -77,6 +77,7 @@ def preflight_text(p: Preflight) -> str:
     if p.complaints:
         lines.append("Read with warnings from the reader (the text may be degraded; reported once each):")
         lines += [f"  {path}: {len(found)} problem(s), e.g. \"{found[0]}\"" for path, found in p.complaints]
+        lines.append("  Usually harmless; check these files' extraction after ingest.")
         lines.append("")
     if p.unsupported:
         lines.append("Cannot be read — recorded as unsupported, never dropped:")

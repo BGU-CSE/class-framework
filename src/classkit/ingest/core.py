@@ -432,10 +432,12 @@ class Preflight:
     complaints: list[tuple[str, list[str]]] = field(default_factory=list)
 
 
-#: Rough conversion cost for the pre-flight estimate. Calibrated on the hand test (F-14): 2141 PDF
-#: pages took 126 s of CPU, ~0.06 s a page, before fontTools; it parses fonts too, so a little more.
-SECONDS_PER_PAGE = 0.07
-SECONDS_PER_SLIDE = 0.03
+#: Rough conversion cost for the pre-flight estimate. Recalibrated on the teacher test: 2,204 PDF
+#: pages (with fontTools) took ~30 s on a recent Mac, ~0.014 s a page; the estimate had said about
+#: 3 minutes. (The earlier hand test, F-14, measured ~0.06 s a page on another machine — an older
+#: one errs this many times slower; the estimate stays labelled "rough".) Slides scaled likewise.
+SECONDS_PER_PAGE = 0.015
+SECONDS_PER_SLIDE = 0.005
 
 
 def preflight(course_root: Path, *, fetch: bool = True) -> Preflight:
@@ -490,7 +492,9 @@ def preflight(course_root: Path, *, fetch: bool = True) -> Preflight:
         files=files, plan=plan, links_listed=len(links.links), by_format=dict(sorted(by_format.items())),
         size=sum(f.size for f in files), slides=slides, pages=pages,
         unsupported=unsupported, media=media, exact_duplicates=exact, seconds=seconds,
-        complaints=complaints,
+        # Only for files this run converts: an unchanged file's complaints were reported when it
+        # was converted, and repeating them every run is noise (teacher test).
+        complaints=[(path, found) for path, found in complaints if path in due],
         to_convert=len(due) + len(plan.new_links),
         private=sum(1 for f in files if is_private(f.rel)),
     )

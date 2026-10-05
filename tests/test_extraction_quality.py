@@ -315,11 +315,13 @@ def test_a_pdfs_first_line_is_never_its_title(course: Path):
 # -- F-14, F-20 -------------------------------------------------------------------------
 
 def test_the_estimate_for_a_textbook_sized_run_is_honest():
-    """F-14: 2141 PDF pages took 2 min 20 s; the estimate said "about 1 minute"."""
+    """Teacher test: 2,204 PDF pages took ~30 s on a recent Mac; the estimate said "about 3
+    minutes" (F-14 had been calibrated on a slower machine)."""
     from classkit.ingest.core import SECONDS_PER_PAGE
     from classkit.ingest.report import _duration
 
-    assert _duration(2141 * SECONDS_PER_PAGE) in ("about 2 minutes", "about 3 minutes")
+    assert 20 <= 2204 * SECONDS_PER_PAGE <= 60
+    assert _duration(2204 * SECONDS_PER_PAGE) == "under a minute"
 
 
 def test_the_session_template_says_the_budget_check_warns():
@@ -453,3 +455,23 @@ def test_repaired_text_is_not_reported(course: Path, monkeypatch, capsys):
     make_pdf(source(course) / "book.pdf", ["placeholder"])
     main(["ingest", "--no-fetch", "--course", str(course)])
     assert "garbled" not in capsys.readouterr().out
+
+
+def test_preflight_reader_warnings_only_for_files_about_to_be_converted(course: Path, capsys):
+    """Teacher test: an unchanged file's reader warnings were repeated on every pre-flight."""
+    path = make_pdf(source(course) / "broken-xref.pdf", ["Heaps", "Heapsort"])
+    data = path.read_bytes()
+    position = data.rindex(b"startxref\n") + len(b"startxref\n")
+    path.write_bytes(data[:position] + b"999" + data[data.index(b"\n", position):])
+
+    main(["ingest", "--preflight", "--no-fetch", "--course", str(course)])
+    first = capsys.readouterr().out
+    assert "incorrect startxref pointer" in first
+    assert "Usually harmless; check these files' extraction after ingest." in first
+
+    main(["ingest", "--no-fetch", "--course", str(course)])
+    capsys.readouterr()
+    make_pdf(source(course) / "new.pdf", ["Quicksort"])
+    main(["ingest", "--preflight", "--no-fetch", "--course", str(course)])
+    again = capsys.readouterr().out
+    assert "incorrect startxref pointer" not in again and "Read with warnings" not in again
