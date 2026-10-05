@@ -51,15 +51,31 @@ deck series), say so plainly: the unit map and the outcomes must then come from 
 the units, in order, with a line each. Do not let a draft be built from memory as though it were
 fact.
 
-**Wait.** Collect the teacher's answers; "leave it TBD" is a valid answer. Then log:
+**Ask the open questions one at a time** (or a few closely related ones together) — not as a
+block: a teacher answering twelve questions in one message gives worse answers than twelve short
+exchanges. Start with the ones that shape the draft most (the units, the outcomes, grading), and
+**skip any an earlier answer already settled** — say which, and how. "Leave it TBD" is a valid
+answer.
+
+**Log every answer as it comes**, in the teacher's own words or a faithful paraphrase — one entry
+per answer, not a summary line at the end. The log is all that the critic (`/review-syllabus`) and
+later agents can see of this conversation: a fact the teacher gave that is not in the log looks to
+them like a fact the draft invented.
+
+```bash
+classkit log "/plan-syllabus, step 1 — teacher's answer: office hours" --changed "no file yet (an answer for the draft)" \
+  --why "Teacher: \"Keep office hours right after the class, at 19:00, Sundays.\""
+```
+
+When the questions are done, log the step itself:
 
 ```bash
 classkit log "/plan-syllabus, step 1 approved" --changed "evidence: M0002 (old syllabus), M0003 (book index), coverage.md" \
-  --why "<the teacher's answers that shape the draft — credits, grading, units — in a line>"
+  --why "the answers above (one entry each); what stays TBD: …"
 ```
 
-The answers are worth logging even though no file changed yet: next year's revision reads why the
-syllabus says what it says.
+The answers are worth logging even though no file changed yet: next year's revision, and the critic
+now, read why the syllabus says what it says.
 
 ## Step 2 — A full draft.
 

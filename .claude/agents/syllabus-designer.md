@@ -81,6 +81,14 @@ Return, in this order:
    evidence implies against `units` in `course.yaml` (a mismatch is a question, not something you
    resolve), and where the old syllabus conflicts with a flipped course (three lecture hours a week,
    a final exam worth everything, no mention of home study).
+   **An old schedule's week counts and lecture hours are history, not a target.** In the flipped
+   course every unit is one teaching week, and the class meeting is the methodology's — so do not
+   take last year's "3-hour Sunday slot" as the class format or "1.5 weeks" as a unit's length;
+   ask how the class will actually meet. **Ordering problems** you notice are signposts for the
+   home study (what to point out, a forward reference), not reasons to reorder: a teacher may
+   follow the book's order deliberately. Name them; reordering is the teacher's call.
+   **An instructor-only material may still be the scope source** (the publisher's lecture notes the
+   teacher teaches from): `audience: instructor` keeps it from students, not from planning.
 4. **Open questions** — numbered, only what the evidence cannot answer and the draft needs: credits
    and the credit system, grading components and weights, prerequisites, level and when offered,
    attendance or integrity policies specific to the course, staff and office hours, whether students

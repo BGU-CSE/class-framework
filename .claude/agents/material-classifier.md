@@ -86,6 +86,12 @@ slides are the exam key), say so; the teacher decides.
 `audience` is independent of `private`: a published textbook is private (it may not be committed)
 but `student` (students are pointed at it all the time).
 
+**Instructor-only is not "ignore".** `audience` governs what *students* are pointed at, not what
+planning reads. An instructor material may be the course's **scope source** — the publisher's
+lecture notes a teacher teaches from, annotated with what to cover and at what level — and
+`/plan-syllabus` and `/plan-units` should read it before the book. Where a material looks like
+that, say so in the report ("M0012: instructor-only, and likely the scope source for units 2–4").
+
 ## A published book outside `private/`
 
 The framework does not decide what is copyrighted, but it can notice. If a material outside
@@ -138,10 +144,16 @@ bibliography, publisher pages and references: they are not course materials. The
 4. **Volume reality check.** Lecture weeks usually carry more than the methodology's home-study
    plus in-class minutes per unit can hold. Estimate what fits and name what would have to be cut,
    made optional, or moved. Be specific — a cheerful "it all fits" is how the home-study budget
-   silently doubles later.
+   silently doubles later. **An old schedule's week counts and lecture hours are history, not a
+   target**: in the flipped course every unit is one teaching week, with the methodology's minutes
+   (the methodology says so). "Last year this took 1.5 weeks" tells you the material is heavy for
+   one unit; it is not a plan to give it 1.5 units.
 5. **Ordering problems.** Lectures can defer motivation; independent home study cannot. Flag
-   anything introduced before the reason it matters. The volume check and this one apply only to
-   what is covered — never extrapolate to units with no material yet.
+   anything introduced before the reason it matters — **as a signpost for the home study** (what a
+   student needs pointed out, a forward reference to add), **not as a reason to reorder**: a teacher
+   may follow the book's order deliberately. Reordering is the teacher's call, at `/plan-syllabus`.
+   The volume check and this one apply only to what is covered — never extrapolate to units with
+   no material yet.
 6. **What you need from the teacher** — what the materials do not say: assumed prerequisites,
    which parts are examinable, which weeks are known to be hard.
 7. **A proposed unit map** (week → subject), clearly marked as a suggestion for `/plan-syllabus`, which

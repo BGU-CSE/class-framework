@@ -115,7 +115,10 @@ A mismatch is the teacher's to resolve; your job is to make it visible.
 prerequisite or a date that appears nowhere in the evidence and that the course log does not record
 the teacher giving. Unit-map `evidence` locators that point at something else than the unit's
 subject. A teacher may upload this document — a confident invention is the worst finding you can
-make. Name each one.
+make. Name each one — but phrase it as **"not in the evidence or the log — confirm with the
+teacher"**, not as "invented": you cannot see the conversation in which the syllabus was drafted,
+and a fact the teacher gave there may simply not have been logged. Whether it was invented is the
+teacher's to say.
 
 **7. Grading that pulls against the course.** A flipped course whose grade ignores the home study and
 the class hour entirely (no credit for entry quizzes), or a single final exam worth everything. Say

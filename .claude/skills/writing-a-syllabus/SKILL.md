@@ -96,6 +96,10 @@ Most of a syllabus's life is revision: during `/plan-syllabus`, in conversation,
   and the `approved` block. Regenerating the whole file is never the default.
 - **A request that conflicts with the rest**: make the change and say what now disagrees, rather
   than silently "fixing" the other part.
+- **Every new factual sentence must trace to the teacher's words** — in this conversation or the
+  course log — **not to last year's syllabus.** An old syllabus is evidence of what *was*; carrying
+  one of its facts into a revision ("theoretical, 'dry' assignments") presents it as this year's.
+  Read your own diff for such a sentence before you show it; if a fact is worth keeping, ask.
 - **Show the change before writing it** (`classkit write … --diff`), then write it on the teacher's
   OK (`--overwrite`). An edit after approval is normal; `classkit status` will say "edited since".
 
