@@ -319,6 +319,50 @@ def test_status_counts_a_source_file_not_yet_ingested(course_root: Path):
     assert "1 outstanding since the last ingest" in text
 
 
+def test_status_says_private_files_are_not_counted(course_root: Path):
+    """Teacher test: status and the pre-flight gave two numbers; status leaves private files out by
+    design (§2.2), and now says so."""
+    private = course_root / "materials" / "source" / "private"
+    private.mkdir(parents=True, exist_ok=True)
+    (private / "book.md").write_text("# Book\n", encoding="utf-8")
+    (course_root / "materials" / "source" / "notes.md").write_text("# Notes\n", encoding="utf-8")
+    text = report(status(course_root, FRAMEWORK_ROOT))
+    assert "1 outstanding since the last ingest" in text
+    assert "private files are not counted here: `classkit doctor` reports them" in text
+
+
+def ingest_notes(course_root: Path, names: list[str]) -> None:
+    from classkit import ingest
+
+    for name in names:
+        (course_root / "materials" / "source" / f"{name}.md").write_text(f"# {name}\n", encoding="utf-8")
+    ingest.run(course_root, fetch=False)
+
+
+def test_status_says_when_the_coverage_report_predates_a_material(course_root: Path):
+    ingest_notes(course_root, ["a", "b", "c"])
+    coverage = course_root / "materials" / "coverage.md"
+    coverage.write_text("# Coverage report\n\nA snapshot. Materials covered: M0001–M0002.\n",
+                        encoding="utf-8")
+    text = report(status(course_root, FRAMEWORK_ROOT))
+    assert "coverage report predates M0003 — re-run /ingest step 4 to refresh it" in text
+
+    coverage.write_text("# Coverage report\n\nMaterials covered: M0001-M0002,\nM0003.\n", encoding="utf-8")
+    assert "predates" not in report(status(course_root, FRAMEWORK_ROOT))
+
+
+def test_status_names_the_newest_few_materials_a_coverage_report_predates(course_root: Path):
+    ingest_notes(course_root, ["a", "b", "c", "d", "e", "f"])
+    (course_root / "materials" / "coverage.md").write_text("Materials covered: M0001.\n", encoding="utf-8")
+    assert "predates M0006, M0005, M0004 and 2 more" in report(status(course_root, FRAMEWORK_ROOT))
+
+
+def test_a_coverage_report_without_the_line_is_not_judged(course_root: Path):
+    ingest_notes(course_root, ["a"])
+    (course_root / "materials" / "coverage.md").write_text("# Coverage\n\nnotes\n", encoding="utf-8")
+    assert "predates" not in report(status(course_root, FRAMEWORK_ROOT))
+
+
 def test_status_writes_nothing(course_root: Path):
     drafted(course_root)
     before = {p: p.read_bytes() for p in course_root.rglob("*") if p.is_file()}

@@ -170,9 +170,12 @@ def materials_lines(course_root: Path) -> list[str]:
     _state, plan = core.reconcile(course_root, records, files, listed, local=False)
     outstanding = plan.outstanding()
 
+    # The count leaves private files out, by design (§2.2: the same answer on every clone) — so
+    # it says so, rather than disagree silently with the pre-flight's count (teacher test).
+    not_private = " (private files are not counted here: `classkit doctor` reports them)"
     lines = []
     if not records:
-        lines.append("none ingested yet")
+        lines.append("none ingested yet" + ("" if outstanding else not_private))
     else:
         private = sum(1 for r in live if r.get("private"))
         instructor = sum(1 for r in live if r.get("audience") == "instructor")
@@ -187,13 +190,60 @@ def materials_lines(course_root: Path) -> list[str]:
         lines.append(", ".join(parts))
     if outstanding:
         shown = "; ".join(outstanding[:3]) + (f"; and {len(outstanding) - 3} more" if len(outstanding) > 3 else "")
-        lines.append(f"{len(outstanding)} outstanding since the last ingest — {shown}. Run /ingest.")
+        lines.append(f"{len(outstanding)} outstanding since the last ingest — {shown}. Run /ingest."
+                     + not_private)
     elif records:
-        lines.append("nothing outstanding")
+        lines.append("nothing outstanding" + not_private)
     coverage = course_root / "materials" / "coverage.md"
-    lines.append("coverage report: materials/coverage.md" if coverage.is_file()
-                 else "no coverage report saved yet (/ingest writes materials/coverage.md)")
+    if not coverage.is_file():
+        lines.append("no coverage report saved yet (/ingest writes materials/coverage.md)")
+        return lines
+    lines.append("coverage report: materials/coverage.md")
+    missing = coverage_predates(coverage, [str(r.get("id")) for r in live])
+    if missing:
+        newest = sorted(missing, reverse=True)
+        shown = ", ".join(newest[:3]) + (f" and {len(newest) - 3} more" if len(newest) > 3 else "")
+        lines.append(f"coverage report predates {shown} — re-run /ingest step 4 to refresh it")
     return lines
+
+
+_COVERED = re.compile(r"Materials covered:(.*)", re.IGNORECASE)
+_ID_RANGE = re.compile(r"M(\d{4})(?:\s*[–—-]\s*M?(\d{4}))?")
+
+
+def covered_ids(text: str) -> set[str] | None:
+    """The material ids a saved coverage report names on its "Materials covered:" line (and the
+    lines continuing it, up to a blank line): `M0001–M0016, M0017`. None when there is no such line
+    — then nothing can be said about what it predates."""
+    lines = text.splitlines()
+    for number, line in enumerate(lines):
+        found = _COVERED.search(line)
+        if not found:
+            continue
+        span = [found.group(1)]
+        for following in lines[number + 1:]:
+            if not following.strip() or following.lstrip().startswith("#"):
+                break
+            span.append(following)
+        ids: set[str] = set()
+        for match in _ID_RANGE.finditer(" ".join(span)):
+            first = int(match.group(1))
+            last = int(match.group(2)) if match.group(2) else first
+            ids.update(f"M{n:04d}" for n in range(first, max(first, last) + 1))
+        return ids
+    return None
+
+
+def coverage_predates(coverage: Path, active_ids: list[str]) -> list[str]:
+    """The active materials a saved coverage report does not cover (teacher test: M0017, the
+    teacher's own syllabus, arrived after the report and nothing said so)."""
+    try:
+        covered = covered_ids(coverage.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError):
+        return []
+    if covered is None:
+        return []
+    return [mid for mid in active_ids if mid not in covered]
 
 
 def status(course_root: Path, framework_root: Path | None) -> Status:
