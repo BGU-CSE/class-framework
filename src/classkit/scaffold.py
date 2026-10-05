@@ -262,7 +262,8 @@ def scaffold_unit(
         files = [path.relative_to(course_root).as_posix() for path in result.created]
         log.append(course_root, log.Entry(
             title=f"classkit scaffold unit {number}",
-            changed=f"{unit_id} \"{unit_title}\": created {', '.join(files)}",
+            changed=f"{unit_id} \"{unit_title}\": {len(files)} placeholder "
+                    f"file{'s' if len(files) != 1 else ''} created (listed below)",
             why="placeholders for /plan-units and /design-unit to fill",
             files=files,
         ))
