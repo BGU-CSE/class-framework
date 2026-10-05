@@ -183,11 +183,16 @@ def check_private_material(course_root: Path) -> list[Line]:
     pending = {mid: why for mid, why in plan.pending}
     lines: list[Line] = []
 
-    for group in plan.new:
-        private_paths = [p for p in group.paths if is_private(p)]
-        if private_paths:
-            lines.append(Line(ACTION, f"materials/source/{private_paths[0]} is new and not ingested",
-                              "classkit ingest"))
+    new_private = [next(p for p in group.paths if is_private(p))
+                   for group in plan.new if any(is_private(p) for p in group.paths)]
+    if len(new_private) == 1:
+        lines.append(Line(ACTION, f"materials/source/{new_private[0]} is new and not ingested",
+                          "classkit ingest"))
+    elif new_private:
+        # One line, not one per file: on a first run they would bury the ACTION that matters
+        # (teacher test: seven of them above a `.gitignore` problem), and one command fixes all.
+        lines.append(Line(ACTION, f"{len(new_private)} private files not ingested yet "
+                                  f"(e.g. materials/source/{new_private[0]})", "classkit ingest"))
     for mid, old, new in plan.moved:
         if is_private(old) or is_private(new):
             lines.append(Line(ACTION, f"{mid} moved: {old} → {new}, not yet recorded", "classkit ingest"))
@@ -279,6 +284,11 @@ def check_private_material(course_root: Path) -> list[Line]:
 
     if not lines:
         lines.append(Line(OK, "no private material (nothing under materials/source/private/)"))
+    if not (course_root / SOURCE_DIR / PRIVATE).is_dir():
+        # git does not carry an ignored, empty folder, so a clone (a TA's) starts without it.
+        lines.append(Line(NOTE, "materials/source/private/ does not exist on this machine — create it "
+                                "for private material (a published book, a solutions manual)",
+                          "mkdir course/materials/source/private"))
     return lines
 
 
@@ -368,7 +378,10 @@ def check_quotation(course_root: Path) -> list[Line]:
                 "committed, it puts the book's text in git",
                 f"rewrite it in your own words and cite the place: `{where}`",
             ))
-    return lines or [Line(OK, "no committed course file copies text from a private material")]
+    # Say what was checked: the ingested copies (NOT_SCANNED) are not (teacher test — a deck
+    # adapted from the publisher's notes shares their text, and "no course file" overstated it).
+    return lines or [Line(OK, "no committed course file copies text from a private material "
+                              "(the ingested copies in materials/ingested/ are not checked)")]
 
 
 def _requirements() -> list[str]:

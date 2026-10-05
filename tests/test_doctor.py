@@ -181,6 +181,21 @@ def test_a_new_private_file_needs_ingest(course: Path):
     assert found.fix == "classkit ingest"
 
 
+def test_several_new_private_files_are_one_line(course: Path):
+    """Teacher test: on a first run, seven 'is new and not ingested' lines buried the one that mattered."""
+    for name in ("a", "b", "c"):
+        make_pdf(private(course) / f"{name}.pdf", [name])
+    (found,) = find(course, doctor.ACTION, "not ingested")
+    assert found.what.startswith("3 private files not ingested yet") and found.fix == "classkit ingest"
+
+
+def test_a_missing_private_folder_is_a_note(course: Path):
+    shutil.rmtree(private(course), ignore_errors=True)  # a clone: git does not carry it
+    (found,) = find(course, doctor.NOTE, "materials/source/private/ does not exist")
+    assert found.fix == "mkdir course/materials/source/private"
+    assert not actions(course)
+
+
 def test_a_hand_edited_full_text_is_a_note(course: Path):
     with_book(course)
     full = private_text_file(course, "M0001")
@@ -311,7 +326,7 @@ def test_a_paraphrase_and_a_short_phrase_pass(course: Path):
                      "it a nearly complete binary tree, and so do we.")
 
     assert not find(course, doctor.ACTION, "copies")
-    assert find(course, doctor.OK, "no committed course file copies")
+    assert find(course, doctor.OK, "no committed course file copies", "materials/ingested/ are not checked")
 
 
 def test_the_course_log_is_checked_too(course: Path):
