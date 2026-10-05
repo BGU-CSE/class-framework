@@ -475,3 +475,35 @@ def test_preflight_reader_warnings_only_for_files_about_to_be_converted(course: 
     main(["ingest", "--preflight", "--no-fetch", "--course", str(course)])
     again = capsys.readouterr().out
     assert "incorrect startxref pointer" not in again and "Read with warnings" not in again
+
+
+# -- DOCX: a bold label is a heading (teacher test: the BGU syllabus form) ------------------
+
+def docx_with_labels(path: Path) -> Path:
+    import docx
+
+    document = docx.Document()
+    def para(*runs):
+        paragraph = document.add_paragraph()
+        for text, bold in runs:
+            paragraph.add_run(text).bold = bold
+    para(("Course syllabus", False))
+    para(("Assessment:", True))
+    para(("Exam 70%, homework 30%.", False))
+    para(("Learning outcomes ", True), ("of the module:", True))
+    para(("Explain heaps.", False))
+    para(("Not a label: ", True), ("the rest is plain", False))
+    para(("Bold but no colon", True))
+    para(("A bold sentence that is far too long to be a section label in any form at all, in any language at all:", True))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    document.save(str(path))
+    return path
+
+
+def test_a_short_bold_label_ending_in_a_colon_is_an_anchor(course: Path):
+    docx_with_labels(source(course) / "syllabus.docx")
+    ingest.run(course, fetch=False)
+    text = text_of(course)
+    assert extract.anchors(text) == ["assessment", "learning-outcomes-of-the-module"]
+    assert "## Assessment\n" in text
+    assert load(course)[0]["title"] == "syllabus"  # a label is not the document's title

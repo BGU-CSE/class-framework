@@ -794,6 +794,10 @@ def extract_docx(path: Path) -> Extraction:
                     if level:
                         headings_found.append(text)
                         lines.extend(["", f"{'#' * level} {text}", ""])
+                    elif _bold_label(child, paragraph, text):
+                        # A form with no heading styles (BGU's syllabus: "Assessment:") still gets
+                        # anchors. Not a title candidate: a label names a section, not the document.
+                        lines.extend(["", f"## {text.rstrip(':').rstrip()}", ""])
                     elif paragraph.style is not None and "List" in paragraph.style.name:
                         lines.append(f"- {_escape_heading(text)}")
                     else:
@@ -857,6 +861,23 @@ def _text_boxes(element) -> list:
         if keep:
             boxes.append(box)
     return boxes
+
+
+#: A bold label read as a heading is at most this long (teacher test: "Learning outcomes of the module:").
+BOLD_LABEL_CHARS = 80
+
+
+def _bold_label(element, paragraph, text: str) -> bool:
+    """A short paragraph, entirely bold, ending in ':' — a section label in a document without
+    heading styles, read as a `##` heading so it can be cited (`M0017#assessment`)."""
+    from docx.text.run import Run  # noqa: PLC0415
+
+    if len(text) > BOLD_LABEL_CHARS or not text.endswith(":") or not text.rstrip(":").strip():
+        return False
+    style_bold = bool(paragraph.style is not None and paragraph.style.font.bold)
+    runs = [Run(r, paragraph) for r in element.iter(f"{_W}r")]
+    runs = [run for run in runs if run.text.strip()]
+    return bool(runs) and all(run.bold or (run.bold is None and style_bold) for run in runs)
 
 
 def _heading_level(style: str) -> int:
