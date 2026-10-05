@@ -361,3 +361,10 @@ def test_after_a_refusal_validate_names_the_decision_not_run_ingest(course: Path
                 if f.code == "materials_not_ingested"]
     assert "classkit ingest --keep M0001" in found.message and "--overwrite M0001" in found.message
     assert "Run /ingest" not in found.message
+
+
+def test_the_links_template_does_not_promise_harvesting():
+    """D-040: links inside slides are not collected; the template said they were (teacher test)."""
+    template = (FRAMEWORK_ROOT / "templates" / "course" / "links.md").read_text(encoding="utf-8")
+    assert "collected automatically" not in template
+    assert "NOT\ncollected" in template or "not collected" in template.lower().replace("\n", " ")
