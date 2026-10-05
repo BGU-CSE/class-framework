@@ -552,3 +552,27 @@ D-022). Agent coverage is now settled *within* each slice, not as a separate pas
 - **Lifecycle** — much later; after the course is taught once.
 
 Q-024 (narrowed) rides along with whichever slice next touches study-time estimation.
+
+---
+
+## Q-032 — Home study that crosses a week boundary
+**Raised 2026-10-05 by Avin's real-course test (D-048).** The teacher wants students to be able to
+*start unit N+1's study once unit N's is done* — a light unit absorbing some of a heavy unit's load
+(in the test, U02 kept whole and balanced against U03). The methodology fixes four 25-minute
+sessions per unit and one unit per week; nothing lets a session be studied a week early, or the load
+be balanced across units, so the trade survives only in prose. Decide in the **home-study
+increment**: a session flag ("may be started in week N−1"), a per-week rather than per-unit load
+check, or prose only.
+
+---
+
+## Q-033 — The class meeting as it really runs: repeated for groups, a TA session, protective quizzes
+**Raised 2026-10-05 by Avin's real-course test (D-048).** Avin teaches the same one-hour class
+**three times**, to groups of ≈40 (each student attends one, the same all semester); every student
+also has a **weekly one-hour TA session**; and the course uses **protective ("magen") quizzes**,
+counting toward the grade only when they help. None has a field: they live in the syllabus body as
+prose. They matter to the **lesson planner** (an activity needing whole-class discussion behaves
+differently at 40; the TA hour may be where practice happens) and to the workload. Decide in the
+**class-hour increment**: a class-format block in `course.yaml` or the methodology (meetings ×
+group size), an optional `weekly_components`, or prose the planner reads.
+
