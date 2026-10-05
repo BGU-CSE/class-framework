@@ -430,7 +430,7 @@ Course-level setup runs once; then units are designed one at a time.
                    It may keep changing all semester; the overview shows "edited since".
 /plan-units 1 2    (D-046) plans the units NAMED — more later, as material arrives.
                    0. shows `classkit status`; if the syllabus is not approved, says so and
-                      asks whether to go on — it does not refuse (D-043). (target, D-048) For
+                      asks whether to go on — it does not refuse (D-043). (D-048) For
                       each unit, checks that some material with `scope` among its `roles`
                       reaches it; if only `reference` material does (the book), it says "book
                       only for this unit — scope not confirmed" and offers to WAIT for the
@@ -653,7 +653,7 @@ exceptions to validation rules for that file (§8.4). It is not repeated in each
 
 | Field | Type | Req | Notes |
 |---|---|---|---|
-| `code` | string | | institutional course code, e.g. `"202-1-2051"`. **Optional (target, D-048)**: identity, read by people and the syllabus, used by no tool; a teacher may scaffold before finding it. `scaffold course --code` is optional; `/plan-syllabus` asks for it when no evidence states it; `classkit status` says when it is not set |
+| `code` | string | | institutional course code, e.g. `"202-1-2051"`. **Optional (D-048)**: identity, read by people and the syllabus, used by no tool; a teacher may scaffold before finding it. `scaffold course --code` is optional; `/plan-syllabus` asks for it when no evidence states it; `classkit status` says when it is not set |
 | `title` | string | ✓ | |
 | `institution` | string | ✓ | |
 | `instructors` | array\<string\> | | |
@@ -910,10 +910,12 @@ at all is an advisory alert.
    `accepted_without_reason`, never as a schema error. Likewise `rule` is **not pattern-checked**:
    any mistyped code, whatever its case, is reported by `unknown_rule`. Both follow the same
    principle — a mistake in the teacher's *own exception* is advice, not a failure (D-038).
-   **An entry may name one item (target, D-048):** `{rule, id: U01-O3, reason}` suppresses only
+   **An entry may name one item (D-048):** `{rule, id: U01-O3, reason}` suppresses only
    the findings about that item (an objective, a guiding question, an activity, an item, a
-   material); without `id` it covers the whole file, as before. Each rule reports which item a
-   finding is about as structured data, not only in its message. An `id` that no longer matches
+   material); without `id` it covers the whole file, as before. Each finding carries the id of
+   the item it is about as data (`Finding.item`): the first id its message names — every rule's
+   message leads with its subject — or an explicit one where it does not (`unit_map_mismatch`); a
+   test pins this per kind of finding. An `id` that no longer matches
    anything is counted with the stale entries, so a renamed objective is never silently covered.
    Why: accepting one objective's missing outcome on purpose must not also silence a *future*
    objective that forgets its outcome by mistake.
@@ -1199,7 +1201,7 @@ unless `links.md` lists it, and listing it restores its old id, so a locator to 
 | `merged_into` | `M<NNNN>` | | the teacher confirmed this is the same material as another; its sources moved there and this id is retired |
 | `private` | boolean | | (D-040) `true` when the canonical source **as last converted** was under `source/private/` (like `source_hash`, it records the last conversion: a file just moved in or out differs from it until the next ingest converts it). Set by ingest from the path, never by hand; written only when `true`; recorded so that a clone without the file still knows |
 | `private_text_hash` | string | | **retired (D-041)** — was the hash of the full text in `private-text/`; a committed field cannot describe a machine-local file (extraction differs across library versions). The full text now certifies itself (below). Kept in the schema only so an older manifest validates |
-| `roles` | array\<enum\> | | **(target, D-048)** `scope` and/or `reference`. **`scope`** — the teacher's material that sets *what* is taught in its units and *at what depth* (their decks, their annotated lecture notes); **`reference`** — the fuller source (the textbook). A material may be both (a book taught straight from); empty or absent means neither (a past exam, an old syllabus, a link). Proposed by the classifying agent, confirmed by the teacher at gate 3 like `kind` and `audience`. `/plan-units` checks that some `scope` material reaches each unit it plans (§5.1) |
+| `roles` | array\<enum\> | | **(D-048)** `scope` and/or `reference`. **`scope`** — the teacher's material that sets *what* is taught in its units and *at what depth* (their decks, their annotated lecture notes); **`reference`** — the fuller source (the textbook). A material may be both (a book taught straight from); empty or absent means neither (a past exam, an old syllabus, a link). Proposed by the classifying agent, confirmed by the teacher at gate 3 like `kind` and `audience`. `/plan-units` checks that some `scope` material reaches each unit it plans (§5.1) |
 | `audience` | enum | | (D-040) `student \| instructor`; absent means `student`. Who may be *pointed at* this material. Proposed by the classifying agent, confirmed by the teacher at gate 3. Independent of `private` (a published book is private but `student`) |
 
 Schema: `schemas/manifest.schema.json`, checked by `classkit validate` (`schema`; an unreadable
@@ -1217,7 +1219,7 @@ extracted text with **explicit anchors**, so a locator names a place that demons
 file lives at `ingested/M<NNNN>-<slug>.md` and is found by its `M<NNNN>-` prefix, so the slug may be
 renamed by hand.
 
-**The teacher's annotations are extracted (target, D-048).** A teacher's highlights and comments on a
+**The teacher's annotations are extracted (D-048).** A teacher's highlights and comments on a
 PDF are how they mark *what* to teach and *at what level* — in the hand test, 140 highlights and 16
 comments in one chapter of the lecture notes, none of which any agent saw. After each page's text, a
 block lists that page's annotations:
@@ -1230,7 +1232,8 @@ block lists that page's annotations:
 
 A block, not marks inside the running text: matching highlight positions to extracted text is
 fragile exactly where extraction is already shaky; the block is deterministic. Highlights give the
-text under them; comments (text notes, free-text boxes) their contents; stamps their label. **For a
+text under them (approximately: whole text fragments as the PDF stores them, those starting
+inside the highlight; a highlight carrying a note shows both); comments (text notes, free-text boxes) their contents; stamps their label. **For a
 private material, annotations go only into the local full text** (`private-text/`): a highlight *is*
 publisher text, and a comment may quote it; the committed index carries only the **counts** per page
 ("6 highlights, 2 comments"), never their text — D-040's rule that the index holds no body text,
@@ -1663,7 +1666,7 @@ never in a separate progress file, which would duplicate state and drift (a dele
 - **`classkit status`** — read-only — assembles the overview from the records: the syllabus
   (approved / approved, edited since / draft), the unit map with each unit's state (not started /
   drafted / planned / designed, or "edited since"), the materials
-  (ingested, outstanding), and **what is still placeholder** (target, D-048) — derived from the
+  (ingested, outstanding), and **what is still placeholder** (D-048) — derived from the
   scaffold's `TODO` markers, e.g. "U01: plan done, 4 sessions TODO; course.yaml: code not set". A
   placeholder is unfinished work, not a defect, so it is reported here and not by `validate`
   (consistency vs completeness, D-033, D-043). Every command shows it first (§5.2). It reads committed files only, so it

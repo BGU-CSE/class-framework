@@ -575,3 +575,22 @@ def test_status_report_shows_each_units_state_and_the_counts(course_root: Path):
     assert "U01  First Unit  planned 2026-10-05" in text
     assert "U02  Heaps       not started" in text
     assert "1 planned, 1 not started" in text
+
+
+# -- what is still placeholder (D-048) --------------------------------------------------
+
+def test_status_lists_what_is_still_placeholder(course_root: Path):
+    found = status(course_root, FRAMEWORK_ROOT)
+    text = "\n".join(found.placeholders)
+    assert "syllabus:" in text and "placeholder" in text
+    assert "U01: still placeholder — plan, 4 of 4 sessions, class hour" in text
+    assert "Placeholder" in report(found)
+
+
+def test_a_course_without_a_code_validates_and_status_says_so(tmp_path: Path):
+    root = tmp_path / "course"
+    assert main(["scaffold", "course", "--title", "T", "--path", str(root)]) == 0
+    text = (root / "course.yaml").read_text(encoding="utf-8")
+    assert '# code: ""' in text
+    assert [f for f in validate(load_course(root, FRAMEWORK_ROOT), FRAMEWORK_ROOT) if f.level == "error"] == []
+    assert "course.yaml: course code not set" in status(root, FRAMEWORK_ROOT).placeholders

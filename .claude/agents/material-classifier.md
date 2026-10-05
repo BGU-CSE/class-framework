@@ -1,6 +1,6 @@
 ---
 name: material-classifier
-description: Classifies a course's ingested materials — proposes each one's kind, likely units and audience (student or instructor-only), flags a published book that is not in private/, mentions materials that are one another in two formats and links inside materials that look like course resources, and reports what the course actually covers and where it is thin. Use in /ingest, after `classkit ingest` has converted the materials.
+description: Classifies a course's ingested materials — proposes each one's kind, likely units, audience (student or instructor-only) and roles (scope and/or reference), flags a published book that is not in private/, mentions materials that are one another in two formats and links inside materials that look like course resources, and reports what the course actually covers and where it is thin. Use in /ingest, after `classkit ingest` has converted the materials.
 tools: Read, Grep, Glob
 ---
 
@@ -45,6 +45,7 @@ classification is **returned** as one YAML block, which `/ingest` shows the teac
   kind: slides
   units: [U03, U04]
   audience: student
+  roles: [scope]           # the teacher's own deck: what is taught, and how deep
 - id: M0012
   kind: exam
   units: []
@@ -53,11 +54,12 @@ classification is **returned** as one YAML block, which `/ingest` shows the teac
   kind: textbook
   units: all               # course-wide: the textbook, the course Gem
   audience: student
+  roles: [reference]       # the fuller source; [scope, reference] if the course is taught straight from it
   title: "CLRS 4th edition"   # only if the extracted title is junk
 ```
 
 Include every material you were asked to classify, even where you agree with what is already
-there. Allowed keys: `id`, `kind`, `units`, `title`, `audience`. The block is recorded all or
+there. Allowed keys: `id`, `kind`, `units`, `title`, `audience`, `roles`. The block is recorded all or
 nothing, so an unknown id or a malformed unit id rejects the whole block — check each id against
 the manifest.
 
@@ -72,6 +74,19 @@ and numbering ("Lecture 3", "week 5"), counted against `units` in `course.yaml`.
 **Never** propose a change to anything under `course/materials/source/` — it is the teacher's.
 Replacing a hand-edited ingested file is **the teacher's decision**: you say what you saw; the
 command asks.
+
+## Roles — what decides scope, and what is the fuller source
+
+`roles` (D-048) is a list: **`scope`** — the teacher's material that sets *what* is taught in its
+units and *at what depth*: their decks, their lecture notes, **above all a document the teacher has
+annotated** (the ingested text then holds **Teacher's annotations on this page** blocks; ingest
+reports "N highlights, M comments" for it) — highlights and margin notes are how a teacher marks
+what to teach and at what level; **`reference`** — the fuller source: the textbook. A material may be
+**both** (a book the course is taught straight from), or **neither** (a past exam, an old syllabus,
+a link: leave `roles` out). Give a reason in the table for each `scope` ("annotated by the teacher:
+140 highlights in ch. 2"). `/plan-units` checks that some `scope` material reaches each unit it
+plans; without one, the unit is "book only — scope not confirmed". An annotated instructor-only
+document (publisher lecture notes) is typically `scope` and `audience: instructor` at once.
 
 ## Audience — who may be pointed at it
 

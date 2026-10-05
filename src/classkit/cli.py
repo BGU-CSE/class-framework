@@ -50,7 +50,7 @@ def build_parser() -> argparse.ArgumentParser:
     kinds = scaffold.add_subparsers(dest="kind", required=True)
 
     new_course = kinds.add_parser("course", help="create the course tree")
-    new_course.add_argument("--code", required=True, help="institutional course code")
+    new_course.add_argument("--code", default="", help="institutional course code (optional: /plan-syllabus asks for it)")
     new_course.add_argument("--title", required=True)
     new_course.add_argument("--institution", default="Ben-Gurion University of the Negev")
     new_course.add_argument("--instructor", default="")

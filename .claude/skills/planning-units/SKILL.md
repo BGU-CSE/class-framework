@@ -149,7 +149,15 @@ In order of weight:
 1. **The unit's map entry** — its `summary` and its `evidence` locators: what the syllabus's plan
    for this unit rests on.
 2. **The unit's materials** — in `materials/manifest.yaml`, the materials whose `units` include it
-   (or `all`, course-wide: the textbook, read the relevant chapter). `units` is a hint, not a fact:
+   (or `all`, course-wide: the textbook, read the relevant chapter). **`roles` decide their weight
+   (D-048): `scope` material — the teacher's decks and annotated notes — decides *what* the unit
+   teaches and *how deep*; `reference` material — the book — fills in the detail and the exact
+   places to cite, and never widens the scope on its own.** In an annotated document, the
+   **Teacher's annotations on this page** blocks are the strongest signal there is: a highlight
+   says "this matters", a margin note ("On board", "Ask in class", "Show on cards") says how it is
+   taught — read them before the page's text, and say in the plan notes which ones shaped the plan.
+   A unit with only `reference` material is planned only if the teacher chose to, and then labelled
+   *provisional — scope not confirmed*. `units` is a hint, not a fact:
    a deck's title slide or a chapter's contents decide. Read the **ingested** copy
    (`materials/ingested/`), never `materials/source/`; its anchors (`## Slide 18`, `## Page 34`) are
    the only places a locator can name.

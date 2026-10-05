@@ -89,7 +89,8 @@ Return, in this order:
    follow the book's order deliberately. Name them; reordering is the teacher's call.
    **An instructor-only material may still be the scope source** (the publisher's lecture notes the
    teacher teaches from): `audience: instructor` keeps it from students, not from planning.
-4. **Open questions** — numbered, only what the evidence cannot answer and the draft needs: credits
+4. **Open questions** — numbered, only what the evidence cannot answer and the draft needs: the
+   **course code** if `course.yaml` has none and no material states it (D-048), credits
    and the credit system, grading components and weights, prerequisites, level and when offered,
    attendance or integrity policies specific to the course, staff and office hours, whether students
    will use an AI study path (a Gem). For each, say **what the draft will do if it stays unanswered**

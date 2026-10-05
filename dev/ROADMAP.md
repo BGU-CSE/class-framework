@@ -489,15 +489,15 @@ Tags: **[2d-A]** the plain fixes (built by a background implementation, merged a
 | | Artifact | Change |
 |---|---|---|
 | ✅ | `src/classkit/ingest/`, `.claude/`, `templates/`, docs | **[2d-A]** ~25 plain fixes from `reviews/TEACHER-TESTING-ingest.md`: ligature repair + garbled-text probe; deck titles from slide 1 / file name; `links.md` template; reader warnings only for files to convert; time estimate; DOCX bold-label anchors; `material apply` echo; `doctor` OK wording and first-run collapse; `status` notes (private files, stale coverage); neutral refusal text; scaffold `private/`, `instructors: []`, `--language`, global-gitignore warning; `scaffold unit` logs; prompts (questions one at a time, every answer logged, "confirm with the teacher", facts trace to the teacher, weeks are history, the chat classifies small increments, `objective_maps_to_outcome` advice); docs and MANUAL-TESTING Built in a background worktree (16 commits), reviewed and adjusted (the repair made document-level; a plural), merged — Session 43 |
-| ⬜ | `src/classkit/ingest/extract.py`, `report.py` | **[2d-B]** PDF annotations (highlights, comments, stamps) as a block per page; private material: text only in `private-text/`, counts in the index; "N highlights, M comments" per file |
-| ⬜ | `schemas/manifest.schema.json`, `ingest/core.py`, `cli.py` | **[2d-B]** `roles: [scope, reference]`; in `material apply` / `set --role` |
-| ⬜ | `.claude/agents/material-classifier.md`, `.claude/commands/ingest.md` | **[2d-B]** propose `roles` (an annotated document → likely `scope`) |
-| ⬜ | `.claude/commands/plan-units.md`, `.claude/skills/planning-units/` | **[2d-B]** "book only — scope not confirmed": wait or plan provisionally; scope material decides what and how deep |
-| ⬜ | `schemas/*.schema.json`, `src/classkit/validate.py` | **[2d-B]** `accepted: [{rule, id?, reason?}]` — per-item suppression; findings carry a structured item id |
-| ⬜ | `schemas/course.schema.json`, `scaffold.py`, `cli.py`, `/plan-syllabus` | **[2d-B]** `code` optional; `--code` optional; asked for at evidence |
-| ⬜ | `src/classkit/status.py` | **[2d-B]** what is still placeholder |
-| ⬜ | `.claude/skills/writing-a-syllabus/SKILL.md` | **[2d-B]** other credit systems go in the body's workload section |
-| ⬜ | `tests/` | **[2d-B]** annotations extracted (generated annotated PDF), kept out of a private index; roles; per-item accepted; code optional; status placeholders |
+| ✅ | `src/classkit/ingest/extract.py`, `report.py` | **[2d-B]** PDF annotations (highlights, comments, stamps) as a block per page; private material: text only in `private-text/`, counts in the index; "N highlights, M comments" per file |
+| ✅ | `schemas/manifest.schema.json`, `ingest/core.py`, `cli.py` | **[2d-B]** `roles: [scope, reference]`; in `material apply` / `set --role` |
+| ✅ | `.claude/agents/material-classifier.md`, `.claude/commands/ingest.md` | **[2d-B]** propose `roles` (an annotated document → likely `scope`) |
+| ✅ | `.claude/commands/plan-units.md`, `.claude/skills/planning-units/` | **[2d-B]** "book only — scope not confirmed": wait or plan provisionally; scope material decides what and how deep |
+| ✅ | `schemas/*.schema.json`, `src/classkit/validate.py` | **[2d-B]** `accepted: [{rule, id?, reason?}]` — per-item suppression; findings carry a structured item id |
+| ✅ | `schemas/course.schema.json`, `scaffold.py`, `cli.py`, `/plan-syllabus` | **[2d-B]** `code` optional; `--code` optional; asked for at evidence |
+| ✅ | `src/classkit/status.py` | **[2d-B]** what is still placeholder |
+| ✅ | `.claude/skills/writing-a-syllabus/SKILL.md` | **[2d-B]** other credit systems go in the body's workload section |
+| ✅ | `tests/` | **[2d-B]** annotations extracted (generated annotated PDF), kept out of a private index; roles; per-item accepted; code optional; status placeholders |
 
 ## Cross-cutting
 
@@ -507,8 +507,8 @@ Tags: **[2d-A]** the plain fixes (built by a background implementation, merged a
 | ✅ | `templates/course/course.yaml`, `GETTING-STARTED.md` | the `gem` block was scaffolded and documented although Exports is deferred (G-16). **Removed from the template and the settings table** — shipping configuration for a feature that does not exist confuses a teacher reading their own `course.yaml`. The optional field stays in `course.schema.json`, so a course that sets it still validates |
 | ⬜ | `tests/` | the scaffold→validate round-trip must stay green at every step — invariant 6 means templates and schemas move together |
 
-**Count as of 2026-10-05 (after [2d-A] merged):** 24 decision blocks, 235 artifact changes,
-**134 built, 5 in progress, 96 not started** — counted from the table. Every [3-syllabus] and
+**Count as of 2026-10-05 (after [2d-B], D-048 built):** 24 decision blocks, 235 artifact changes,
+**143 built, 5 in progress, 87 not started** — counted from the table. Every [3-syllabus] and
 [units] row is built, reviewed (`reviews/impl-review-step-3.md`) and its outcomes applied (D-047);
 next, Avin checks both on a real course. (After the units build, Session 40: 219; 127 / 5 / 87.) (After D-046 was designed: 111 / 6 / 102.) (After the syllabus build,
 Session 37: 195; 98 / 6 / 91.) (After D-043 was designed:

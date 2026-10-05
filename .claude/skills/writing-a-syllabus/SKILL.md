@@ -42,6 +42,8 @@ per unit, sessions, the class meeting) come from `methodologies/<name>.yaml` —
   problem. **Every outcome should be built by some units, and every unit should serve some
   outcome** — name any that are not.
 - **`workload`** — `credits` and `credit_system` only from the old syllabus or the teacher.
+  The front matter holds **one** credit system — the one the institution counts in; other systems
+  the form states (ECTS beside local points) go in the body's workload section (D-048).
   `total_hours` likewise. What the methodology implies (minutes per unit × units) may be shown next
   to it, clearly as arithmetic, not as the institution's figure.
 - **`prerequisites`** — course names or codes, from the old syllabus or the teacher.

@@ -47,6 +47,14 @@ Show it to the teacher. Then read `course/course.yaml`, the syllabus's Course Ou
 - **A unit with no material** (coverage says "no material yet", the map entry has no `evidence`):
   say so. The agent will not plan it from memory; the teacher may give the subject in their own
   words, or plan it later, when the material arrives.
+- **A unit with only the book — scope not confirmed** (D-048). Check `materials/manifest.yaml`: does
+  some material with `scope` in its `roles` reach this unit (its `units` include it, or a `scope`
+  material is cited in the map's `evidence`)? If only `reference` material does — the textbook,
+  `units: all` — the book says what *could* be taught, not what *this teacher* teaches or how deep.
+  Say "U07: book only — scope not confirmed" and offer: **wait** for the teacher's material (their
+  deck or annotated notes), or **plan provisionally**, every objective then labelled
+  *provisional — scope not confirmed* in the plan notes. The teacher decides; log the choice.
+  (No `roles` recorded at all — an older manifest — ask the teacher which materials are theirs.)
 
 Run `classkit doctor` and note which private materials are **index-only on this machine** — the
 agent must be told.

@@ -1,5 +1,5 @@
 # Course configuration. Validated against schemas/course.schema.json.
-code: "{{code}}"
+{{code_line}}
 title: "{{title}}"
 institution: "{{institution}}"
 instructors:{{instructors}}

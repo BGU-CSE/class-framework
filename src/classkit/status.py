@@ -65,6 +65,8 @@ class Status:
     units: list[UnitLine]
     materials: list[str]
     last_log: str = ""
+    #: what is still a scaffolded placeholder (D-048) — unfinished work, not a defect
+    placeholders: list[str] = field(default_factory=list)
 
 
 def syllabus_state(course_root: Path, framework_root: Path | None) -> SyllabusState:
@@ -246,6 +248,51 @@ def coverage_predates(coverage: Path, active_ids: list[str]) -> list[str]:
     return [mid for mid in active_ids if mid not in covered]
 
 
+def _todos(value) -> int:
+    """How many values in parsed front matter are still the scaffold's `TODO` placeholders."""
+    if isinstance(value, dict):
+        return sum(_todos(v) for v in value.values())
+    if isinstance(value, list):
+        return sum(_todos(v) for v in value)
+    return int(isinstance(value, str) and value.strip().upper().startswith("TODO"))
+
+
+def _front_matter_todos(path: Path) -> int:
+    try:
+        data, _body = read(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ApproveError, FrontMatterError, ValueError):
+        return 0
+    return _todos(data)
+
+
+def placeholders(course_root: Path, config: dict) -> list[str]:
+    """What is still placeholder (D-048), derived from the scaffold's `TODO` markers — no state of
+    its own. A placeholder is unfinished work, so it is reported here, not by `validate`."""
+    lines = []
+    if not str(config.get("code") or "").strip():
+        lines.append("course.yaml: course code not set")
+    syllabus = course_root / SYLLABUS
+    if syllabus.is_file() and (n := _front_matter_todos(syllabus)):
+        lines.append(f"syllabus: {n} placeholder{'' if n == 1 else 's'} (TODO)")
+    units = course_root / "units"
+    for directory in sorted(d for d in units.iterdir() if d.is_dir()) if units.is_dir() else []:
+        match = _UNIT_DIR.match(directory.name)
+        if not match:
+            continue
+        parts = []
+        if _front_matter_todos(directory / "unit.md"):
+            parts.append("plan")
+        sessions = sorted((directory / "sessions").glob("*.md")) if (directory / "sessions").is_dir() else []
+        open_sessions = sum(1 for s in sessions if _front_matter_todos(s))
+        if open_sessions:
+            parts.append(f"{open_sessions} of {len(sessions)} session{'' if len(sessions) == 1 else 's'}")
+        if (directory / "in-class.md").is_file() and _front_matter_todos(directory / "in-class.md"):
+            parts.append("class hour")
+        if parts:
+            lines.append(f"U{int(match.group(1)):02d}: still placeholder — {', '.join(parts)}")
+    return lines
+
+
 def status(course_root: Path, framework_root: Path | None) -> Status:
     try:
         config = load_yaml(course_root / "course.yaml")
@@ -268,6 +315,7 @@ def status(course_root: Path, framework_root: Path | None) -> Status:
         units=unit_lines(course_root, syllabus.unit_map, declared),
         materials=materials_lines(course_root),
         last_log=last,
+        placeholders=placeholders(course_root, config),
     )
 
 
@@ -299,6 +347,9 @@ def report(found: Status) -> str:
 
     out += ["", "Materials     " + found.materials[0]]
     out += [f"              {line}" for line in found.materials[1:]]
+    if found.placeholders:
+        out += ["", "Placeholder   " + found.placeholders[0]]
+        out += [f"              {line}" for line in found.placeholders[1:]]
     if found.last_log:
         out += ["", f"Last log      {found.last_log}"]
     return "\n".join(out)

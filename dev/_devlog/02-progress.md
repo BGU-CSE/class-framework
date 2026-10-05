@@ -1877,3 +1877,17 @@ may overrun it); the probe flags real French or German text, and says so; the re
 "only if its author agrees". Spec §8.7 updated (titles, the repair and probe, DOCX bold labels,
 `private/` scaffolded). 392 tests.
 
+## Session 44 — 2026-10-05 — `--language` removed (D-001); worktrees ignored; [2d-B] built
+
+Avin chose (b): no `--language` scaffold option (D-001), the comment kept. Asked about
+`.claude/worktrees/`: it is Claude Code's location for agent worktrees; it was **not ignored** and
+showed as untracked — now gitignored; the merged worktree and branch removed. Then [2d-B], built
+here: the teacher's PDF annotations (highlights with the text under them, notes, free-text, stamps)
+as a block per page — private: text only locally, counts in the index; `roles: [scope, reference]`
+(schema, apply, `set --role`), proposed by the classifier, and `/plan-units`'s "book only — scope not
+confirmed"; `accepted:` for one item (`id:`), findings carrying the item they are about (the first id
+the message names, explicit for `unit_map_mismatch`, pinned by a test); `code` optional;
+placeholders in `classkit status`; the ECTS line in the skill; prompts and docs; a MANUAL-TESTING
+section. One reversal of my own: rewriting the schemas through `json.dump` reflowed them (421-line
+diff) — reverted and re-done as text edits (32 lines). 405 tests.
+

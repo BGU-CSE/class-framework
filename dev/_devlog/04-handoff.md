@@ -28,11 +28,10 @@ an approved syllabus and two approved unit plans, nothing invented. Triaged as *
   a garbled-text probe, deck titles from slide 1, `links.md` template, every teacher answer logged,
   "confirm with the teacher" not "invented", questions one at a time, `private/` scaffolded, and more.
   392 tests.
-- **[2d-B] — next to build:** the teacher's PDF annotations extracted (private: text only locally,
-  counts in the index); `roles: [scope, reference]` and `/plan-units`'s "book only — scope not
-  confirmed"; per-item `accepted:` (`id:`); `code` optional; placeholders in `classkit status`; the
-  ECTS line in the skill. Rows tagged [2d-B] in `../ROADMAP.md`.
-- **Open for Avin:** `scaffold course --language` vs D-001 (English only, for now).
+- **[2d-B] — built** (Session 44): annotations extracted (private: text locally, counts in the index);
+  `roles: [scope, reference]` and "book only — scope not confirmed"; per-item `accepted:`; `code`
+  optional; placeholders in `status`. 405 tests. `--language` removed (D-001); `.claude/worktrees/`
+  gitignored.
 - **Then** Avin re-tests ingest and planning on the real course (do the annotations reach the
   agents? does CLRS read correctly now?), then the [design] increments (Q-032, Q-033 feed them).
 

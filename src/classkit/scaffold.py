@@ -116,7 +116,7 @@ def scaffold_course(
     course_root: Path,
     framework_root: Path,
     *,
-    code: str,
+    code: str = "",
     title: str,
     institution: str,
     instructor: str,
@@ -155,7 +155,11 @@ def scaffold_course(
         render(
             _template(framework_root, "course", "course.yaml"),
             {
-                "code": code,
+                # Optional (D-048): identity no tool reads; a teacher may scaffold before
+                # finding it. Left as a commented placeholder, which `classkit status` reports.
+                "code_line": (f"code: {json.dumps(code, ensure_ascii=False)}" if code.strip() else
+                              '# code: ""   # the institution\'s course code — not set yet; '
+                              "/plan-syllabus asks for it"),
                 "title": title,
                 "institution": institution,
                 # `[]` with no instructor, not a list holding one empty string.
@@ -199,7 +203,7 @@ def scaffold_course(
                 changed=f"course log started; created {', '.join(created)}"
                 if created
                 else "course log started; every other file already existed",
-                why=f"setting up {title} ({code})",
+                why=f"setting up {title}" + (f" ({code})" if code.strip() else ""),
                 files=[*created, log.LOG_FILE],
             )
         ),

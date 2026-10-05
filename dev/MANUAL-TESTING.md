@@ -504,6 +504,40 @@ cannot be tracked", and checking the course gives no error. Without `stage` it i
 
 ---
 
+## Step 2d — after the real-course test: annotations, roles, one-item exceptions (D-048)
+
+**What it should deliver:** your own marks reach the agents, and planning knows your material from
+the book. Re-ingest the real course (a fresh clone, or `--overwrite` the affected materials — an
+unchanged source is not re-converted, so old extractions keep their old text).
+
+1. **"Ingest the course."** "Check these extractions" lists your annotated lecture notes with
+   "N highlights, M comments … likely scope material", and CLRS **without** a garbled-words line
+   (the `û` repair). Open the publisher notes' full text in `course/materials/private-text/`: after
+   page text, a **Teacher's annotations on this page** block — the highlighted words, your
+   comments ("On board", "Ask in class …"). Open the **committed** index of the same file in
+   `ingested/`: only "*(teacher's annotations: 6 highlights, 2 comments)*" — none of the text.
+2. **Classification:** the table and YAML block now have `roles` — your decks and annotated notes
+   `scope`, the book `reference` — with a reason for each `scope`. Correct one ("M0010 is both") and
+   check `material apply` records `[scope, reference]`.
+3. **"Plan unit 7"** (only the book reaches it): it says **"book only — scope not confirmed"** and
+   offers to wait or plan provisionally. For a unit with your notes, the plan notes say which of
+   your annotations shaped it.
+4. **One-item exception:** leave one objective without an outcome on purpose and say "accept that
+   for U01-O3 only" — the chat adds `{rule: objective_maps_to_outcome, id: U01-O3, reason: …}`;
+   "check the course" — the alert is gone for O3, and still fires for any other objective you
+   leave without an outcome.
+5. **"Where does the course stand?"** — a **Placeholder** section: what is still TODO (U02's
+   sessions, the class hour …), and "course code not set" if you scaffolded without `--code`.
+
+### What is worth your judgement here
+
+- **Do the highlights come out as the words you highlighted?** The text under a highlight is
+  approximate (the PDF's own text fragments) — is it close enough to read your intent?
+- **Did the plan follow your notes rather than the book's breadth?**
+- **Is CLRS readable now** (`efficient`, not `efûcient`) after re-ingest?
+
+---
+
 ## Expected noise — do not report these as bugs
 
 | What you will see | Why | Tracked as |
