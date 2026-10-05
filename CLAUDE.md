@@ -129,9 +129,13 @@ Scaffolding **never overwrites**, so it is safe to re-run at any time.
 ## Materials
 
 - **`course/materials/source/`** is the teacher's: any files, any structure, duplicates included.
-  **Nothing modifies, moves or deletes anything in it** — no agent, no tool.
+  **Nothing modifies, moves or deletes anything in it** — no agent, no tool — with one exception:
+  `classkit add-url` appends a line to `source/links.md`.
 - **`source/links.md`** lists the course's links, one per line with an optional ` — note`. Add one
   with `classkit add-url URL --note "…"`.
+- **`source/private/`** holds only what must not be in the repo — a published book, a solutions
+  manual. The teacher's own slides belong outside it: a TA's clone sees only an index of what is in
+  `private/`.
 - **`course/materials/ingested/`** is derived: `classkit ingest` (run by `/ingest`) writes one
   Markdown copy per material, `M0007-heaps.md`, with an anchor per slide (`## Slide 18`), per page
   (`## Page 34`), or the document's own headings. **`materials/manifest.yaml`** lists every

@@ -14,8 +14,9 @@ goal: "TODO"
 
 # COURSE OUTCOMES — the roof of the coverage chain. What a student who passes can DO:
 # "Analyse the running time of a recursive algorithm" is an outcome; "Recursion" is a
-# subject label. Every Unit Objective rolls up to at least one outcome. Two are scaffolded,
-# to match the scaffolded unit; a real course has as many as it genuinely delivers.
+# subject label. Every Unit Objective rolls up to at least one outcome. Two placeholders are
+# scaffolded; a scaffolded unit's objectives both name CO1 (every course has one), so CO2 is
+# served by nothing until units are planned. A real course has as many as it genuinely delivers.
 outcomes:
   - id: CO1
     statement: "TODO"
