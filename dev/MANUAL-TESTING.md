@@ -7,7 +7,8 @@ following `README.md` gets where they expect. That needs a human running it in a
 This document is the procedure. It grows a section per implementation step (see `ROADMAP.md`).
 
 Each section was checked against the step that built it. Step 1's counts and validate summary were
-re-checked on 2026-10-01, after step 2c-2 (F-01); the other sections are as their steps left them.
+re-checked on 2026-10-05, after the teacher-test fixes (14 files; 14 warnings after `scaffold unit
+1`); the other sections are as their steps left them.
 
 ## Work in the chat, as a teacher would (D-045)
 
@@ -63,8 +64,13 @@ course — invariant 1 says no course content in the framework repo, and the clo
   --units 13
 ```
 
-Expect **13 files created**, among them `course/syllabus/syllabus.md`, `course/course.yaml`,
-`course/LOG.md` and `course/.gitignore` (step 2c-1: it keeps private material out of git).
+Expect **14 files created**, among them `course/syllabus/syllabus.md`, `course/course.yaml`,
+`course/LOG.md`, `course/.gitignore` (step 2c-1: it keeps private material out of git) and
+`course/materials/source/private/.gitkeep` — the private folder exists from the start, and the
+output ends by saying what it is for. `course.yaml` has `instructors: []` when no `--instructor` was
+given, and a comment on `language:` (`--language`, default `en`). If your global git config ignores
+`.gitignore` files, the output ends with a **WARNING** naming the fix (`git add -f
+course/.gitignore`).
 
 ```bash
 .venv/bin/classkit validate
@@ -82,7 +88,9 @@ Then add a unit and validate again:
 ```
 
 Expect **6 files created** under `course/units/01-asymptotic-analysis/` (4 sessions + `unit.md` +
-`in-class.md`), and again **0 errors** — the summary reads `1 unit, 12 guiding questions` (F-02).
+`in-class.md`), and again **0 errors** and **14 warnings** — the 2 above plus 12 ×
+`guiding_question_assessed` (expected noise, below); the summary reads `1 unit, 12 guiding
+questions` (F-02). `course/LOG.md` gets a `classkit scaffold unit 1` entry naming the six files.
 
 > **This unit is a throwaway (F-18).** A real teacher ingests their materials (step 2b) *before*
 > any unit exists, and `/plan-units` decides what unit 1 is. Here it only proves scaffolding works;
@@ -94,19 +102,24 @@ Expect **6 files created** under `course/units/01-asymptotic-analysis/` (4 sessi
 ```bash
 .venv/bin/classkit scaffold unit 1 --title "Asymptotic analysis"
 # → "0 created, 6 left untouched." Every file reported as `exists … (left untouched)`.
+# No new LOG.md entry: a run that created nothing is not a change.
 ```
 
 ### What is worth your judgement here, not just green output
 
 - **Open `course/syllabus/syllabus.md`.** Is the skeleton one you would actually want to fill in? Is
-  anything a Bologna descriptor needs missing? *(D-032 already adds `level`, `course_type`, `offered`,
-  `teaching_methods`, `reading` — not yet implemented, so their absence is expected.)*
+  anything a Bologna descriptor needs missing? *(D-032's descriptor parts exist as **body
+  sections** — "Level, type and when offered", "Teaching methods", "Reading" — and `reading:` as a
+  commented-out front-matter block. `level`, `course_type`, `offered` and `teaching_methods` are
+  not front-matter fields; their absence there is expected.)*
 - **Open a session file and `in-class.md`.** Do the TODOs tell you what to write?
 - Does `validate`'s output read like something you would act on, or like noise?
 
 ---
 
 ## Step 0 — the overwrite-safe write path
+
+*Tested after Step 1: it needs a course to write into.*
 
 **What it should deliver:** it must be *structurally impossible* for an agent to destroy your work by
 forgetting to check (invariant 5, §8.6). Exit code **3** means refused, distinct from 2 (broke).
@@ -146,7 +159,10 @@ test proves the mechanism, not yet the enforcement.
 
 The test no code review can do: **your real, messy materials.** Copy (do not move) a real course's
 slides, PDFs, Word files, past exams and a few odd files into `course/materials/source/` — unsorted,
-with at least one deck *and* its PDF export, and one file in a format nothing reads. Then:
+with at least one deck *and* its PDF export, and one file in a format nothing reads. **Put a
+published book and a solutions manual straight into `course/materials/source/private/`** — the
+normal case, as `source/README.md` tells a teacher; moving a file into `private/` later is a
+separate migration check (step 2c-1). Then:
 
 ```bash
 .venv/bin/pip install -e .                       # new dependencies: python-pptx, python-docx, pypdf
@@ -176,8 +192,9 @@ Point one study path's `ref` at a real anchor (`"M0001#slide-2"`) and one at a m
 
 - **Is the extraction readable?** Open a few `ingested/` files. Slides that are mostly pictures will
   be thin — is it thin enough to mislead the classifier?
-- **Are the titles sensible?** They come from the first slide title or heading, else metadata, else
-  the file name.
+- **Are the titles sensible?** A deck's comes from slide 1's title only, else the file name (`.`,
+  `-`, `_` read as spaces); a document's from its first heading, else metadata, else the file name;
+  never a PDF's first line.
 - **A deck and its PDF export stay two materials** (D-040): nothing should ask you about them.
 - **Are the kinds and units right?** Units are guessed before any unit map exists, from "Lecture 3"
   and the like; how often is the guess wrong? (`/plan-units` will re-map them — D-039.)
@@ -198,13 +215,16 @@ scratch clone is already a git repository, which two of the checks need; commit 
 
 ```bash
 .venv/bin/pip install -e .
-.venv/bin/classkit scaffold course --code X --title Y   # on a 2b course: creates only course/.gitignore
+.venv/bin/classkit scaffold course --code X --title Y   # creates only what is missing — nothing on a course
+                                                       # scaffolded by this version
 tail -5 course/LOG.md                                  # …and logs that it did
 .venv/bin/classkit doctor                              # ok / note / ACTION lines; exit 0 or 1
 ```
 
-Move (`mv`, by hand — this is the teacher's act) the textbook PDF and the solutions manual into
-`course/materials/source/private/`. Then:
+**The migration check** — a file ingested outside `private/` and moved in later. If your 2b run
+put the book straight into `private/` (the normal case), add a published PDF outside it, ingest it,
+and move that instead. Move (`mv`, by hand — this is the teacher's act) the textbook PDF and the
+solutions manual into `course/materials/source/private/`. Then:
 
 ```bash
 .venv/bin/classkit ingest --preflight                  # "Private: 2 file(s) under private/"
@@ -269,7 +289,10 @@ a fresh clone and course, or re-run in the old one (then read "an old course" be
 Expect: **no library noise** — no `fontTools is required…`, no `Previous trailer cannot be read`
 above the report; a file the reader complained about is listed once, by name, with a count (F-03,
 F-10). What changed is listed **by name and id** (F-23). No "suspected duplicates" and no
-"embedded links" lines (D-040). The time estimate for ~2000 PDF pages says about 2–3 minutes (F-14).
+"embedded links" lines (D-040). The time estimate for ~2000 PDF pages says under a minute
+(recalibrated on the teacher test: 2,204 pages took ~30 s on a recent Mac; an older machine may
+take a few times longer — it is "rough"). Reader warnings are listed only for files about to be
+converted, with "Usually harmless; check these files' extraction after ingest."
 
 Then `/ingest` (or `classkit ingest`) and check, in the run summary and the files:
 
@@ -378,7 +401,8 @@ then `/plan-syllabus`. Check, step by step:
   - "show me the status" → `Syllabus  APPROVED: approved 2026-…`
   - edit one word in the body yourself, then "show me the status" → `APPROVED, EDITED SINCE`
   - reword only a YAML comment → still `APPROVED` (comments are not part of the hash)
-  - "approve the syllabus again" → re-approved; the record replaced in place
+  - after an edit, "approve the syllabus again" → re-approved; the record replaced in place. On an
+    **unchanged** file it is a no-op: `unchanged … not edited since — nothing to record`, no log entry
   - "show me the last log entries" → `classkit approve syllabus … re-approved …`
 
   By hand: replace the block with `approved: {date: 2026-10-05}` → status says "edits since
@@ -450,8 +474,13 @@ Everything below is said in the chat.
      `unit.md` only)
    - change a unit's `title` so it differs from the map → checking the course warns
      `unit_map_mismatch` against that `unit.md`; change it back
-5. **`/plan-units 7`** for a unit with **no material**: it should say so and **not** draft
-   objectives from memory as though they were fact — at most a sketch, labelled as one, if you ask.
+5. **`/plan-units 7`** for a unit with **none of your own material** (no deck, no notes of yours).
+   With the textbook ingested (`units: all`) a unit is rarely without *any* material — the book and
+   the unit map's evidence reach it — so what this tests is the difference that matters: the book
+   says what *could* be taught; your material says what you teach and at what level. It should say
+   which it has, and **not** draft objectives at the book's depth as though they were your plan —
+   at most a sketch, labelled "scope not confirmed", if you ask. (To test a unit with no material
+   at all, use a course without the book ingested.)
 6. **`/review-unit 1`** (optional) on the planned unit: the critic reviews the **plan** (objectives,
    outcomes stretched to fit, load, prerequisites, difficulties), not the placeholder sessions;
    nothing is written.
