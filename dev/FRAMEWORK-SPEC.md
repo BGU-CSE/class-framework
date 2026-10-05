@@ -1136,7 +1136,10 @@ teacher reorganizes `source/`**.
 Everything under `source/` is material except: the top-level `README.md` (scaffolded) and
 `links.md` (read separately), any path with a component starting with `.`, Office lock files
 (`~$…`), and `Thumbs.db` / `desktop.ini`. `scaffold course` creates `source/README.md`,
-`source/links.md` and `ingested/`; the manifest is created by the first ingest.
+`source/links.md`, `source/private/` (D-048 — from day one, so the private option is visible; being
+gitignored, a clone does not get it, and `doctor` notes that) and `ingested/`; the manifest is created by
+the first ingest. The one tool that writes under `source/` is `classkit add-url`, which appends to
+`links.md`.
 
 #### `links.md`
 
@@ -1177,7 +1180,7 @@ unless `links.md` lists it, and listing it restores its old id, so a locator to 
 | Field | Type | Req | Notes |
 |---|---|---|---|
 | `id` | `M<NNNN>` | ✓ | assigned once, never reused |
-| `title` | string | ✓ | the first slide title or heading, else the file's metadata title — unless it is tool boilerplate ("PowerPoint Presentation", "Microsoft Word - …") **or looks like a file name or a path** (`manual.dvi`, `*.tex`, `*.pdf`, `C:\…`; D-040/F-12) — else the file name, cleaned of `_` and extension. **Never a PDF's first line of text** (D-040/F-12). A plain-text file, which has nothing else, is still titled by its first line — except a private one (G-9). A link's fetched title, else its note, else its URL. Editable; re-ingest keeps it |
+| `title` | string | ✓ | **a deck: slide 1's title only, else the file name** (D-048 — a later slide's title is a section or a digression: the hand test's Unit 4 deck was titled after a tribute on slide 2; PPTX metadata titles are not used). Other formats: the first heading, else the file's metadata title — unless it is tool boilerplate ("PowerPoint Presentation", "Microsoft Word - …") **or looks like a file name or a path** (`manual.dvi`, `*.tex`, `*.pdf`, `C:\…`; D-040/F-12) — else the file name, made readable (`.`, `-`, `_` → spaces, extension dropped; a dot between digits kept, `ch6.2`). **Never a PDF's first line of text** (D-040/F-12). A plain-text file, which has nothing else, is still titled by its first line — except a private one (G-9). A link's fetched title, else its note, else its URL. Editable; re-ingest keeps it |
 | `format` | string | ✓ | `pptx`, `pdf`, `docx`, `md`, `odt`, `url`, … |
 | `kind` | enum | ✓ | `slides \| textbook \| notes \| exam \| exercise \| syllabus \| reading \| link \| video \| other` — set by the classifying agent, correctable by the teacher |
 | `sources` | array\<string\> | ✓ | paths under `source/` (or the URL); **more than one when duplicates were merged** |
@@ -1425,9 +1428,17 @@ locators rot.
   - **Equations** in slides and documents (Office Math, `m:oMath`; in a deck, inside
     `mc:AlternateContent`) are extracted as linear text in a code span — `` `(n)/(2)+x^(2)` `` — where
     possible, else as an `[equation]` placeholder, so a reader knows something is there.
-  - **PDF text** is normalised: ligatures (`ﬁ`, `ﬂ`, …) expanded; the extractor's optional
-    font-parsing dependency (fontTools, for `pypdf`) is installed, which fixes most broken
-    characters (verify on a real textbook). Formula layout in PDFs remains unreliable; known.
+  - **PDF text** is normalised: ligatures (`ﬁ`, `ﬂ`, …) expanded; fontTools installed for `pypdf`.
+    That did **not** fix CLRS 4e, whose font maps every "fi" to `û` (~4,700 words). So (D-048): a
+    **repair** — `û` inside an otherwise-ASCII word becomes `fi` — runs **only when the substitution
+    is systematic across the document** (≥ 20 such words), so a French "sûr" quoted in an English
+    book survives; and a **garbled-text probe** runs after every extraction — words that are ASCII
+    but for one stray Latin letter (Greek, i.e. mathematics, excluded), reported under "Check these
+    extractions" when ≥ 20 and ≥ 0.5% of the words: "~N words look garbled (e.g. "eÿcient") — a
+    font-encoding problem". It flags real French or German text too; the message says so. Formula
+    layout in PDFs remains unreliable; known.
+  - **A DOCX with no heading styles** (an institution's form of bold labels) gets anchors: a
+    paragraph that is entirely bold, at most 80 characters and ends with ":" is a heading (D-048).
   - **Low yield is reported, never silent.** Per material, the run summary flags an extraction far
     smaller than its source (e.g. a few characters from a 45 KB document) and counts empty slides
     and pages ("20 of 37 slides have no text"), so thin extraction is not mistaken for thin teaching.

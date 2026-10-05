@@ -19,7 +19,24 @@ Then, for history and what is still open:
 6. `02-progress.md` (last block) — where we stopped.
 7. `03-open-questions.md` — what's unresolved.
 
-## Current state — 2026-10-04 (step 3 — syllabus and units — ready for Avin's check)
+## Current state — 2026-10-05 (the real-course test triaged; plain fixes merged; D-048's decisions next)
+
+**Avin tested steps 0–3 on his real course** (`../reviews/TEACHER-TESTING-ingest.md`): it worked —
+an approved syllabus and two approved unit plans, nothing invented. Triaged as **D-048**.
+
+- **[2d-A] — built and merged** (Session 43): ~25 plain fixes — ligature repair (systematic only) and
+  a garbled-text probe, deck titles from slide 1, `links.md` template, every teacher answer logged,
+  "confirm with the teacher" not "invented", questions one at a time, `private/` scaffolded, and more.
+  392 tests.
+- **[2d-B] — next to build:** the teacher's PDF annotations extracted (private: text only locally,
+  counts in the index); `roles: [scope, reference]` and `/plan-units`'s "book only — scope not
+  confirmed"; per-item `accepted:` (`id:`); `code` optional; placeholders in `classkit status`; the
+  ECTS line in the skill. Rows tagged [2d-B] in `../ROADMAP.md`.
+- **Open for Avin:** `scaffold course --language` vs D-001 (English only, for now).
+- **Then** Avin re-tests ingest and planning on the real course (do the annotations reach the
+  agents? does CLRS read correctly now?), then the [design] increments (Q-032, Q-033 feed them).
+
+## State after the developer audit — 2026-10-05 (kept for history)
 
 **The syllabus and units increments are built, reviewed and finalized** (Sessions 37, 40; review
 `../reviews/impl-review-step-3.md`; outcomes D-047). Suite: **353 tests**, green.

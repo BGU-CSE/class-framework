@@ -1861,3 +1861,19 @@ Q-026, Q-030 and Q-031 checked and still accurate.
 
 **Not touched, as instructed:** the `homework-by-shira` branch; the [design] increment.
 
+## Session 43 — 2026-10-05 — Avin's real-course test triaged (→ D-048); the plain fixes built and merged
+
+Avin's teacher report (`reviews/TEACHER-TESTING-ingest.md`) triaged into ~25 plain fixes and five
+decisions. The plain fixes ([2d-A]) were built by a background agent in its own worktree (16 commits,
+391 tests) while the decisions were taken with Avin (D-048: annotations extracted; `roles: [scope,
+reference]`; per-item `accepted:`; ECTS stays in the body; `code` optional and placeholders in
+`status`; Q-032 and Q-033 opened). Claude reviewed the branch before merging: tests, the prompt
+diffs against the report, and the agent's own flags. Changed in review: the `û` → `fi` repair ran per
+word and would have turned a real "flûte" into "flfite" — it now runs only when the substitution is
+systematic across the document; a "1 materials changed" plural. **Open, for Avin:** the new
+`scaffold course --language` flag conflicts with D-001 (English only, for now) — keep it or not.
+Recorded the agent's other flags: the time estimate follows the teacher test's machine (an older one
+may overrun it); the probe flags real French or German text, and says so; the refusal text keeps
+"only if its author agrees". Spec §8.7 updated (titles, the repair and probe, DOCX bold labels,
+`private/` scaffolded). 392 tests.
+
