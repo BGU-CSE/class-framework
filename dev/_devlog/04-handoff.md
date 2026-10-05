@@ -30,7 +30,12 @@ Then, for history and what is still open:
 - **D-047:** step 2 of both commands split (2a asks and ends the turn; 2b writes and checks);
   `approve unit N` requires `--stage`; `objective_coverage` skipped for *planned* units; unit
   placeholders name CO1 only.
-- **Next — Avin checks both on a real course** (possibly from a university computer): a fresh clone,
+- **A developer audit (2026-10-05, Session 42) was applied**: open questions Q-002…Q-006, Q-021,
+  Q-027, Q-029 brought up to date (Q-004 resolved); a new devlog rule — a decision annotates the
+  questions it affects in the same commit; tests for `unit_count` and `schema_unavailable`;
+  `.claude/settings.local.json` gitignored. 357 tests.
+- **Avin has checked step 3 on a real course** — the teacher report is next to discuss.
+- *(was:)* **Avin checks both on a real course** (possibly from a university computer): a fresh clone,
   `/ingest`, `/plan-syllabus` to approval, `/plan-units 1 2` (planning only). `dev/MANUAL-TESTING.md`,
   sections "Step 3-syllabus" and "Step 3-units". Then the [design] increments (home study, the class
   hour with the entry quiz) — the heart of Core.

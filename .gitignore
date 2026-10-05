@@ -10,3 +10,8 @@ dev/.developer
 
 # macOS Finder litter.
 .DS_Store
+
+# Claude Code's per-machine permissions file. A developer's or teacher's own settings — never
+# shared (the shared ones are .claude/settings.json). Was covered only by a global excludes file
+# until that was removed (D-041), so nothing in the repo kept it out.
+.claude/settings.local.json

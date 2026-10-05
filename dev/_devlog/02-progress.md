@@ -1829,3 +1829,35 @@ one nit stale). Applied with Avin's go-ahead: step 2 split into 2a/2b in both co
 requires `--stage`, `objective_coverage` skipped for planned units, CO1-only placeholders. Spec §5.1,
 §8.4, §8.9; D-047; ledger (225); 353 tests. Ready for Avin's real-course check.
 
+## Session 42 — 2026-10-05 — A developer audit's findings verified and applied
+
+Avin ran a read-only audit in another session (at `9d0aa31`) and passed its findings here. Each was
+verified before acting. **All eight held; one causal claim did not.**
+
+1. **Q-005** asserted the pre-D-020 feasibility mechanism → annotated "Narrowed by D-020 and D-025":
+   not a blocker; what remains is calibrating the advisory constants.
+2. **Q-004** (pilot materials' format; "ingestion design depends on this") → **resolved** against
+   D-035/D-040/D-042: ingest discovers formats itself; Avin's real materials were ingested in the
+   hand test.
+3. **Process gap** → `_devlog/README.md` gains the companion rule: a decision that resolves, narrows
+   or re-frames a question annotates it in the same commit.
+4. **Q-002** re-framed against D-040/D-042's private-material machinery (which covers source material,
+   not generated exam items).
+5. **Q-006** partly answered by events (org, private course repos, a second contributor's work on
+   homework); the branch itself untouched.
+6. **Q-003** notes that `python-pptx` is now a hard dependency (for extraction).
+7. **`schema_unavailable` and `unit_count`** had no test → four tests added (fewer, more and as many
+   units as declared; the schema layer skipped without jsonschema). 357 tests.
+8. **`.claude/settings.local.json`** not ignored → added to `.gitignore`. **Correction to the audit:**
+   it says "the rewritten .gitignore dropped the line". `git log -S` shows the line was **never** in
+   the repo's `.gitignore`; the file was covered only by Avin's global excludes file, deleted on
+   2026-10-01 (D-041, G-4). Same mechanism that surfaced `.DS_Store`. The stale copy on Avin's machine
+   is left for him to delete.
+
+**The sweep found what the audit missed:** **Q-029** still described the cross-unit collision as an
+*error*; D-037 had made it the warning `activity_references_other_unit` — annotated. **Q-021**'s code
+sizes were from August; **Q-027** item 2 is partly covered by D-020 — both annotated. Q-007, Q-022,
+Q-026, Q-030 and Q-031 checked and still accurate.
+
+**Not touched, as instructed:** the `homework-by-shira` branch; the [design] increment.
+

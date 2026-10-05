@@ -1051,3 +1051,44 @@ def test_a_planned_unit_is_not_checked_for_objective_coverage(course_root: Path)
 
     approve_unit(course_root, 1, stage="planned", on="2026-10-05")
     assert "objective_coverage" not in {f.code for f in findings(course_root)}
+
+
+# -- the two informational rules (audit, 2026-10-05: every rule needs a test) ----------
+
+def test_fewer_units_than_declared_is_a_warning_naming_the_count(course_root: Path):
+    found = [f for f in findings(course_root) if f.code == "unit_count"]
+    assert [f.level for f in found] == ["warn"]
+    assert "1 of 13 units exist so far" in found[0].message
+
+
+def test_more_units_than_declared_is_a_warning(course_root: Path):
+    text = (course_root / "course.yaml").read_text(encoding="utf-8")
+    assert "units: 13" in text, "fixture drifted: course.yaml no longer says units: 13"
+    (course_root / "course.yaml").write_text(text.replace("units: 13", "units: 1", 1), encoding="utf-8")
+    scaffold_unit(course_root, FRAMEWORK_ROOT, 2, "Second Unit")
+    found = [f for f in findings(course_root) if f.code == "unit_count"]
+    assert [f.level for f in found] == ["warn"]
+    assert "declares 1 units but 2 exist" in found[0].message
+
+
+def test_as_many_units_as_declared_raises_no_unit_count(course_root: Path):
+    text = (course_root / "course.yaml").read_text(encoding="utf-8")
+    (course_root / "course.yaml").write_text(text.replace("units: 13", "units: 1", 1), encoding="utf-8")
+    assert levels(course_root, "unit_count") == set()
+
+
+def test_without_jsonschema_the_schema_layer_is_skipped_with_a_warning(course_root: Path, monkeypatch):
+    import builtins
+
+    real_import = builtins.__import__
+
+    def no_jsonschema(name, *args, **kwargs):
+        if name == "jsonschema":
+            raise ImportError("simulated: jsonschema not installed")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", no_jsonschema)
+    found = [f for f in findings(course_root) if f.code == "schema_unavailable"]
+    assert [f.level for f in found] == ["warn"]
+    assert "not schema-checked" in found[0].message
+    assert "schema" not in {f.code for f in findings(course_root)}

@@ -25,6 +25,16 @@ Related sub-questions:
 ---
 
 ## Q-002 — Exam confidentiality
+**Re-framed 2026-10-05 by D-040/D-042.** The machinery this question was reaching for now exists for
+*source* material: `materials/source/private/` is gitignored by a scaffolded, committed
+`course/.gitignore`; `classkit doctor` checks that ignore file is itself committed;
+`private_material_committed` reports anything already tracked; and exporters must refuse private and
+`audience: instructor` material in code. It does **not** cover *generated* exam items, which live in
+`course/assessments/items/` and are committed like everything else. So the question is now: **should
+active exam items use the same mechanism** (a gitignored location, or an item-level `private` flag the
+same ignore and export rules honour), or a separate private repo or submodule as first asked? Decide
+in the Assessment phase, before any real exam item is written. Original framing below.
+
 Live exam items in a repo that other teachers clone is a leak risk, and git history makes it
 permanent. Separate private repo/submodule for active exams? Decide before any real exam
 content is committed.
@@ -32,19 +42,44 @@ content is committed.
 ---
 
 ## Q-003 — PPTX generation toolchain
+**Note 2026-10-05:** `python-pptx` is now a hard dependency (`pyproject.toml`), added for ingest's
+extraction (D-035). That does not decide the *generation* toolchain, but it tilts it: the library is
+already installed and tested in every checkout. Still open; belongs with Exports. Original framing
+below.
+
 PPTX is decided (D-006), the mechanism isn't. Options: `python-pptx` from markdown, a template
 deck + content injection, or Marp/Quarto → PPTX. Also: must the output be *editable* by the
 teacher in PowerPoint, and does BGU have a required template?
 
 ---
 
-## Q-004 — Pilot course source materials
+## ~~Q-004 — Pilot course source materials~~ RESOLVED
+**Resolved 2026-10-05 → D-035 (and D-040/D-042).** Its premise, "ingestion design depends on this",
+no longer holds: ingest was designed and built without the answer, because it discovers formats
+itself — built-in extractors for md, txt, pptx, pdf and docx, optional pandoc and LibreOffice for
+the rest, `ingest --preflight` reporting files by format with their page and slide counts, and an
+unreadable file recorded as `unsupported` rather than failing the run. Private and copyrighted
+material (the textbook PDF, the instructor's manual) is handled by D-040/D-042. Avin's real materials
+(CLRS 4e PDF, instructor's manual, syllabus docx, decks) were ingested in the step 0–2b hand test.
+What remains is scheduling, not a design input: having the real materials on the machine used for
+each real-course check. Original framing below.
+
 What format are the existing *Intro to Data Structures and Algorithms* materials (PPTX / PDF /
 Word / Moodle export), and where are they? Ingestion design depends on this.
 
 ---
 
 ## Q-005 — Time-budget constants for the flip
+**Narrowed 2026-08-28 by D-020 and D-025** (annotated 2026-10-05). The mechanism described below no
+longer exists. D-020 moved the budget to one teacher-approved `est_minutes` per Guiding Question, so
+the 25-minute guarantee sums those and needs no derived constants; D-025 made the constants an
+**advisory yardstick** — the designer proposes `est_minutes` from them, the critic sanity-checks
+against them, and no validator rule derives or checks time (`course.yaml` says "ADVISORY ONLY").
+**Not a blocker.** What remains is calibration: making the placeholder numbers in
+`defaults/time-constants.yaml` realistic for technical material, which matters only for the quality
+of the agents' proposals and the critic's check — best done from a real course's experience. Same
+reasoning as Q-024. Original framing below.
+
 Need realistic constants to budget home study: reading rate (pages or words/min for technical CS
 material), video watch rate, exercise time. Per-course tunable in a policy file (proposed: yes).
 **Sharpened by D-010/D-012:** these constants are what make the validator's feasibility check real
@@ -154,7 +189,8 @@ commands or agents?"** Good question. The answer splits, and only the scaffold h
 testability, independence from the agent that wrote the content, and it must be free enough to run
 after every edit.
 
-**`scaffold` is the weak case.** 257 of 1,097 lines of Python. An agent could read a template and
+**`scaffold` is the weak case.** 257 of 1,097 lines of Python (August; by 2026-10-05 `scaffold.py` is
+326 of ~6,400 lines, most of the growth in ingest and validation, D-035 onwards). An agent could read a template and
 write files perfectly well — that *is* what agents do.
 
 | Keep as Python | Move to a command |
@@ -293,6 +329,12 @@ courses never live here.
 ---
 
 ## Q-006 — Other teachers / other courses
+**Partly answered by events (2026-10-05).** The framework lives in the `BGU-CSE` organization (Q-020),
+course repos are private, one per teacher (Q-022), and the separation mechanism Q-001 asked about is
+real, not planned (D-009, D-015, D-034). Work by a second contributor has begun (on homework, Q-026,
+in a separate branch). Still open: which other teachers and courses, and on what timeline. Original
+framing below.
+
 Who else is on the project, what courses, and on what timeline? Affects how soon the
 separation mechanism (Q-001) has to be real rather than planned.
 
@@ -434,6 +476,13 @@ it has no built-in accountability loop — nothing structurally notices whether 
 quiz is an accountability mechanism that already exists and already costs class time that is already
 budgeted. This would give homework the same structural grip the flip gives study sessions.
 
+**Narrowed 2026-09-29 by D-037** (annotated 2026-10-05): the collision below no longer fails
+validation. D-037 split the rule: a Guiding Question that exists but belongs to another unit is now
+`activity_references_other_unit`, a **warning** — split precisely for this case — and only an id that
+exists nowhere is an error. A homework-checking quiz now validates with a warning the teacher may
+accept. What remains open is the design question itself (a referencing route through homework, and
+the two items in the last paragraph). Original text below.
+
 **The concrete collision to remember.** Homework spans *several* units, but
 `activity_references_guiding_question` **errors** when an activity references a Guiding Question that
 is not of the current unit (§8.4). A quiz item checking homework covering units 1–3 would do exactly
@@ -482,7 +531,9 @@ crossed deliberately if it is crossed.
 **Raised 2026-08-27, relocated here 2026-08-28.** Small structural checks the flipped-class model
 does not yet make, none blocking: (1) a session's `duration_minutes` is unconstrained — nothing ties
 it to the methodology's `session_minutes`; (2) nothing checks that the sessions' `est_minutes` budgets
-*sum* to the declared home-study total (100 min); (3) goals have no core-vs-stretch priority marker.
+*sum* to the declared home-study total (100 min) — *partly covered since D-020: each session's
+questions are summed against the session budget (`session_budget_feasibility`, step 4); the unit-level
+sum is not*; (3) goals have no core-vs-stretch priority marker.
 Pick up after the main content-model and homework passes.
 
 ---
