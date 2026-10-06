@@ -19,21 +19,46 @@ Then, for history and what is still open:
 6. `02-progress.md` (last block) — where we stopped.
 7. `03-open-questions.md` — what's unresolved.
 
-## Current state — 2026-10-05 (the real-course test triaged; plain fixes merged; D-048's decisions next)
+## Current state — 2026-10-06 (D-048 built; next: specify the unit-design increments)
 
-**Avin tested steps 0–3 on his real course** (`../reviews/TEACHER-TESTING-ingest.md`): it worked —
-an approved syllabus and two approved unit plans, nothing invented. Triaged as **D-048**.
+**Where the project is.** Core is being finished in **increments a teacher can check** (D-043): each is
+specified with Avin, built (in a fresh session or here), then checked by Avin **on his real course**
+(BGU Data Structures: last year's syllabus, decks, CLRS 4e in `private/`, the Instructor's Manual,
+his annotated publisher lecture notes). Agents are the point; no new validation rule unless the real
+course shows a need. One independent review at the end of Core, not per increment.
 
-- **[2d-A] — built and merged** (Session 43): ~25 plain fixes — ligature repair (systematic only) and
-  a garbled-text probe, deck titles from slide 1, `links.md` template, every teacher answer logged,
-  "confirm with the teacher" not "invented", questions one at a time, `private/` scaffolded, and more.
-  392 tests.
-- **[2d-B] — built** (Session 44): annotations extracted (private: text locally, counts in the index);
-  `roles: [scope, reference]` and "book only — scope not confirmed"; per-item `accepted:`; `code`
-  optional; placeholders in `status`. 405 tests. `--language` removed (D-001); `.claude/worktrees/`
-  gitignored.
-- **Then** Avin re-tests ingest and planning on the real course (do the annotations reach the
-  agents? does CLRS read correctly now?), then the [design] increments (Q-032, Q-033 feed them).
+**Built and checked on the real course:** steps 0–3 — ingest, private material and `doctor`, the
+course log, `/plan-syllabus` (approved), `/plan-units` (two units approved as *planned*). Avin's test
+report: `../reviews/TEACHER-TESTING-ingest.md` → **D-048**, fully built: plain fixes [2d-A]
+(ligature repair + garbled-text probe, deck titles from slide 1, every teacher answer logged, the
+critic's "confirm with the teacher", …) and decisions [2d-B] (**PDF annotations extracted**, **`roles:
+[scope, reference]`** with "book only — scope not confirmed", **per-item `accepted:` `id:`**, `code`
+optional, placeholders in `classkit status`). Suite: **405 tests**, green. `main` = `origin/main`.
+
+**What a teacher can do now, in the chat:** `/ingest` → `/plan-syllabus` → `/plan-units N…` →
+`classkit status`; `/review-syllabus`, `/review-unit N` (on a plan). `MANUAL-TESTING.md` "Step 2d" is
+the not-yet-run re-test of D-048 — **Avin will run it together with the unit-design test** (re-ingest
+first: an unchanged source is not re-converted).
+
+**Next — specify the [design] increments with Avin, one decision at a time**, then build, then his
+check (2d + unit design together):
+1. **Home study** — `/design-unit N session K`: study sessions, guiding questions (the
+   `writing-guiding-questions` skill), `answer` locators (D-019), `est_minutes` (D-020, D-025; the
+   `estimating-study-time` skill), `defer_to_class` (D-023), the session's study-path pool
+   (D-020), the resource-kind vocabulary (D-040/F-21). Open: **Q-032** (home study crossing a week
+   boundary). The agent's *craft* is the unspecified part — the fields are designed.
+2. **The class hour with the entry quiz** — `/design-unit N quiz | class`: the least designed and the
+   heart of Core — activity types, how the entry quiz and the unit's `difficulties` drive the hour,
+   **what the teacher walks into class with** (is `in-class.md` enough, or does Core need
+   student-facing material — a scope question raised in Session 36, still open), D-028/D-031a/e.
+   Open: **Q-033** (the class repeated for groups of ≈40, the weekly TA session, protective quizzes).
+3. **Review** — `/review-unit N` on a designed unit: the critic's standard, now that rules are few.
+Then the end-of-Core review, `/write-items` retirement and `/design-unit` parts ([design] rows).
+
+**Known staging gaps (do not "fix" ahead of the increments):** `/design-unit`, `/write-items`,
+`study-session-designer`, `lesson-planner`, `assessment-writer`, `topic-researcher` still describe the
+pre-D-019/D-020 model and keep `Write`/`Edit` (G-4) — each is rewritten in its increment, applying
+D-044 (craft in a skill; agent read-only, returns; the chat revises; description names its command).
 
 ## State after the developer audit — 2026-10-05 (kept for history)
 
@@ -439,6 +464,15 @@ The kickoff prompt pattern and the required "spec-gap report" deliverable are de
 
 ## Working agreements with Avin
 
+- **Decisions one at a time**, each with options, their costs, and a recommendation; record each in
+  the spec (and the decision log, ledger) as it is made — Avin reminds when it slips.
+- **Simple technical fixes: just do them**; pedagogical and scope questions: ask.
+- **The teacher works in the chat** (D-045); Avin tests that way too.
+- **Verify a claim about the code before writing it into the spec.** Two unverified claims of
+  Claude's reached the spec ("extraction is the same on every machine", "links are readable in the
+  ingested text"); both were wrong.
+- **Reviews and audits are checked before acting** — several findings were overstated or stale.
+- **Push when asked**, or when the next step needs the work on GitHub (a fresh-clone test).
 - **Be honest, rigorous and unbiased — no reflexive agreement** (2026-09-29, now in the root
   `CLAUDE.md` for both hats). Avin noticed a pattern of "good call" / "good catch" and quick
   concessions. Assess on the merits, name the cost of each decision *before* it is made, and when

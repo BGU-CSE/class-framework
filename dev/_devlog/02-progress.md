@@ -1891,3 +1891,12 @@ placeholders in `classkit status`; the ECTS line in the skill; prompts and docs;
 section. One reversal of my own: rewriting the schemas through `json.dump` reflowed them (421-line
 diff) — reverted and re-done as text edits (32 lines). 405 tests.
 
+## Session 44b — 2026-10-06 — Brought up to date for a fresh developer session
+
+Avin will run the "Step 2d" re-test together with the unit-design test. Handoff's "Current state"
+rewritten for a cold start (where the project is, what is built and checked, what is next — the
+[design] increments' spec, home study first — and the known staging gaps not to fix early);
+working agreements extended (decisions one at a time, simple fixes done directly, the chat-first
+teacher, verify claims about code before the spec, check reviews before acting, when to push).
+ROADMAP: a 2d step row and the count paragraph's "next".
+
