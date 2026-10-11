@@ -1632,3 +1632,41 @@ unchecked) was stale — D-044 had built it. Avin approved the consolidated fixe
 5. **G-3 kept as built** (step 5 asks the teacher which hints they set; no provenance field — a new
    mechanism for a low-stakes hint). G-5 … G-11 accepted as built.
 353 tests.
+## D-048 — Avin's real-course test of steps 0–3: what ingest missed, and what the teacher decided
+**Date:** 2026-10-05 · **Status:** locked (design) · sources: `reviews/TEACHER-TESTING-ingest.md`
+
+Avin ran steps 0–3 on his real course (last year's BGU syllabus, four decks, CLRS 4e, its Instructor's
+Manual, his annotated publisher lecture notes): an approved syllabus and two approved unit plans,
+nothing invented that survived review, every checked locator right, the gates held. Claude triaged
+the report: ~25 **plain fixes** (ligature repair and a garbled-text probe, deck titles from slide 1,
+the `links.md` template contradicting D-040, every teacher answer logged and the critic saying "not
+in the evidence or the log — confirm" rather than "invented", questions one at a time, and more) —
+handed to a background implementation; and five **decisions**, taken with Avin:
+
+1. **The teacher's PDF annotations are extracted** — highlights (the text under them), comments,
+   stamps — as a block after each page's text, not inline marks. For a private material, only into
+   the local full text; the committed index gets per-page counts only. Reported per file in "Check
+   these extractions". (The hand test's top finding: 140 highlights and 16 comments in one chapter,
+   the teacher's scope and level signal, seen by no agent.)
+2. **`roles: [scope, reference]`** on materials (Avin: a material may be both). `scope` = the
+   teacher's material that sets what and how deep; `reference` = the fuller source. Proposed by the
+   classifier, confirmed at gate 3. `/plan-units` checks a `scope` material reaches each unit, else
+   says "book only — scope not confirmed" and offers to wait or plan provisionally (what Avin chose
+   by hand for U07). Chosen over a course-level setting, which cannot say *which* files are the notes.
+3. **`accepted:` may name one item** (`id:`); without it, the whole file as before. Cost: rules
+   report a structured item id, a one-time change across rules.
+4. **Two credit systems: no field** (a). By D-043's rule nothing uses the second figure; it belongs in
+   the body's workload section. One line in `writing-a-syllabus`. (b), an `equivalents` field, waits
+   for a syllabus export that would read it.
+5. **`code` optional** (schema and scaffold; nothing uses it; `/plan-syllabus` asks) and **placeholders
+   reported by `classkit status`**, not `validate` (unfinished ≠ inconsistent, D-033/D-043).
+
+**Deferred to the design increments** (open questions Q-032, Q-033): home study that crosses a week
+boundary; a class meeting repeated for groups, the weekly TA session, protective quizzes.
+**Declined:** `status` cross-checking approval hashes against the log (restoring files outside the
+tools is rare; the log is history, not state).
+6. **No `--language` scaffold option (Avin, b).** The plain-fix build had added one; it conflicts with
+   D-001 (English only, for now) and would invite a value no agent or template handles. Removed; the
+   comment on `language:` in `course.yaml` stays, saying what it will control and that other
+   languages are deferred, not rejected. Hebrew comes back as one decision when wanted.
+

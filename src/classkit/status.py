@@ -65,6 +65,8 @@ class Status:
     units: list[UnitLine]
     materials: list[str]
     last_log: str = ""
+    #: what is still a scaffolded placeholder (D-048) — unfinished work, not a defect
+    placeholders: list[str] = field(default_factory=list)
 
 
 def syllabus_state(course_root: Path, framework_root: Path | None) -> SyllabusState:
@@ -170,9 +172,12 @@ def materials_lines(course_root: Path) -> list[str]:
     _state, plan = core.reconcile(course_root, records, files, listed, local=False)
     outstanding = plan.outstanding()
 
+    # The count leaves private files out, by design (§2.2: the same answer on every clone) — so
+    # it says so, rather than disagree silently with the pre-flight's count (teacher test).
+    not_private = " (private files are not counted here: `classkit doctor` reports them)"
     lines = []
     if not records:
-        lines.append("none ingested yet")
+        lines.append("none ingested yet" + ("" if outstanding else not_private))
     else:
         private = sum(1 for r in live if r.get("private"))
         instructor = sum(1 for r in live if r.get("audience") == "instructor")
@@ -187,12 +192,104 @@ def materials_lines(course_root: Path) -> list[str]:
         lines.append(", ".join(parts))
     if outstanding:
         shown = "; ".join(outstanding[:3]) + (f"; and {len(outstanding) - 3} more" if len(outstanding) > 3 else "")
-        lines.append(f"{len(outstanding)} outstanding since the last ingest — {shown}. Run /ingest.")
+        lines.append(f"{len(outstanding)} outstanding since the last ingest — {shown}. Run /ingest."
+                     + not_private)
     elif records:
-        lines.append("nothing outstanding")
+        lines.append("nothing outstanding" + not_private)
     coverage = course_root / "materials" / "coverage.md"
-    lines.append("coverage report: materials/coverage.md" if coverage.is_file()
-                 else "no coverage report saved yet (/ingest writes materials/coverage.md)")
+    if not coverage.is_file():
+        lines.append("no coverage report saved yet (/ingest writes materials/coverage.md)")
+        return lines
+    lines.append("coverage report: materials/coverage.md")
+    missing = coverage_predates(coverage, [str(r.get("id")) for r in live])
+    if missing:
+        newest = sorted(missing, reverse=True)
+        shown = ", ".join(newest[:3]) + (f" and {len(newest) - 3} more" if len(newest) > 3 else "")
+        lines.append(f"coverage report predates {shown} — re-run /ingest step 4 to refresh it")
+    return lines
+
+
+_COVERED = re.compile(r"Materials covered:(.*)", re.IGNORECASE)
+_ID_RANGE = re.compile(r"M(\d{4})(?:\s*[–—-]\s*M?(\d{4}))?")
+
+
+def covered_ids(text: str) -> set[str] | None:
+    """The material ids a saved coverage report names on its "Materials covered:" line (and the
+    lines continuing it, up to a blank line): `M0001–M0016, M0017`. None when there is no such line
+    — then nothing can be said about what it predates."""
+    lines = text.splitlines()
+    for number, line in enumerate(lines):
+        found = _COVERED.search(line)
+        if not found:
+            continue
+        span = [found.group(1)]
+        for following in lines[number + 1:]:
+            if not following.strip() or following.lstrip().startswith("#"):
+                break
+            span.append(following)
+        ids: set[str] = set()
+        for match in _ID_RANGE.finditer(" ".join(span)):
+            first = int(match.group(1))
+            last = int(match.group(2)) if match.group(2) else first
+            ids.update(f"M{n:04d}" for n in range(first, max(first, last) + 1))
+        return ids
+    return None
+
+
+def coverage_predates(coverage: Path, active_ids: list[str]) -> list[str]:
+    """The active materials a saved coverage report does not cover (teacher test: M0017, the
+    teacher's own syllabus, arrived after the report and nothing said so)."""
+    try:
+        covered = covered_ids(coverage.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError):
+        return []
+    if covered is None:
+        return []
+    return [mid for mid in active_ids if mid not in covered]
+
+
+def _todos(value) -> int:
+    """How many values in parsed front matter are still the scaffold's `TODO` placeholders."""
+    if isinstance(value, dict):
+        return sum(_todos(v) for v in value.values())
+    if isinstance(value, list):
+        return sum(_todos(v) for v in value)
+    return int(isinstance(value, str) and value.strip().upper().startswith("TODO"))
+
+
+def _front_matter_todos(path: Path) -> int:
+    try:
+        data, _body = read(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ApproveError, FrontMatterError, ValueError):
+        return 0
+    return _todos(data)
+
+
+def placeholders(course_root: Path, config: dict) -> list[str]:
+    """What is still placeholder (D-048), derived from the scaffold's `TODO` markers — no state of
+    its own. A placeholder is unfinished work, so it is reported here, not by `validate`."""
+    lines = []
+    if not str(config.get("code") or "").strip():
+        lines.append("course.yaml: course code not set")
+    syllabus = course_root / SYLLABUS
+    if syllabus.is_file() and (n := _front_matter_todos(syllabus)):
+        lines.append(f"syllabus: {n} placeholder{'' if n == 1 else 's'} (TODO)")
+    units = course_root / "units"
+    for directory in sorted(d for d in units.iterdir() if d.is_dir()) if units.is_dir() else []:
+        match = _UNIT_DIR.match(directory.name)
+        if not match:
+            continue
+        parts = []
+        if _front_matter_todos(directory / "unit.md"):
+            parts.append("plan")
+        sessions = sorted((directory / "sessions").glob("*.md")) if (directory / "sessions").is_dir() else []
+        open_sessions = sum(1 for s in sessions if _front_matter_todos(s))
+        if open_sessions:
+            parts.append(f"{open_sessions} of {len(sessions)} session{'' if len(sessions) == 1 else 's'}")
+        if (directory / "in-class.md").is_file() and _front_matter_todos(directory / "in-class.md"):
+            parts.append("class hour")
+        if parts:
+            lines.append(f"U{int(match.group(1)):02d}: still placeholder — {', '.join(parts)}")
     return lines
 
 
@@ -218,6 +315,7 @@ def status(course_root: Path, framework_root: Path | None) -> Status:
         units=unit_lines(course_root, syllabus.unit_map, declared),
         materials=materials_lines(course_root),
         last_log=last,
+        placeholders=placeholders(course_root, config),
     )
 
 
@@ -249,6 +347,9 @@ def report(found: Status) -> str:
 
     out += ["", "Materials     " + found.materials[0]]
     out += [f"              {line}" for line in found.materials[1:]]
+    if found.placeholders:
+        out += ["", "Placeholder   " + found.placeholders[0]]
+        out += [f"              {line}" for line in found.placeholders[1:]]
     if found.last_log:
         out += ["", f"Last log      {found.last_log}"]
     return "\n".join(out)

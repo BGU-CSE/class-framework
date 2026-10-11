@@ -136,8 +136,10 @@ def write(
             return WriteOutcome(
                 path,
                 REFUSED,
-                "already has content. Show the teacher what is there, ask, and only "
-                "then write again with overwrite=True (`--overwrite`).",
+                # Neutral: a teacher reads it as well as an agent (teacher test). "Only if its
+                # author agrees" stays, so an agent is not invited to re-run on its own.
+                "already has content (shown below). Re-run with `--overwrite` "
+                "(overwrite=True) to replace it — only if its author agrees.",
                 preview=preview_of(path),
             )
 

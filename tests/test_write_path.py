@@ -273,3 +273,20 @@ def test_diff_of_identical_content_says_unchanged(tmp_path, monkeypatch, capsys)
 def test_diff_of_a_new_file_shows_every_line_added(tmp_path):
     out = diff(tmp_path / "new.md", "one\ntwo\n")
     assert "+one" in out and "+two" in out and not (tmp_path / "new.md").exists()
+
+
+def test_the_refusal_is_worded_for_whoever_reads_it(tmp_path: Path, capsys, monkeypatch):
+    """Teacher test: the refusal spoke to an agent about 'the teacher' in the third person."""
+    import io
+
+    from classkit.cli import main
+
+    target = tmp_path / "notes.md"
+    target.write_text("hello\n", encoding="utf-8")
+    monkeypatch.setattr("sys.stdin", io.StringIO("new\n"))
+    assert main(["write", str(target)]) == 3
+    err = capsys.readouterr().err
+    assert "already has content (shown below). Re-run with `--overwrite`" in err
+    assert "Show the teacher" not in err
+    assert "| hello" in err  # the preview is still shown
+    assert target.read_text(encoding="utf-8") == "hello\n"

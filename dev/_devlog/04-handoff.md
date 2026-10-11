@@ -19,7 +19,48 @@ Then, for history and what is still open:
 6. `02-progress.md` (last block) — where we stopped.
 7. `03-open-questions.md` — what's unresolved.
 
-## Current state — 2026-10-04 (step 3 — syllabus and units — ready for Avin's check)
+## Current state — 2026-10-06 (D-048 built; next: specify the unit-design increments)
+
+**Where the project is.** Core is being finished in **increments a teacher can check** (D-043): each is
+specified with Avin, built (in a fresh session or here), then checked by Avin **on his real course**
+(BGU Data Structures: last year's syllabus, decks, CLRS 4e in `private/`, the Instructor's Manual,
+his annotated publisher lecture notes). Agents are the point; no new validation rule unless the real
+course shows a need. One independent review at the end of Core, not per increment.
+
+**Built and checked on the real course:** steps 0–3 — ingest, private material and `doctor`, the
+course log, `/plan-syllabus` (approved), `/plan-units` (two units approved as *planned*). Avin's test
+report: `../reviews/TEACHER-TESTING-ingest.md` → **D-048**, fully built: plain fixes [2d-A]
+(ligature repair + garbled-text probe, deck titles from slide 1, every teacher answer logged, the
+critic's "confirm with the teacher", …) and decisions [2d-B] (**PDF annotations extracted**, **`roles:
+[scope, reference]`** with "book only — scope not confirmed", **per-item `accepted:` `id:`**, `code`
+optional, placeholders in `classkit status`). Suite: **405 tests**, green. `main` = `origin/main`.
+
+**What a teacher can do now, in the chat:** `/ingest` → `/plan-syllabus` → `/plan-units N…` →
+`classkit status`; `/review-syllabus`, `/review-unit N` (on a plan). `MANUAL-TESTING.md` "Step 2d" is
+the not-yet-run re-test of D-048 — **Avin will run it together with the unit-design test** (re-ingest
+first: an unchanged source is not re-converted).
+
+**Next — specify the [design] increments with Avin, one decision at a time**, then build, then his
+check (2d + unit design together):
+1. **Home study** — `/design-unit N session K`: study sessions, guiding questions (the
+   `writing-guiding-questions` skill), `answer` locators (D-019), `est_minutes` (D-020, D-025; the
+   `estimating-study-time` skill), `defer_to_class` (D-023), the session's study-path pool
+   (D-020), the resource-kind vocabulary (D-040/F-21). Open: **Q-032** (home study crossing a week
+   boundary). The agent's *craft* is the unspecified part — the fields are designed.
+2. **The class hour with the entry quiz** — `/design-unit N quiz | class`: the least designed and the
+   heart of Core — activity types, how the entry quiz and the unit's `difficulties` drive the hour,
+   **what the teacher walks into class with** (is `in-class.md` enough, or does Core need
+   student-facing material — a scope question raised in Session 36, still open), D-028/D-031a/e.
+   Open: **Q-033** (the class repeated for groups of ≈40, the weekly TA session, protective quizzes).
+3. **Review** — `/review-unit N` on a designed unit: the critic's standard, now that rules are few.
+Then the end-of-Core review, `/write-items` retirement and `/design-unit` parts ([design] rows).
+
+**Known staging gaps (do not "fix" ahead of the increments):** `/design-unit`, `/write-items`,
+`study-session-designer`, `lesson-planner`, `assessment-writer`, `topic-researcher` still describe the
+pre-D-019/D-020 model and keep `Write`/`Edit` (G-4) — each is rewritten in its increment, applying
+D-044 (craft in a skill; agent read-only, returns; the chat revises; description names its command).
+
+## State after the developer audit — 2026-10-05 (kept for history)
 
 **The syllabus and units increments are built, reviewed and finalized** (Sessions 37, 40; review
 `../reviews/impl-review-step-3.md`; outcomes D-047). Suite: **353 tests**, green.
@@ -30,7 +71,12 @@ Then, for history and what is still open:
 - **D-047:** step 2 of both commands split (2a asks and ends the turn; 2b writes and checks);
   `approve unit N` requires `--stage`; `objective_coverage` skipped for *planned* units; unit
   placeholders name CO1 only.
-- **Next — Avin checks both on a real course** (possibly from a university computer): a fresh clone,
+- **A developer audit (2026-10-05, Session 42) was applied**: open questions Q-002…Q-006, Q-021,
+  Q-027, Q-029 brought up to date (Q-004 resolved); a new devlog rule — a decision annotates the
+  questions it affects in the same commit; tests for `unit_count` and `schema_unavailable`;
+  `.claude/settings.local.json` gitignored. 357 tests.
+- **Avin has checked step 3 on a real course** — the teacher report is next to discuss.
+- *(was:)* **Avin checks both on a real course** (possibly from a university computer): a fresh clone,
   `/ingest`, `/plan-syllabus` to approval, `/plan-units 1 2` (planning only). `dev/MANUAL-TESTING.md`,
   sections "Step 3-syllabus" and "Step 3-units". Then the [design] increments (home study, the class
   hour with the entry quiz) — the heart of Core.
@@ -418,6 +464,15 @@ The kickoff prompt pattern and the required "spec-gap report" deliverable are de
 
 ## Working agreements with Avin
 
+- **Decisions one at a time**, each with options, their costs, and a recommendation; record each in
+  the spec (and the decision log, ledger) as it is made — Avin reminds when it slips.
+- **Simple technical fixes: just do them**; pedagogical and scope questions: ask.
+- **The teacher works in the chat** (D-045); Avin tests that way too.
+- **Verify a claim about the code before writing it into the spec.** Two unverified claims of
+  Claude's reached the spec ("extraction is the same on every machine", "links are readable in the
+  ingested text"); both were wrong.
+- **Reviews and audits are checked before acting** — several findings were overstated or stale.
+- **Push when asked**, or when the next step needs the work on GitHub (a fresh-clone test).
 - **Be honest, rigorous and unbiased — no reflexive agreement** (2026-09-29, now in the root
   `CLAUDE.md` for both hats). Avin noticed a pattern of "good call" / "good catch" and quick
   concessions. Assess on the merits, name the cost of each decision *before* it is made, and when

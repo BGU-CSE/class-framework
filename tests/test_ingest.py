@@ -680,6 +680,21 @@ def test_apply_reads_yaml_from_the_cli(course: Path, monkeypatch, capsys):
     assert main(["material", "apply", "--course", str(course)]) == 2
 
 
+def test_apply_echoes_every_field_including_unchanged_ones(course: Path, monkeypatch, capsys):
+    """Teacher test: a kind already guessed right was not echoed, so its confirmation was invisible."""
+    import io
+
+    make_pdf(source(course) / "a.pdf", ["A"])
+    run(course)
+    kind = records(course)["M0001"]["kind"]
+    monkeypatch.setattr("sys.stdin", io.StringIO(f"- id: M0001\n  kind: {kind}\n  units: [U02]\n"))
+
+    assert main(["material", "apply", "--course", str(course)]) == 0
+    out = capsys.readouterr().out
+    assert f"M0001  kind={kind} (unchanged)  units=U02\n" in out
+    assert "1 material changed, 0 already so." in out
+
+
 def log_text(course: Path) -> str:
     return (course / "LOG.md").read_text(encoding="utf-8")
 
@@ -783,3 +798,42 @@ def test_a_refusal_shows_the_diff_by_anchor_not_the_front_matter(course: Path, c
     assert "Slide 3:" in section and "+ - c, now with merge sort" in section
     assert "Slide 1:" not in section
     assert "source_hash" not in section and "id: M0001" not in section
+
+
+# -- roles: scope and reference (D-048) ------------------------------------------------
+
+def test_roles_are_recorded_by_apply_either_or_both(course: Path):
+    for name in ("notes", "book"):
+        make_pdf(source(course) / f"{name}.pdf", [name])
+    run(course)
+    ingest.apply(course, [{"id": "M0001", "roles": ["scope"]},
+                          {"id": "M0002", "roles": ["reference", "scope"]}])
+    assert records(course)["M0001"]["roles"] == ["scope"]
+    assert records(course)["M0002"]["roles"] == ["scope", "reference"]  # a fixed order
+
+
+def test_set_role_and_no_roles_from_the_cli(course: Path, capsys):
+    make_pdf(source(course) / "notes.pdf", ["notes"])
+    run(course)
+    assert main(["material", "set", "M0001", "--role", "scope", "--course", str(course)]) == 0
+    assert "roles=scope" in capsys.readouterr().out
+    assert main(["material", "set", "M0001", "--no-roles", "--course", str(course)]) == 0
+    assert not records(course)["M0001"].get("roles")  # absent = neither
+
+
+def test_an_unknown_role_is_refused_and_nothing_is_recorded(course: Path):
+    make_pdf(source(course) / "notes.pdf", ["notes"])
+    run(course)
+    with pytest.raises(ingest.MaterialError, match="a role is one of scope, reference"):
+        ingest.apply(course, [{"id": "M0001", "roles": ["syllabus"]}])
+    assert "roles" not in records(course)["M0001"]
+
+
+def test_the_manifest_schema_accepts_roles(course: Path):
+    from classkit.model import load_course
+    from classkit.validate import validate
+
+    make_pdf(source(course) / "notes.pdf", ["notes"])
+    run(course)
+    ingest.apply(course, [{"id": "M0001", "roles": ["scope", "reference"]}])
+    assert not [f for f in validate(load_course(course, FRAMEWORK_ROOT), FRAMEWORK_ROOT) if f.level == "error"]

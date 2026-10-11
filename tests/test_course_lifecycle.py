@@ -114,6 +114,72 @@ def test_scaffold_fills_in_only_what_is_missing(course_root: Path):
     assert len(result.skipped) == 5
 
 
+# -- scaffold course: private/, instructors, language, a .gitignore git ignores ----------
+
+def new_course(tmp_path: Path, *extra: str) -> tuple[int, Path]:
+    root = tmp_path / "fresh"
+    code = main(["scaffold", "course", "--code", "T-1", "--title", "T", "--path", str(root), *extra])
+    return code, root
+
+
+def test_scaffold_course_creates_the_private_folder_and_says_what_it_is_for(tmp_path: Path, capsys):
+    code, root = new_course(tmp_path)
+    assert code == 0
+    assert (root / "materials" / "source" / "private").is_dir()
+    out = capsys.readouterr().out
+    assert "materials/source/private/.gitkeep" in out
+    assert "in materials/source/private/ — it is gitignored" in out
+
+
+def test_no_instructor_is_an_empty_list(tmp_path: Path):
+    import yaml
+
+    _, root = new_course(tmp_path)
+    assert yaml.safe_load((root / "course.yaml").read_text(encoding="utf-8"))["instructors"] == []
+    assert [f for f in validate(load_course(root, FRAMEWORK_ROOT), FRAMEWORK_ROOT) if f.level == "error"] == []
+
+
+def test_an_instructor_is_listed(tmp_path: Path):
+    import yaml
+
+    _, root = new_course(tmp_path, "--instructor", 'Chen "C." Avin')
+    assert yaml.safe_load((root / "course.yaml").read_text(encoding="utf-8"))["instructors"] == ['Chen "C." Avin']
+
+
+def test_the_course_language_is_english_with_a_comment_and_no_option(tmp_path: Path):
+    """D-001: English only for now; no scaffold option invites a language nothing supports (D-048)."""
+    import yaml
+
+    _, root = new_course(tmp_path)
+    text = (root / "course.yaml").read_text(encoding="utf-8")
+    assert yaml.safe_load(text)["language"] == "en"
+    assert "The language the agents write course content in" in text
+    with pytest.raises(SystemExit):
+        new_course(tmp_path / "other", "--language", "he")
+
+
+def test_scaffold_course_warns_when_git_ignores_its_gitignore(tmp_path: Path, capsys):
+    import shutil
+    import subprocess
+
+    if shutil.which("git") is None:
+        pytest.skip("git is not installed")
+    excludes = tmp_path / "global-excludes"
+    excludes.write_text(".gitignore\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "core.excludesFile", str(excludes)], cwd=tmp_path, check=True)
+
+    new_course(tmp_path)
+    out = capsys.readouterr().out
+    assert "WARNING: course/.gitignore is itself ignored by git" in out
+    assert "fix: git add -f course/.gitignore" in out
+
+
+def test_scaffold_course_does_not_warn_without_reason(tmp_path: Path, capsys):
+    new_course(tmp_path)
+    assert "WARNING" not in capsys.readouterr().out
+
+
 # -- the syllabus, the course-level top layer (D-021) -----------------------
 
 def test_scaffold_creates_a_syllabus(course_root: Path):
@@ -607,6 +673,8 @@ def test_an_objective_naming_no_outcome_is_an_alert(course_root: Path):
     found = [f for f in findings(course_root) if f.code == "objective_maps_to_outcome"]
     assert [f.level for f in found] == ["alert"]
     assert "U01-O1" in found[0].message and found[0].where.endswith("unit.md")
+    # Not "attach an outcome" alone: the planning standard forbids the nearest one to silence it.
+    assert "if no outcome fits, say so: add an outcome in the syllabus, or accept" in found[0].message
     assert errors(course_root) == []
 
 
@@ -1051,3 +1119,95 @@ def test_a_planned_unit_is_not_checked_for_objective_coverage(course_root: Path)
 
     approve_unit(course_root, 1, stage="planned", on="2026-10-05")
     assert "objective_coverage" not in {f.code for f in findings(course_root)}
+
+
+# -- the two informational rules (audit, 2026-10-05: every rule needs a test) ----------
+
+def test_fewer_units_than_declared_is_a_warning_naming_the_count(course_root: Path):
+    found = [f for f in findings(course_root) if f.code == "unit_count"]
+    assert [f.level for f in found] == ["warn"]
+    assert "1 of 13 units exist so far" in found[0].message
+
+
+def test_more_units_than_declared_is_a_warning(course_root: Path):
+    text = (course_root / "course.yaml").read_text(encoding="utf-8")
+    assert "units: 13" in text, "fixture drifted: course.yaml no longer says units: 13"
+    (course_root / "course.yaml").write_text(text.replace("units: 13", "units: 1", 1), encoding="utf-8")
+    scaffold_unit(course_root, FRAMEWORK_ROOT, 2, "Second Unit")
+    found = [f for f in findings(course_root) if f.code == "unit_count"]
+    assert [f.level for f in found] == ["warn"]
+    assert "declares 1 units but 2 exist" in found[0].message
+
+
+def test_as_many_units_as_declared_raises_no_unit_count(course_root: Path):
+    text = (course_root / "course.yaml").read_text(encoding="utf-8")
+    (course_root / "course.yaml").write_text(text.replace("units: 13", "units: 1", 1), encoding="utf-8")
+    assert levels(course_root, "unit_count") == set()
+
+
+def test_without_jsonschema_the_schema_layer_is_skipped_with_a_warning(course_root: Path, monkeypatch):
+    import builtins
+
+    real_import = builtins.__import__
+
+    def no_jsonschema(name, *args, **kwargs):
+        if name == "jsonschema":
+            raise ImportError("simulated: jsonschema not installed")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", no_jsonschema)
+    found = [f for f in findings(course_root) if f.code == "schema_unavailable"]
+    assert [f.level for f in found] == ["warn"]
+    assert "not schema-checked" in found[0].message
+    assert "schema" not in {f.code for f in findings(course_root)}
+
+
+# -- accepted: for one item (D-048) ------------------------------------------------------
+
+def _no_outcomes(course_root: Path) -> None:
+    text = unit_md(course_root).read_text(encoding="utf-8")
+    unit_md(course_root).write_text(text.replace("    outcomes: [CO1]\n", ""), encoding="utf-8")
+
+
+def _accept(course_root: Path, entry: str) -> None:
+    text = unit_md(course_root).read_text(encoding="utf-8")
+    unit_md(course_root).write_text(text.replace("---\n", "---\naccepted:\n" + entry, 1), encoding="utf-8")
+
+
+def test_an_accepted_entry_naming_one_item_covers_only_that_item(course_root: Path):
+    _no_outcomes(course_root)
+    _accept(course_root, '  - {rule: objective_maps_to_outcome, id: U01-O1, reason: "landscape"}\n')
+    found = [f for f in findings(course_root) if f.code == "objective_maps_to_outcome"]
+    assert [f.item for f in found] == ["U01-O2"]  # O1 accepted; O2 still reported
+
+
+def test_an_accepted_entry_without_an_id_still_covers_the_whole_file(course_root: Path):
+    _no_outcomes(course_root)
+    _accept(course_root, '  - {rule: objective_maps_to_outcome, reason: "all deliberate"}\n')
+    assert levels(course_root, "objective_maps_to_outcome") == set()
+
+
+def test_an_accepted_id_that_matches_nothing_is_counted_as_stale(course_root: Path):
+    from classkit.model import load_course
+    from classkit.validate import Validator
+
+    _no_outcomes(course_root)
+    _accept(course_root, '  - {rule: objective_maps_to_outcome, id: U01-O9, reason: "renamed?"}\n')
+    validator = Validator(load_course(course_root, FRAMEWORK_ROOT), FRAMEWORK_ROOT)
+    validator.run()
+    [acceptance] = validator.acceptances
+    assert acceptance.item == "U01-O9" and acceptance.suppressed == []
+    assert {f.item for f in validator.findings if f.code == "objective_maps_to_outcome"} == {"U01-O1", "U01-O2"}
+
+
+def test_each_kind_of_finding_carries_the_id_of_what_it_is_about(course_root: Path):
+    """The item id is the first id a rule's message names (D-048) — pinned here per kind, so a
+    reworded message cannot silently break per-item acceptance."""
+    _no_outcomes(course_root)
+    edit(in_class(course_root), "[U01-S03-G1]", "[U01-S09-G7]")
+    by_code: dict = {}
+    for f in findings(course_root):
+        by_code.setdefault(f.code, f.item)  # the first finding of each kind
+    assert by_code["objective_maps_to_outcome"] == "U01-O1"
+    assert by_code["activity_references_guiding_question"].startswith("U01-A")
+    assert by_code["guiding_question_assessed"].startswith("U01-S")

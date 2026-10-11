@@ -4,7 +4,7 @@
   "title": "Course",
   "description": "course/course.yaml — the root configuration of a single course. One per course repo.",
   "type": "object",
-  "required": ["code", "title", "institution", "language", "methodology", "units"],
+  "required": ["title", "institution", "language", "methodology", "units"],
   "additionalProperties": false,
   "properties": {
     "rules": {

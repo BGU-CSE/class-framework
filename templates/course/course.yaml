@@ -1,10 +1,13 @@
 # Course configuration. Validated against schemas/course.schema.json.
-code: "{{code}}"
+{{code_line}}
 title: "{{title}}"
 institution: "{{institution}}"
-instructors:
-  - "{{instructor}}"
-language: en
+instructors:{{instructors}}
+# The language the agents write course content in — the syllabus body, guiding questions,
+# study paths, the class hour, assessment items. Only English is supported for now (D-001): the
+# templates are in English and right-to-left text is untested. Other languages (Hebrew included)
+# are deferred, not rejected; there is deliberately no scaffold option for this yet.
+language: {{language}}
 
 # Selects the study-session design contract (D-011). See methodologies/.
 methodology: "{{methodology}}"

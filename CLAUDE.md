@@ -140,9 +140,13 @@ Scaffolding **never overwrites**, so it is safe to re-run at any time.
 ## Materials
 
 - **`course/materials/source/`** is the teacher's: any files, any structure, duplicates included.
-  **Nothing modifies, moves or deletes anything in it** — no agent, no tool.
+  **Nothing modifies, moves or deletes anything in it** — no agent, no tool — with one exception:
+  `classkit add-url` appends a line to `source/links.md`.
 - **`source/links.md`** lists the course's links, one per line with an optional ` — note`. Add one
   with `classkit add-url URL --note "…"`.
+- **`source/private/`** holds only what must not be in the repo — a published book, a solutions
+  manual. The teacher's own slides belong outside it: a TA's clone sees only an index of what is in
+  `private/`.
 - **`course/materials/ingested/`** is derived: `classkit ingest` (run by `/ingest`) writes one
   Markdown copy per material, `M0007-heaps.md`, with an anchor per slide (`## Slide 18`), per page
   (`## Page 34`), or the document's own headings. **`materials/manifest.yaml`** lists every
@@ -171,7 +175,14 @@ Scaffolding **never overwrites**, so it is safe to re-run at any time.
 - **`audience: instructor`** in the manifest marks material students must never be pointed at — a
   solutions manual, a past exam. Citing it from a study path raises the alert
   `instructor_material_cited`; the in-class plan may cite it. No export will bundle it.
-- The classifying agent only reads and **returns** each material's kind, units and audience;
+- **Your annotations count.** Highlights and margin comments on a PDF are extracted, page by page,
+  as a "Teacher's annotations" block — for a private PDF only in the local full text (the committed
+  index just counts them). They are how agents learn what you teach and how deep.
+- **`roles`** on a material: `scope` (your decks and annotated notes — they decide what a unit
+  teaches and how deep) and/or `reference` (the book — the fuller source). `/plan-units` says "book
+  only — scope not confirmed" for a unit only the book reaches, and asks whether to wait or plan
+  provisionally.
+- The classifying agent only reads and **returns** each material's kind, units, audience and roles;
   `/ingest` shows them to the teacher and records them (`classkit material apply`). Nobody edits the
   manifest's bookkeeping by hand. Identical copies merge automatically; a deck and its PDF export
   stay two materials and nobody is asked — **cite the deck**. `classkit material merge` is optional,
@@ -216,6 +227,9 @@ accepted:
 ```
 
 A `reason` is optional but worth writing: it is what explains the exception next year.
+
+To accept an exception for **one item only** — one objective, one guiding question — add its `id`
+(`- rule: objective_maps_to_outcome`, `id: U01-O3`); without `id` it covers the whole file.
 
 or change a rule for the whole course in `course.yaml` under `rules:`. **Agents never do either on
 their own** — only when you ask — and they never "fix" something you decided.

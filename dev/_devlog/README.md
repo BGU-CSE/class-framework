@@ -26,6 +26,11 @@ gets deleted before release.
   (`../ROADMAP.md`) in the same commit.** The draft is being finished before the code follows,
   so the ledger is the only thing keeping track of what has been decided but not built.
 - When a question in `03-open-questions.md` gets answered, move it to `01-decisions.md`.
+- **When a decision resolves, narrows or re-frames an open question, annotate that question in the
+  same commit** — a dated line at its top saying which decision, and what is left (the style of
+  Q-024 and Q-005). The companion to the ledger rule above: decisions were recorded correctly while
+  Q-004 and Q-005 went on asserting a superseded model for six weeks, because nothing made anyone
+  revisit the questions (audit, 2026-10-05).
 - **Structure and flow belong in `../FRAMEWORK-SPEC.md`, not here.** This folder records *how we got here*;
   FRAMEWORK-SPEC.md records *how it works now*. Only FRAMEWORK-SPEC.md survives this folder's deletion, so any
   rationale worth keeping must be reflected there too.

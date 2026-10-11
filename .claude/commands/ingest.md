@@ -114,7 +114,16 @@ classkit log "/ingest, conversion approved" --changed "M0001..M0023 ingested (�
 
 ## Step 3 — Classify.
 
-Use the **material-classifier** agent. Tell it which ids are new or updated this run, give it the "Check these extractions" lines
+**A small increment** — one or two new files, plainly what they are (this year's syllabus, one more
+deck in a series already classified): you may propose the classification yourself — read the
+ingested copy, write the same table and YAML block the agent would (`kind`, `units`, `audience`
+with a reason for `instructor`), and show it to the teacher for confirmation like the agent's. The
+gate is the same; only the reader differs. Send the agent for **bulk** material, for anything
+**ambiguous** (what is this file? is it the teacher's or a publisher's?), or when the teacher asks
+for an independent read (D-044: the chat revises; agents do heavy or independent work). Say which
+you chose and why. A new material can still change the coverage report — say so at step 4.
+
+Otherwise use the **material-classifier** agent. Tell it which ids are new or updated this run, give it the "Check these extractions" lines
 from step 2, **tell it which private materials are index-only on this machine** (from step
 0), and pass on anything the teacher said they care about (`$1`). It has no tool that writes or
 runs anything: it **returns** a classification table with the same values as a YAML block —

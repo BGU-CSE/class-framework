@@ -119,6 +119,7 @@ def test_outside_git_doctor_says_why_the_commit_check_is_skipped(course: Path):
 
 
 def test_a_private_folder_in_another_case_must_be_renamed(course: Path):
+    shutil.rmtree(private(course))  # scaffolded; on a case-insensitive disk it would be "Private"
     make_pdf(course / "materials" / "source" / "Private" / "clrs.pdf", ["Heaps"])
     (found,) = find(course, doctor.ACTION, "Private/", "case-sensitive")
     assert "rename it" in found.fix
@@ -179,6 +180,21 @@ def test_a_new_private_file_needs_ingest(course: Path):
     make_pdf(private(course) / "manual.pdf", ["Solutions"])
     (found,) = find(course, doctor.ACTION, "private/manual.pdf", "not ingested")
     assert found.fix == "classkit ingest"
+
+
+def test_several_new_private_files_are_one_line(course: Path):
+    """Teacher test: on a first run, seven 'is new and not ingested' lines buried the one that mattered."""
+    for name in ("a", "b", "c"):
+        make_pdf(private(course) / f"{name}.pdf", [name])
+    (found,) = find(course, doctor.ACTION, "not ingested")
+    assert found.what.startswith("3 private files not ingested yet") and found.fix == "classkit ingest"
+
+
+def test_a_missing_private_folder_is_a_note(course: Path):
+    shutil.rmtree(private(course), ignore_errors=True)  # a clone: git does not carry it
+    (found,) = find(course, doctor.NOTE, "materials/source/private/ does not exist")
+    assert found.fix == "mkdir course/materials/source/private"
+    assert not actions(course)
 
 
 def test_a_hand_edited_full_text_is_a_note(course: Path):
@@ -264,7 +280,7 @@ def test_a_private_copy_of_a_committed_file_does_not_make_it_private(course: Pat
     stays public and its source stays committed. Doctor says so, and how to fix it."""
     make_pdf(course / "materials" / "source" / "clrs.pdf", ["Heaps body"])
     ingest.run(course, fetch=False)
-    private(course).mkdir()
+    private(course).mkdir(exist_ok=True)
     shutil.copy(course / "materials" / "source" / "clrs.pdf", private(course) / "clrs.pdf")
     ingest.run(course, fetch=False)
 
@@ -311,7 +327,7 @@ def test_a_paraphrase_and_a_short_phrase_pass(course: Path):
                      "it a nearly complete binary tree, and so do we.")
 
     assert not find(course, doctor.ACTION, "copies")
-    assert find(course, doctor.OK, "no committed course file copies")
+    assert find(course, doctor.OK, "no committed course file copies", "materials/ingested/ are not checked")
 
 
 def test_the_course_log_is_checked_too(course: Path):

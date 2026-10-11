@@ -12,7 +12,7 @@ import yaml
 from . import approve, doctor, ingest, log, status
 from .frontmatter import FrontMatterError
 from .ingest import links as linkfile
-from .ingest.manifest import AUDIENCES, KINDS, SOURCE_DIR, ManifestError
+from .ingest.manifest import AUDIENCES, KINDS, ROLES, SOURCE_DIR, ManifestError
 from .ingest.report import log_summary, plural, preflight_text, run_text
 from .mode import DEVELOPER, TEACHER, UnsafeMarker, current_mode, set_mode
 from .model import LayoutError, find_course_root, find_framework_root, load_course
@@ -50,7 +50,7 @@ def build_parser() -> argparse.ArgumentParser:
     kinds = scaffold.add_subparsers(dest="kind", required=True)
 
     new_course = kinds.add_parser("course", help="create the course tree")
-    new_course.add_argument("--code", required=True, help="institutional course code")
+    new_course.add_argument("--code", default="", help="institutional course code (optional: /plan-syllabus asks for it)")
     new_course.add_argument("--title", required=True)
     new_course.add_argument("--institution", default="Ben-Gurion University of the Negev")
     new_course.add_argument("--instructor", default="")
@@ -197,6 +197,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--audience", choices=AUDIENCES,
         help="who may be pointed at it: student (the default) or instructor (never cited to students)",
     )
+    set_cmd.add_argument(
+        "--role", dest="roles", action="append", choices=ROLES,
+        help="what it is for in planning: scope (sets what is taught and how deep) and/or reference "
+             "(the fuller source); repeatable, replaces the list",
+    )
+    set_cmd.add_argument("--no-roles", action="store_true", help="clear the roles (neither)")
     set_cmd.add_argument("--course", help="course directory (default: search upward)")
     merge_cmd = actions.add_parser(
         "merge", help="optional: merge one material into another the teacher says is the same "
@@ -207,7 +213,7 @@ def build_parser() -> argparse.ArgumentParser:
     merge_cmd.add_argument("--course", help="course directory (default: search upward)")
     apply_cmd = actions.add_parser(
         "apply",
-        help="record a batch of classifications (YAML list of {id, kind, units, title, audience}); "
+        help="record a batch of classifications (YAML list of {id, kind, units, title, audience, roles}); "
              "all or nothing",
     )
     apply_cmd.add_argument(
@@ -350,6 +356,14 @@ def run_scaffold(args, framework_root: Path) -> int:
             methodology=args.methodology,
         )
         report_scaffold(result, root.parent)
+        print("\nPut material that must not be committed (a published book, a solutions manual) "
+              "in materials/source/private/ — it is gitignored.")
+        # The rules protect every clone only if course/.gitignore is itself committed; a global
+        # excludes file that ignores `.gitignore` is not rare (teacher test). Said now, not only
+        # by `classkit doctor` later.
+        ignored = doctor.gitignore_ignored(root)
+        if ignored is not None:
+            print(f"\nWARNING: {ignored.what}.\n  fix: {ignored.fix}")
         return 0
 
     course_root = find_course_root()
@@ -479,12 +493,14 @@ def run_material(args) -> int:
     try:
         if args.action == "set":
             units = [] if args.no_units else (list(args.units) if args.units else None)
+            roles = [] if args.no_roles else (list(args.roles) if args.roles else None)
             record = ingest.set_fields(course_root, args.id.upper(), kind=args.kind, units=units,
-                                       title=args.title, audience=args.audience)
+                                       title=args.title, audience=args.audience, roles=roles)
             shown_units = record.get("units") or []
             shown_units = shown_units if isinstance(shown_units, str) else ",".join(shown_units) or "-"
             print(f"{record['id']}  kind={record.get('kind')}  units={shown_units}"
-                  f"  audience={record.get('audience') or 'student'}  title={record.get('title')!r}")
+                  f"  audience={record.get('audience') or 'student'}"
+                  f"  roles={','.join(record.get('roles') or []) or '-'}  title={record.get('title')!r}")
         elif args.action == "merge":
             record = ingest.merge(course_root, args.id.upper(), args.into.upper())
             print(f"merged {args.id.upper()} into {record['id']}: sources {', '.join(record['sources'])}")
@@ -500,13 +516,18 @@ def run_material(args) -> int:
                 entries = yaml.safe_load(text)
             except yaml.YAMLError as exc:
                 raise ingest.MaterialError(f"not valid YAML: {exc}") from exc
-            changes = ingest.apply(course_root, entries or [])
-            for material_id, fields in changes:
+            results = ingest.apply_all(course_root, entries or [])
+            # Every field set is echoed, unchanged ones marked, so the teacher sees what was
+            # confirmed as well as what changed (teacher test: `kind` was silent when already so).
+            for material_id, fields, changed in results:
                 shown = "  ".join(
-                    f"{k}={','.join(v) if isinstance(v, list) else v}" for k, v in fields.items()
+                    f"{k}={','.join(v) if isinstance(v, list) else v}"
+                    + ("" if k in changed else " (unchanged)") for k, v in fields.items()
                 )
                 print(f"{material_id}  {shown}")
-            print(f"{len(changes)} materials changed, {len(entries or []) - len(changes)} already so.")
+            changes = sum(1 for _id, _fields, changed in results if changed)
+            rest = len(results) - changes
+            print(f"{changes} material{'' if changes == 1 else 's'} changed, {rest} already so.")
     except ingest.MaterialError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

@@ -46,6 +46,7 @@ from . import extract as ex
 from . import links as linkfile
 from .manifest import (
     AUDIENCES,
+    ROLES,
     INGESTED_DIR,
     KINDS,
     PRIVATE_TEXT_DIR,
@@ -432,10 +433,12 @@ class Preflight:
     complaints: list[tuple[str, list[str]]] = field(default_factory=list)
 
 
-#: Rough conversion cost for the pre-flight estimate. Calibrated on the hand test (F-14): 2141 PDF
-#: pages took 126 s of CPU, ~0.06 s a page, before fontTools; it parses fonts too, so a little more.
-SECONDS_PER_PAGE = 0.07
-SECONDS_PER_SLIDE = 0.03
+#: Rough conversion cost for the pre-flight estimate. Recalibrated on the teacher test: 2,204 PDF
+#: pages (with fontTools) took ~30 s on a recent Mac, ~0.014 s a page; the estimate had said about
+#: 3 minutes. (The earlier hand test, F-14, measured ~0.06 s a page on another machine — an older
+#: one errs this many times slower; the estimate stays labelled "rough".) Slides scaled likewise.
+SECONDS_PER_PAGE = 0.015
+SECONDS_PER_SLIDE = 0.005
 
 
 def preflight(course_root: Path, *, fetch: bool = True) -> Preflight:
@@ -490,7 +493,9 @@ def preflight(course_root: Path, *, fetch: bool = True) -> Preflight:
         files=files, plan=plan, links_listed=len(links.links), by_format=dict(sorted(by_format.items())),
         size=sum(f.size for f in files), slides=slides, pages=pages,
         unsupported=unsupported, media=media, exact_duplicates=exact, seconds=seconds,
-        complaints=complaints,
+        # Only for files this run converts: an unchanged file's complaints were reported when it
+        # was converted, and repeating them every run is noise (teacher test).
+        complaints=[(path, found) for path, found in complaints if path in due],
         to_convert=len(due) + len(plan.new_links),
         private=sum(1 for f in files if is_private(f.rel)),
     )
@@ -960,21 +965,32 @@ class MaterialError(ValueError):
 
 def set_fields(course_root: Path, material_id: str, *, kind: str | None = None,
                units: list[str] | None = None, title: str | None = None,
-               audience: str | None = None) -> dict:
+               audience: str | None = None, roles: list[str] | None = None) -> dict:
     """Set a material's `kind`, `units`, `title` or `audience` — how the classifying agent's
     decisions, and the teacher's corrections, are recorded without editing a file by hand."""
     records = load(course_root)
     record = by_id(records).get(material_id)
     if record is None:
         raise MaterialError(f"no material {material_id} in the manifest")
-    _set(record, _checked(material_id, kind, units, title, audience))
+    _set(record, _checked(material_id, kind, units, title, audience, roles))
     save(course_root, records)
     return record
 
 
-def _checked(material_id: str, kind, units, title, audience=None) -> dict:
+def _checked(material_id: str, kind, units, title, audience=None, roles=None) -> dict:
     """The fields to set, validated; raises MaterialError naming the material."""
     fields: dict = {}
+    if roles is not None:
+        # D-048: `scope` and/or `reference`; an empty list clears them (neither).
+        if isinstance(roles, str):
+            roles = [roles]
+        if not isinstance(roles, list):
+            raise MaterialError(f"{material_id}: roles must be a list, e.g. [scope] or [scope, reference]")
+        roles = [str(r).strip().lower() for r in roles]
+        bad = [r for r in roles if r not in ROLES]
+        if bad:
+            raise MaterialError(f"{material_id}: a role is one of {', '.join(ROLES)}, not {', '.join(bad)}")
+        fields["roles"] = [r for r in ROLES if r in roles]
     if audience is not None:
         if audience not in AUDIENCES:
             raise MaterialError(f"{material_id}: audience must be one of {', '.join(AUDIENCES)}, "
@@ -1013,15 +1029,23 @@ def _set(record: dict, fields: dict) -> None:
     record.update(fields)
 
 
-APPLY_KEYS = {"id", "kind", "units", "title", "audience"}
+APPLY_KEYS = {"id", "kind", "units", "title", "audience", "roles"}
 
 
 def apply(course_root: Path, entries) -> list[tuple[str, dict]]:
+    """`apply_all`, returning only (id, fields that changed) for the materials that changed."""
+    return [(mid, {k: fields[k] for k in changed}) for mid, fields, changed in apply_all(course_root, entries)
+            if changed]
+
+
+def apply_all(course_root: Path, entries) -> list[tuple[str, dict, set[str]]]:
     """Record a batch of classifications — the classifying agent's returned block, applied by
     `/ingest` (D-039). All or nothing: every entry is checked before any is recorded, so a typo
     in entry 40 does not leave 39 recorded and the rest not.
 
-    Each entry is `{id, kind?, units?, title?, audience?}`. Returns (id, fields that changed).
+    Each entry is `{id, kind?, units?, title?, audience?, roles?}`. Returns, for every entry, (id, every
+    field it set, the names of those that changed) — so the teacher sees what was confirmed as
+    well as what changed.
     """
     if not isinstance(entries, list):
         raise MaterialError("expected a list of entries, each with an `id`")
@@ -1046,18 +1070,17 @@ def apply(course_root: Path, entries) -> list[tuple[str, dict]]:
         if record.get("merged_into") or record.get("removed_at"):
             raise MaterialError(f"{material_id} is merged or removed; classify the material it became")
         fields = _checked(material_id, entry.get("kind"), entry.get("units"), entry.get("title"),
-                          entry.get("audience"))
+                          entry.get("audience"), entry.get("roles"))
         planned.append((record, fields))
 
-    changes = []
+    results = []
     for record, fields in planned:
-        changed = {k: v for k, v in fields.items() if record.get(k) != v}
+        changed = {k for k, v in fields.items() if record.get(k) != v}
         _set(record, fields)
-        if changed:
-            changes.append((record["id"], changed))
-    if changes:
+        results.append((record["id"], fields, changed))
+    if any(changed for _id, _fields, changed in results):
         save(course_root, records)
-    return changes
+    return results
 
 
 def merge(course_root: Path, material_id: str, into: str) -> dict:

@@ -36,7 +36,8 @@ files as *media*: recorded, not read. Nothing is silently dropped.
 
 ## What `/ingest` does with it
 
-**It never modifies, moves or deletes anything in this directory.** It writes a readable copy
+**It never modifies, moves or deletes anything in this directory** — the one exception anywhere
+is `classkit add-url`, which appends a line to `links.md`. It writes a readable copy
 of each file to `../ingested/`, one Markdown file per material, named by a stable id —
 `M0007-heaps.md` — with every slide and page marked (`## Slide 18`, `## Page 34`). An answer
 reference can then point at **`M0007#slide-18`**, and `classkit validate` checks that slide
@@ -72,8 +73,10 @@ Everything here is committed to your course repo — the file and its full inges
 in its git history even if deleted later. If the repo is shared with anyone, a TA or a co-teacher,
 treat what you add here as visible to them.
 
-**What must not be committed goes in `private/`** (create the folder): a published textbook's PDF,
-a publisher's slides, a solutions manual. `course/.gitignore` keeps it out of git. For each file
+**What must not be committed goes in `private/`** (`classkit scaffold course` created it): a
+published textbook's PDF, a publisher's slides, a solutions manual. `course/.gitignore` keeps it
+out of git. **Put only that there** — your own slides, notes and old syllabi belong outside it: a
+TA's clone sees only an index of what is in `private/`, never its text. For each file
 there, `/ingest` commits only an *index* — its pages or slides with their labels and sections, no
 text — so citations to it are still checked; the full text stays on your machine, in
 `../private-text/`. A clone without the file can cite the book but not read it. `classkit doctor`

@@ -24,6 +24,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import unicodedata
 import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -54,6 +55,19 @@ NOISY_LOGGERS = ("pypdf", "PyPDF2", "pptx", "docx", "fontTools")
 LIGATURES = str.maketrans({"\ufb00": "ff", "\ufb01": "fi", "\ufb02": "fl", "\ufb03": "ffi",
                            "\ufb04": "ffl", "\ufb05": "st", "\ufb06": "st"})
 
+#: A letter run — a word, for the ligature repair and the garbled-text probe.
+_WORD = re.compile(r"[^\W\d_]+")
+#: Some PDFs' fonts map the "fi" ligature to `û` (CLRS 4e: `efûcient`, `ûnd` — ~4,700 words),
+#: and fontTools does not help (teacher test). Repaired only inside a word whose other letters
+#: are all ASCII, so a real `û` beside other accented letters (a French name) survives.
+_FI_SUBSTITUTE = "\u00fb"
+
+#: The garbled-text probe (teacher test): a material is reported when at least this many words…
+GARBLED_MIN_WORDS = 20
+#: …and at least this share of its words are ASCII but for one Latin non-ASCII letter (`efûcient`).
+#: CLRS 4e unrepaired ran ~1%; ordinary English text with a few names (`Erdős`, `naïve`) runs far below.
+GARBLED_MIN_SHARE = 0.005
+
 MEDIA_EXTENSIONS = {
     ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".wmv",
     ".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac",
@@ -81,6 +95,10 @@ class Extraction:
     empty: tuple[int, int, str] | None = None
     #: set when the text is far smaller than the source (F-06): what to tell the teacher
     low_yield: str = ""
+    #: (count, example) — words that look garbled by a font-encoding problem; see `garbled()`
+    garbled: tuple[int, str] | None = None
+    #: (highlights, comments, stamps) — the teacher's PDF annotations found (D-048)
+    annotations: tuple[int, int, int] = (0, 0, 0)
 
     def quality(self) -> list[str]:
         """One line per thing the teacher should know about this extraction — low yield, empty
@@ -92,6 +110,16 @@ class Extraction:
         if self.empty and self.empty[0]:
             empty, total, unit = self.empty
             notes.append(f"{empty} of {total} {unit} have no text (pictures? OCR is not done in Core)")
+        if self.garbled:
+            count, example = self.garbled
+            notes.append(f"~{count:,} words look garbled (e.g. \"{example}\") — a font-encoding "
+                         "problem; check the extraction (ignore this if the material is in a "
+                         "language with accented letters)")
+        if any(self.annotations):
+            found = [f"{n} {name}{'' if n == 1 else 's'}"
+                     for n, name in zip(self.annotations, ("highlight", "comment", "stamp")) if n]
+            notes.append(f"{', '.join(found)} — the teacher's annotations, extracted page by page; "
+                         "an annotated document is likely scope material (roles: scope)")
         if self.warnings:
             first = self.warnings[0]
             notes.append(f"the reader reported {len(self.warnings)} problem(s), e.g. \"{first}\" — "
@@ -139,8 +167,12 @@ def format_of(path: Path) -> str:
 
 
 def title_from_name(path: Path | str) -> str:
-    """A title from a file name: the stem, `_` read as a space — `Unit_2_Heaps.pptx` → `Unit 2 Heaps`."""
-    return _clean(Path(path).stem.replace("_", " ")) or Path(path).stem
+    """A title from a file name: the stem, with `_`, `-` and `.` read as spaces —
+    `Unit_2_Heaps.pptx` → `Unit 2 Heaps`, `Introduction.to.Algorithms.pdf` → `Introduction to
+    Algorithms`. A dot between two digits stays (`ch6.2` → `ch6.2`): it is a section number."""
+    stem = Path(path).stem
+    readable = re.sub(r"(?<!\d)\.|\.(?!\d)", " ", stem.replace("_", " ").replace("-", " "))
+    return _clean(readable) or stem
 
 
 class _Collect(logging.Handler):
@@ -200,7 +232,69 @@ def extract(path: Path) -> Extraction:
                                  "try exporting it to PDF", warnings=captured)
     result.warnings = result.warnings + captured
     result.title = _clean(result.title) or title_from_name(path)
+    if result.status == INGESTED:
+        result.garbled = garbled(result.body)
     return result
+
+
+def repair_ligatures(text: str) -> str:
+    """`û` → `fi` inside a word whose other letters are ASCII (`efûcient` → `efficient`); a word
+    with another non-ASCII letter is left alone. See `_FI_SUBSTITUTE`."""
+    if _FI_SUBSTITUTE not in text:
+        return text
+
+    def fix(match: re.Match) -> str:
+        word = match.group(0)
+        if _FI_SUBSTITUTE not in word:
+            return word
+        rest = word.replace(_FI_SUBSTITUTE, "")
+        if rest and rest.isascii():
+            return word.replace(_FI_SUBSTITUTE, "fi")
+        return word
+
+    return _WORD.sub(fix, text)
+
+
+def _fi_substitutions(texts: list[str]) -> int:
+    """How many words `repair_ligatures` would change — `û` inside an otherwise-ASCII word."""
+    count = 0
+    for text in texts:
+        if _FI_SUBSTITUTE not in text:
+            continue
+        for word in _WORD.findall(text):
+            rest = word.replace(_FI_SUBSTITUTE, "")
+            if _FI_SUBSTITUTE in word and rest and rest.isascii():
+                count += 1
+    return count
+
+
+def _looks_garbled(word: str) -> bool:
+    """ASCII letters but for exactly one Latin non-ASCII letter, with at least two ASCII letters
+    beside it: `efûcient`. Greek (Θ, π — mathematics) and other scripts are not counted."""
+    if word.isascii():
+        return False
+    foreign = [c for c in word if not c.isascii()]
+    if len(foreign) != 1 or len(word) - 1 < 2:
+        return False
+    return unicodedata.name(foreign[0], "").startswith("LATIN")
+
+
+def garbled(text: str) -> tuple[int, str] | None:
+    """The garbled-text probe: (how many words look garbled, the commonest one), or None when
+    there are too few to matter (GARBLED_MIN_WORDS, GARBLED_MIN_SHARE). Run on what extraction
+    produced, after any repair — it reports what is still broken, whatever the cause."""
+    from collections import Counter  # noqa: PLC0415
+
+    total = 0
+    bad: Counter = Counter()
+    for match in _WORD.finditer(text):
+        total += 1
+        if _looks_garbled(match.group(0)):
+            bad[match.group(0)] += 1
+    count = sum(bad.values())
+    if count < GARBLED_MIN_WORDS or count < GARBLED_MIN_SHARE * total:
+        return None
+    return count, bad.most_common(1)[0][0]
 
 
 def probe(path: Path) -> Probe:
@@ -397,7 +491,8 @@ def extract_pptx(path: Path) -> Extraction:
         title = (_clean(" ".join(_pptx_paragraph_text(p) for p in title_shape.text_frame.paragraphs))
                  if title_shape is not None and title_shape.has_text_frame else "")
         if title:
-            first_title = first_title or title
+            if number == 1:
+                first_title = _title_from_metadata(title)  # the same boilerplate rejected
             lines += [f"**{title}**", ""]
             labels.setdefault(anchor, []).append(f"**{label(title)}**")
 
@@ -427,9 +522,11 @@ def extract_pptx(path: Path) -> Extraction:
         if not any(line.strip() and line != "*(hidden slide)*" for line in lines[start:]):
             empty += 1
 
-    title = first_title or _title_from_metadata(deck.core_properties.title)
+    # A deck's title is slide 1's title, else its file name (F-12, teacher test): never a later
+    # slide's — a section, a digression or a tribute slide — and not the metadata title, which
+    # is the authoring tool's or the template's as often as the author's.
     body = "\n".join(lines).rstrip() + "\n"
-    return Extraction(INGESTED, body=body, title=title, labels=labels,
+    return Extraction(INGESTED, body=body, title=first_title, labels=labels,
                       empty=(empty, len(deck.slides), "slides"),
                       low_yield=_low_yield(path, body, r"ppt/slides/slide\d+\.xml", "deck"))
 
@@ -602,7 +699,19 @@ def extract_pdf(path: Path) -> Extraction:
     sections = _outline_by_page(reader)
     labels: dict[str, list[str]] = {}
 
+    # Read every page's text first: the `û` → `fi` repair applies only when the substitution is
+    # systematic across the document (a font-encoding fault, CLRS 4e: ~4,700 words), so a French
+    # "sûr" or "flûte" quoted in an English book is left alone (D-048).
+    raw: list[str] = []
+    for page in reader.pages:
+        try:
+            raw.append((page.extract_text() or "").translate(LIGATURES))
+        except Exception:  # one bad page must not lose the rest of the document
+            raw.append("")
+    systematic = _fi_substitutions(raw) >= GARBLED_MIN_WORDS
+
     empty = 0
+    totals = [0, 0, 0]
     for index, page in enumerate(reader.pages):
         number = index + 1
         anchor = f"page-{number}"
@@ -616,10 +725,7 @@ def extract_pdf(path: Path) -> Extraction:
             labels.setdefault(anchor, []).append(f"*(printed page {label(page_label)})*")
         for title in sections.get(index, []):
             labels.setdefault(anchor, []).append(f"*(section: {label(title.translate(LIGATURES))})*")
-        try:
-            text = (page.extract_text() or "").translate(LIGATURES)
-        except Exception:  # one bad page must not lose the rest of the document
-            text = ""
+        text = repair_ligatures(raw[index]) if systematic else raw[index]
         page_characters = len("".join(text.split()))
         characters += page_characters
         empty += page_characters == 0
@@ -632,6 +738,15 @@ def extract_pdf(path: Path) -> Extraction:
         for uri in _link_annotations(page):
             if uri not in text:
                 lines += [f"*(link: {uri})*", ""]
+        # The teacher's annotations (D-048): a block after the page's text; the counts become a
+        # label, which is all a private material's committed index carries of them.
+        block, counts = _annotation_block(page)
+        if block:
+            lines += block + [""]
+            found = [f"{n} {name}{'' if n == 1 else 's'}"
+                     for n, name in zip(counts, ("highlight", "comment", "stamp")) if n]
+            labels.setdefault(anchor, []).append(f"*(teacher's annotations: {', '.join(found)})*")
+            totals = [a + b for a, b in zip(totals, counts)]
 
     pages = len(reader.pages)
     # A PDF's title is its metadata title, else the file name — never its first line of text,
@@ -647,7 +762,101 @@ def extract_pdf(path: Path) -> Extraction:
                                  "pages are anchored, the text is empty", labels=labels)
 
     return Extraction(INGESTED, body=body, title=metadata_title, labels=labels,
-                      empty=(empty, pages, "pages"))
+                      empty=(empty, pages, "pages"), annotations=tuple(totals))
+
+
+# Annotation subtypes (D-048). Marks over text — the text under them is what the teacher pointed
+# at; notes and free-text boxes — the teacher's own words; stamps — "Show on cards", "Approved".
+MARKED = ("/Highlight", "/Underline", "/Squiggly")
+COMMENTED = ("/Text", "/FreeText")
+ANNOTATION_CHARS = 300  # one annotation's text, at most — a block line, not a page
+
+
+def _one_line(value, limit: int = ANNOTATION_CHARS) -> str:
+    text = " ".join(str(value or "").split())
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+
+def _boxes(obj) -> list[tuple[float, float, float, float]]:
+    """A marking annotation's areas, (x0, y0, x1, y1): one per quadrilateral of /QuadPoints (a
+    highlight across lines has several), else its /Rect."""
+    try:
+        quads = [float(v) for v in (obj.get("/QuadPoints") or [])]
+        if len(quads) >= 8:
+            boxes = []
+            for i in range(0, len(quads) - 7, 8):
+                xs, ys = quads[i:i + 8:2], quads[i + 1:i + 8:2]
+                boxes.append((min(xs), min(ys), max(xs), max(ys)))
+            return boxes
+        rect = [float(v) for v in (obj.get("/Rect") or [])]
+        return [(min(rect[0], rect[2]), min(rect[1], rect[3]), max(rect[0], rect[2]),
+                 max(rect[1], rect[3]))] if len(rect) == 4 else []
+    except Exception:
+        return []
+
+
+def _text_fragments(page) -> list[tuple[float, float, str]]:
+    """The page's text with positions, (x, y, text), one per text-showing operation — the
+    granularity pypdf reports. A highlight's text is the fragments that start inside it."""
+    fragments: list[tuple[float, float, str]] = []
+
+    def visit(text, cm, tm, _font, _size):
+        if text and text.strip():
+            x = cm[0] * tm[4] + cm[2] * tm[5] + cm[4]
+            y = cm[1] * tm[4] + cm[3] * tm[5] + cm[5]
+            fragments.append((x, y, text))
+
+    try:
+        page.extract_text(visitor_text=visit)
+    except Exception:
+        return []
+    return fragments
+
+
+def _under(boxes, fragments) -> str:
+    """The text of the fragments that start inside any of `boxes` (with a little slack: a
+    baseline sits near a highlight's bottom edge), in reading order."""
+    picked = [(-y, x, text) for x, y, text in fragments
+              if any(x0 - 2 <= x <= x1 + 2 and y0 - 4 <= y <= y1 + 2 for x0, y0, x1, y1 in boxes)]
+    return " ".join(text for _y, _x, text in sorted(picked))
+
+
+def _annotation_block(page) -> tuple[list[str], tuple[int, int, int]]:
+    """The teacher's annotations on a page, as the lines of a block, and (highlights, comments,
+    stamps). The text under a highlight is approximate — whole fragments as the PDF stores them —
+    and a highlight carrying a note shows both. A malformed annotation is skipped."""
+    marks: list[str] = []
+    comments: list[str] = []
+    stamps: list[str] = []
+    fragments: list | None = None
+    try:
+        annotations = [a.get_object() for a in (page.get("/Annots") or [])]
+    except Exception:
+        return [], (0, 0, 0)
+    for obj in annotations:
+        try:
+            subtype = str(obj.get("/Subtype"))
+            note = _one_line(obj.get("/Contents"))
+            if subtype in MARKED:
+                if fragments is None:
+                    fragments = _text_fragments(page)
+                under = _one_line(_under(_boxes(obj), fragments))
+                line = f'- highlighted: "{under}"' if under else "- highlighted: (text not recovered)"
+                marks.append(line + (f' — note: "{note}"' if note else ""))
+            elif subtype in COMMENTED and note:
+                comments.append(f'- comment: "{note}"')
+            elif subtype == "/Stamp":
+                name = note or str(obj.get("/Name") or "").lstrip("/")
+                stamps.append(f'- stamp: "{_one_line(name)}"' if name else "- stamp")
+        except Exception:
+            continue
+    counts = (len(marks), len(comments), len(stamps))
+    if not any(counts):
+        return [], counts
+    found = [f"{n} {name}{'' if n == 1 else 's'}"
+             for n, name in zip(counts, ("highlight", "comment", "stamp")) if n]
+    return [f"**Teacher's annotations on this page** ({', '.join(found)}):", *marks, *comments,
+            *stamps], counts
 
 
 def _link_annotations(page) -> list[str]:
@@ -717,6 +926,10 @@ def extract_docx(path: Path) -> Extraction:
                     if level:
                         headings_found.append(text)
                         lines.extend(["", f"{'#' * level} {text}", ""])
+                    elif _bold_label(child, paragraph, text):
+                        # A form with no heading styles (BGU's syllabus: "Assessment:") still gets
+                        # anchors. Not a title candidate: a label names a section, not the document.
+                        lines.extend(["", f"## {text.rstrip(':').rstrip()}", ""])
                     elif paragraph.style is not None and "List" in paragraph.style.name:
                         lines.append(f"- {_escape_heading(text)}")
                     else:
@@ -780,6 +993,23 @@ def _text_boxes(element) -> list:
         if keep:
             boxes.append(box)
     return boxes
+
+
+#: A bold label read as a heading is at most this long (teacher test: "Learning outcomes of the module:").
+BOLD_LABEL_CHARS = 80
+
+
+def _bold_label(element, paragraph, text: str) -> bool:
+    """A short paragraph, entirely bold, ending in ':' — a section label in a document without
+    heading styles, read as a `##` heading so it can be cited (`M0017#assessment`)."""
+    from docx.text.run import Run  # noqa: PLC0415
+
+    if len(text) > BOLD_LABEL_CHARS or not text.endswith(":") or not text.rstrip(":").strip():
+        return False
+    style_bold = bool(paragraph.style is not None and paragraph.style.font.bold)
+    runs = [Run(r, paragraph) for r in element.iter(f"{_W}r")]
+    runs = [run for run in runs if run.text.strip()]
+    return bool(runs) and all(run.bold or (run.bold is None and style_bold) for run in runs)
 
 
 def _heading_level(style: str) -> int:

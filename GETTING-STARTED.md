@@ -137,7 +137,8 @@ reports an error if that slide does not exist — a made-up "slide 18" of a 12-s
 before it reaches a student. (It cannot tell whether the answer is *on* slide 18; that is still a
 human's or the reviewing agent's call.)
 
-- **Your originals are never touched.** Nothing in `materials/source/` is modified, moved or deleted.
+- **Your originals are never touched.** Nothing in `materials/source/` is modified, moved or deleted
+  — the one exception is `classkit add-url`, which appends a line to `links.md`.
 - **Files that must not be committed go in `materials/source/private/`** — a published textbook's
   PDF, a publisher's slides, a solutions manual. `course/.gitignore` (scaffolded) keeps that folder
   out of git. For each file there, ingest commits only an **index** in `ingested/` — its pages or
@@ -146,6 +147,8 @@ human's or the reviewing agent's call.)
   repo. The full text goes to `materials/private-text/`, also kept out of git, on your machine only;
   the agents read it there. A TA's clone without the PDF can still cite and validate the book; to
   let agents read it there, copy the PDF into their `private/` and run `/ingest`.
+  - **Put only that in `private/`** — what must not be in the repo. Your own slides, notes and old
+    syllabi belong outside it: a TA's clone sees only an index of what is in `private/`.
   - Everything **outside** `private/` is committed — the source *and* its full extracted text.
     Anything pushed to GitHub stays in the repository's history even if deleted later. If a book is
     already committed, moving it into `private/` stops future commits but not the history;

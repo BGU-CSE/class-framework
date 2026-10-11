@@ -315,11 +315,13 @@ def test_a_pdfs_first_line_is_never_its_title(course: Path):
 # -- F-14, F-20 -------------------------------------------------------------------------
 
 def test_the_estimate_for_a_textbook_sized_run_is_honest():
-    """F-14: 2141 PDF pages took 2 min 20 s; the estimate said "about 1 minute"."""
+    """Teacher test: 2,204 PDF pages took ~30 s on a recent Mac; the estimate said "about 3
+    minutes" (F-14 had been calibrated on a slower machine)."""
     from classkit.ingest.core import SECONDS_PER_PAGE
     from classkit.ingest.report import _duration
 
-    assert _duration(2141 * SECONDS_PER_PAGE) in ("about 2 minutes", "about 3 minutes")
+    assert 20 <= 2204 * SECONDS_PER_PAGE <= 60
+    assert _duration(2204 * SECONDS_PER_PAGE) == "under a minute"
 
 
 def test_the_session_template_says_the_budget_check_warns():
@@ -361,3 +363,208 @@ def test_after_a_refusal_validate_names_the_decision_not_run_ingest(course: Path
                 if f.code == "materials_not_ingested"]
     assert "classkit ingest --keep M0001" in found.message and "--overwrite M0001" in found.message
     assert "Run /ingest" not in found.message
+
+
+def test_the_links_template_does_not_promise_harvesting():
+    """D-040: links inside slides are not collected; the template said they were (teacher test)."""
+    template = (FRAMEWORK_ROOT / "templates" / "course" / "links.md").read_text(encoding="utf-8")
+    assert "collected automatically" not in template
+    assert "NOT\ncollected" in template or "not collected" in template.lower().replace("\n", " ")
+
+
+# -- deck titles: slide 1 or the file name (teacher test, F-12 follow-up) -------------------
+
+def test_a_deck_title_comes_from_slide_1(course: Path):
+    make_pptx(source(course) / "Unit_2_Heaps.pptx", [("Heaps and heapsort", "Today"), ("Max-heapify", "x")])
+    ingest.run(course, fetch=False)
+    assert load(course)[0]["title"] == "Heaps and heapsort"
+
+
+def test_a_deck_title_never_comes_from_a_later_slide(course: Path):
+    """The teacher's Unit 4 deck was titled from slide 2, a tribute slide."""
+    make_pptx(source(course) / "Unit_4_Divide-and-Conquer_board.pptx",
+              [("", "Last Week"), ("In Memoriam: Michael O. Rabin", "1931–2026")])
+    ingest.run(course, fetch=False)
+    assert load(course)[0]["title"] == "Unit 4 Divide and Conquer board"
+
+
+def test_a_deck_with_a_boilerplate_slide_1_title_uses_its_file_name(course: Path):
+    make_pptx(source(course) / "unit_3.pptx", [("PowerPoint Presentation", "x")])
+    ingest.run(course, fetch=False)
+    assert load(course)[0]["title"] == "unit 3"
+
+
+@pytest.mark.parametrize("name, title", [
+    ("Introduction.to.Algorithms.4th.Edition.2022.4.pdf", "Introduction to Algorithms 4th Edition 2022.4"),
+    ("Lecture-Notes-for-Chapter-1.pdf", "Lecture Notes for Chapter 1"),
+    ("notes_ch6.2.pdf", "notes ch6.2"),
+])
+def test_a_title_from_a_file_name_is_readable(name: str, title: str):
+    assert extract.title_from_name(name) == title
+
+
+# -- ligature damage: the `û` repair and the garbled-text probe (teacher test, CLRS 4e) ------
+
+def test_a_fi_substitute_is_repaired_inside_an_ascii_word():
+    assert extract.repair_ligatures("an efûcient way to ûnd the Ûrst") == "an efficient way to find the Ûrst"
+
+
+def test_a_real_accented_word_keeps_its_letter():
+    assert extract.repair_ligatures("crème brûlée and Brûlé") == "crème brûlée and Brûlé"
+
+
+def test_the_pdf_text_is_repaired_on_ingest(course: Path, monkeypatch):
+    from pypdf import PageObject
+
+    monkeypatch.setattr(PageObject, "extract_text", lambda self, *a, **k: "an efûcient way to ûnd it " * 50)
+    make_pdf(source(course) / "book.pdf", ["placeholder"])
+    ingest.run(course, fetch=False)
+    assert "efficient way to find" in text_of(course) and "û" not in text_of(course)
+
+
+def test_an_occasional_french_word_in_an_english_pdf_is_not_repaired(course: Path, monkeypatch):
+    """D-048: the repair runs only when the substitution is systematic (a font-encoding fault),
+    so a real "sûr" or "flûte" quoted in an English book survives."""
+    from pypdf import PageObject
+
+    monkeypatch.setattr(PageObject, "extract_text",
+                        lambda self, *a, **k: "the flûte is sûr " + "plain English words " * 200)
+    make_pdf(source(course) / "book.pdf", ["placeholder"])
+    ingest.run(course, fetch=False)
+    assert "flûte" in text_of(course) and "sûr" in text_of(course)
+
+
+def test_the_probe_counts_words_with_one_stray_latin_letter():
+    text = "an eÿcient algorithm " * 30 + "plain words " * 100
+    assert extract.garbled(text) == (30, "eÿcient")
+
+
+def test_the_probe_ignores_a_few_names_and_greek_mathematics():
+    text = "Erdős and the naïve bound " + "Θn and πr and Θlgn " * 40 + "plain words " * 2000
+    assert extract.garbled(text) is None
+
+
+def test_the_probe_needs_a_material_share_not_only_a_count():
+    text = "an eÿcient algorithm " * 25 + "plain words here " * 3000
+    assert extract.garbled(text) is None  # 25 of ~9,075 words: under 0.5%
+
+
+def test_garbled_text_is_reported_in_check_these_extractions(course: Path, monkeypatch, capsys):
+    from pypdf import PageObject
+
+    monkeypatch.setattr(PageObject, "extract_text", lambda self, *a, **k: "an eÿcient sort " * 40)
+    make_pdf(source(course) / "book.pdf", ["placeholder"])
+    main(["ingest", "--no-fetch", "--course", str(course)])
+    out = capsys.readouterr().out
+    assert "Check these extractions" in out
+    assert 'M0001  ~40 words look garbled (e.g. "eÿcient") — a font-encoding problem' in out
+
+
+def test_repaired_text_is_not_reported(course: Path, monkeypatch, capsys):
+    from pypdf import PageObject
+
+    monkeypatch.setattr(PageObject, "extract_text", lambda self, *a, **k: "an efûcient sort " * 40)
+    make_pdf(source(course) / "book.pdf", ["placeholder"])
+    main(["ingest", "--no-fetch", "--course", str(course)])
+    assert "garbled" not in capsys.readouterr().out
+
+
+def test_preflight_reader_warnings_only_for_files_about_to_be_converted(course: Path, capsys):
+    """Teacher test: an unchanged file's reader warnings were repeated on every pre-flight."""
+    path = make_pdf(source(course) / "broken-xref.pdf", ["Heaps", "Heapsort"])
+    data = path.read_bytes()
+    position = data.rindex(b"startxref\n") + len(b"startxref\n")
+    path.write_bytes(data[:position] + b"999" + data[data.index(b"\n", position):])
+
+    main(["ingest", "--preflight", "--no-fetch", "--course", str(course)])
+    first = capsys.readouterr().out
+    assert "incorrect startxref pointer" in first
+    assert "Usually harmless; check these files' extraction after ingest." in first
+
+    main(["ingest", "--no-fetch", "--course", str(course)])
+    capsys.readouterr()
+    make_pdf(source(course) / "new.pdf", ["Quicksort"])
+    main(["ingest", "--preflight", "--no-fetch", "--course", str(course)])
+    again = capsys.readouterr().out
+    assert "incorrect startxref pointer" not in again and "Read with warnings" not in again
+
+
+# -- DOCX: a bold label is a heading (teacher test: the BGU syllabus form) ------------------
+
+def docx_with_labels(path: Path) -> Path:
+    import docx
+
+    document = docx.Document()
+    def para(*runs):
+        paragraph = document.add_paragraph()
+        for text, bold in runs:
+            paragraph.add_run(text).bold = bold
+    para(("Course syllabus", False))
+    para(("Assessment:", True))
+    para(("Exam 70%, homework 30%.", False))
+    para(("Learning outcomes ", True), ("of the module:", True))
+    para(("Explain heaps.", False))
+    para(("Not a label: ", True), ("the rest is plain", False))
+    para(("Bold but no colon", True))
+    para(("A bold sentence that is far too long to be a section label in any form at all, in any language at all:", True))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    document.save(str(path))
+    return path
+
+
+def test_a_short_bold_label_ending_in_a_colon_is_an_anchor(course: Path):
+    docx_with_labels(source(course) / "syllabus.docx")
+    ingest.run(course, fetch=False)
+    text = text_of(course)
+    assert extract.anchors(text) == ["assessment", "learning-outcomes-of-the-module"]
+    assert "## Assessment\n" in text
+    assert load(course)[0]["title"] == "syllabus"  # a label is not the document's title
+
+
+# -- the teacher's PDF annotations (D-048) ------------------------------------------
+
+def test_annotations_are_extracted_as_a_block_after_the_page(course: Path):
+    from materials_fixtures import make_annotated_pdf
+
+    make_annotated_pdf(source(course) / "notes.pdf", ["Merge sort runs in n lg n time", "Second page"])
+    ingest.run(course, fetch=False)
+    text = text_of(course)
+    page1 = text.split("## Page 2")[0]
+    assert "**Teacher's annotations on this page** (1 highlight, 2 comments, 1 stamp):" in page1
+    assert '- highlighted: "Merge sort runs in n lg n time" — note: "prove this on the board"' in page1
+    assert '- comment: "Ask in class what the running time is"' in page1
+    assert '- comment: "Show on cards"' in page1
+    assert '- stamp: "Approved"' in page1
+    assert "Teacher's annotations" not in text.split("## Page 2")[1]
+
+
+def test_annotations_are_reported_in_check_these_extractions(course: Path, capsys):
+    from materials_fixtures import make_annotated_pdf
+
+    make_annotated_pdf(source(course) / "notes.pdf", ["Merge sort runs in n lg n time"])
+    main(["ingest", "--no-fetch", "--course", str(course)])
+    out = capsys.readouterr().out
+    assert "1 highlight, 2 comments, 1 stamp — the teacher's annotations" in out
+
+
+def test_a_private_materials_annotations_stay_out_of_its_committed_index(course: Path):
+    """D-048: a highlight is publisher text and a comment may quote it — the committed index
+    carries only the counts; the text is in the local full text."""
+    from materials_fixtures import make_annotated_pdf
+
+    from classkit.ingest.manifest import ingested_file, private_text_file
+
+    make_annotated_pdf(source(course) / "private" / "notes.pdf", ["Merge sort runs in n lg n time"])
+    ingest.run(course, fetch=False)
+    index = ingested_file(course, "M0001").read_text(encoding="utf-8")
+    full = private_text_file(course, "M0001").read_text(encoding="utf-8")
+    assert "*(teacher's annotations: 1 highlight, 2 comments, 1 stamp)*" in index
+    for words in ("Merge sort", "prove this", "Ask in class", "Show on cards"):
+        assert words not in index
+    assert '- comment: "Show on cards"' in full and "Merge sort runs" in full
+
+
+def test_a_pdf_without_annotations_has_no_block(course: Path):
+    make_pdf(source(course) / "plain.pdf", ["Just text"])
+    ingest.run(course, fetch=False)
+    assert "Teacher's annotations" not in text_of(course)

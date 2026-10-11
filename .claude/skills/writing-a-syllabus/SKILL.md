@@ -42,6 +42,8 @@ per unit, sessions, the class meeting) come from `methodologies/<name>.yaml` —
   problem. **Every outcome should be built by some units, and every unit should serve some
   outcome** — name any that are not.
 - **`workload`** — `credits` and `credit_system` only from the old syllabus or the teacher.
+  The front matter holds **one** credit system — the one the institution counts in; other systems
+  the form states (ECTS beside local points) go in the body's workload section (D-048).
   `total_hours` likewise. What the methodology implies (minutes per unit × units) may be shown next
   to it, clearly as arithmetic, not as the institution's figure.
 - **`prerequisites`** — course names or codes, from the old syllabus or the teacher.
@@ -96,6 +98,10 @@ Most of a syllabus's life is revision: during `/plan-syllabus`, in conversation,
   and the `approved` block. Regenerating the whole file is never the default.
 - **A request that conflicts with the rest**: make the change and say what now disagrees, rather
   than silently "fixing" the other part.
+- **Every new factual sentence must trace to the teacher's words** — in this conversation or the
+  course log — **not to last year's syllabus.** An old syllabus is evidence of what *was*; carrying
+  one of its facts into a revision ("theoretical, 'dry' assignments") presents it as this year's.
+  Read your own diff for such a sentence before you show it; if a fact is worth keeping, ask.
 - **Show the change before writing it** (`classkit write … --diff`), then write it on the teacher's
   OK (`--overwrite`). An edit after approval is normal; `classkit status` will say "edited since".
 

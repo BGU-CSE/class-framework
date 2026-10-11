@@ -432,7 +432,12 @@ Course-level setup runs once; then units are designed one at a time.
                    It may keep changing all semester; the overview shows "edited since".
 /plan-units 1 2    (D-046) plans the units NAMED — more later, as material arrives.
                    0. shows `classkit status`; if the syllabus is not approved, says so and
-                      asks whether to go on — it does not refuse (D-043)
+                      asks whether to go on — it does not refuse (D-043). (D-048) For
+                      each unit, checks that some material with `scope` among its `roles`
+                      reaches it; if only `reference` material does (the book), it says "book
+                      only for this unit — scope not confirmed" and offers to WAIT for the
+                      teacher's material or to plan PROVISIONALLY, labelled so — the
+                      teacher's material decides what and how deep, the book fills in
                    1. curriculum-architect (read-only; loads planning-units) READS the
                       approved syllabus, the unit's map entry and evidence, its materials,
                       earlier units, and returns for each named unit: summary,
@@ -650,7 +655,7 @@ exceptions to validation rules for that file (§8.4). It is not repeated in each
 
 | Field | Type | Req | Notes |
 |---|---|---|---|
-| `code` | string | ✓ | institutional course code, e.g. `"202-1-2051"` |
+| `code` | string | | institutional course code, e.g. `"202-1-2051"`. **Optional (D-048)**: identity, read by people and the syllabus, used by no tool; a teacher may scaffold before finding it. `scaffold course --code` is optional; `/plan-syllabus` asks for it when no evidence states it; `classkit status` says when it is not set |
 | `title` | string | ✓ | |
 | `institution` | string | ✓ | |
 | `instructors` | array\<string\> | | |
@@ -907,6 +912,15 @@ at all is an advisory alert.
    `accepted_without_reason`, never as a schema error. Likewise `rule` is **not pattern-checked**:
    any mistyped code, whatever its case, is reported by `unknown_rule`. Both follow the same
    principle — a mistake in the teacher's *own exception* is advice, not a failure (D-038).
+   **An entry may name one item (D-048):** `{rule, id: U01-O3, reason}` suppresses only
+   the findings about that item (an objective, a guiding question, an activity, an item, a
+   material); without `id` it covers the whole file, as before. Each finding carries the id of
+   the item it is about as data (`Finding.item`): the first id its message names — every rule's
+   message leads with its subject — or an explicit one where it does not (`unit_map_mismatch`); a
+   test pins this per kind of finding. An `id` that no longer matches
+   anything is counted with the stale entries, so a renamed objective is never silently covered.
+   Why: accepting one objective's missing outcome on purpose must not also silence a *future*
+   objective that forgets its outcome by mistake.
    Findings about a unit as a whole — `session_count`, `in_class_missing`, `objective_coverage` —
    are reported against its `unit.md`, so that is where they are accepted. Findings reported
    against `course.yaml` (which has no front matter) are adjusted course-wide with `rules:`.
@@ -1126,7 +1140,10 @@ teacher reorganizes `source/`**.
 Everything under `source/` is material except: the top-level `README.md` (scaffolded) and
 `links.md` (read separately), any path with a component starting with `.`, Office lock files
 (`~$…`), and `Thumbs.db` / `desktop.ini`. `scaffold course` creates `source/README.md`,
-`source/links.md` and `ingested/`; the manifest is created by the first ingest.
+`source/links.md`, `source/private/` (D-048 — from day one, so the private option is visible; being
+gitignored, a clone does not get it, and `doctor` notes that) and `ingested/`; the manifest is created by
+the first ingest. The one tool that writes under `source/` is `classkit add-url`, which appends to
+`links.md`.
 
 #### `links.md`
 
@@ -1167,7 +1184,7 @@ unless `links.md` lists it, and listing it restores its old id, so a locator to 
 | Field | Type | Req | Notes |
 |---|---|---|---|
 | `id` | `M<NNNN>` | ✓ | assigned once, never reused |
-| `title` | string | ✓ | the first slide title or heading, else the file's metadata title — unless it is tool boilerplate ("PowerPoint Presentation", "Microsoft Word - …") **or looks like a file name or a path** (`manual.dvi`, `*.tex`, `*.pdf`, `C:\…`; D-040/F-12) — else the file name, cleaned of `_` and extension. **Never a PDF's first line of text** (D-040/F-12). A plain-text file, which has nothing else, is still titled by its first line — except a private one (G-9). A link's fetched title, else its note, else its URL. Editable; re-ingest keeps it |
+| `title` | string | ✓ | **a deck: slide 1's title only, else the file name** (D-048 — a later slide's title is a section or a digression: the hand test's Unit 4 deck was titled after a tribute on slide 2; PPTX metadata titles are not used). Other formats: the first heading, else the file's metadata title — unless it is tool boilerplate ("PowerPoint Presentation", "Microsoft Word - …") **or looks like a file name or a path** (`manual.dvi`, `*.tex`, `*.pdf`, `C:\…`; D-040/F-12) — else the file name, made readable (`.`, `-`, `_` → spaces, extension dropped; a dot between digits kept, `ch6.2`). **Never a PDF's first line of text** (D-040/F-12). A plain-text file, which has nothing else, is still titled by its first line — except a private one (G-9). A link's fetched title, else its note, else its URL. Editable; re-ingest keeps it |
 | `format` | string | ✓ | `pptx`, `pdf`, `docx`, `md`, `odt`, `url`, … |
 | `kind` | enum | ✓ | `slides \| textbook \| notes \| exam \| exercise \| syllabus \| reading \| link \| video \| other` — set by the classifying agent, correctable by the teacher |
 | `sources` | array\<string\> | ✓ | paths under `source/` (or the URL); **more than one when duplicates were merged** |
@@ -1186,6 +1203,7 @@ unless `links.md` lists it, and listing it restores its old id, so a locator to 
 | `merged_into` | `M<NNNN>` | | the teacher confirmed this is the same material as another; its sources moved there and this id is retired |
 | `private` | boolean | | (D-040) `true` when the canonical source **as last converted** was under `source/private/` (like `source_hash`, it records the last conversion: a file just moved in or out differs from it until the next ingest converts it). Set by ingest from the path, never by hand; written only when `true`; recorded so that a clone without the file still knows |
 | `private_text_hash` | string | | **retired (D-041)** — was the hash of the full text in `private-text/`; a committed field cannot describe a machine-local file (extraction differs across library versions). The full text now certifies itself (below). Kept in the schema only so an older manifest validates |
+| `roles` | array\<enum\> | | **(D-048)** `scope` and/or `reference`. **`scope`** — the teacher's material that sets *what* is taught in its units and *at what depth* (their decks, their annotated lecture notes); **`reference`** — the fuller source (the textbook). A material may be both (a book taught straight from); empty or absent means neither (a past exam, an old syllabus, a link). Proposed by the classifying agent, confirmed by the teacher at gate 3 like `kind` and `audience`. `/plan-units` checks that some `scope` material reaches each unit it plans (§5.1) |
 | `audience` | enum | | (D-040) `student \| instructor`; absent means `student`. Who may be *pointed at* this material. Proposed by the classifying agent, confirmed by the teacher at gate 3. Independent of `private` (a published book is private but `student`) |
 
 Schema: `schemas/manifest.schema.json`, checked by `classkit validate` (`schema`; an unreadable
@@ -1202,6 +1220,28 @@ Front matter carries the id, title, format, canonical source path and `source_ha
 extracted text with **explicit anchors**, so a locator names a place that demonstrably exists. The
 file lives at `ingested/M<NNNN>-<slug>.md` and is found by its `M<NNNN>-` prefix, so the slug may be
 renamed by hand.
+
+**The teacher's annotations are extracted (D-048).** A teacher's highlights and comments on a
+PDF are how they mark *what* to teach and *at what level* — in the hand test, 140 highlights and 16
+comments in one chapter of the lecture notes, none of which any agent saw. After each page's text, a
+block lists that page's annotations:
+
+```
+**Teacher's annotations on this page** (6 highlights, 2 comments):
+- highlighted: "the running time of merge sort is Θ(n lg n)"
+- comment: "Ask in class what is the running time of merge"
+```
+
+A block, not marks inside the running text: matching highlight positions to extracted text is
+fragile exactly where extraction is already shaky; the block is deterministic. Highlights give the
+text under them (approximately: whole text fragments as the PDF stores them, those starting
+inside the highlight; a highlight carrying a note shows both); comments (text notes, free-text boxes) their contents; stamps their label. **For a
+private material, annotations go only into the local full text** (`private-text/`): a highlight *is*
+publisher text, and a comment may quote it; the committed index carries only the **counts** per page
+("6 highlights, 2 comments"), never their text — D-040's rule that the index holds no body text,
+kept simple. The run summary's "Check these extractions" reports "N highlights, M comments" per
+file, so their presence is visible; the classifying agent treats an annotated document as a likely
+`scope` material (`roles`).
 
 | Format | Anchor | Locator |
 |---|---|---|
@@ -1393,9 +1433,17 @@ locators rot.
   - **Equations** in slides and documents (Office Math, `m:oMath`; in a deck, inside
     `mc:AlternateContent`) are extracted as linear text in a code span — `` `(n)/(2)+x^(2)` `` — where
     possible, else as an `[equation]` placeholder, so a reader knows something is there.
-  - **PDF text** is normalised: ligatures (`ﬁ`, `ﬂ`, …) expanded; the extractor's optional
-    font-parsing dependency (fontTools, for `pypdf`) is installed, which fixes most broken
-    characters (verify on a real textbook). Formula layout in PDFs remains unreliable; known.
+  - **PDF text** is normalised: ligatures (`ﬁ`, `ﬂ`, …) expanded; fontTools installed for `pypdf`.
+    That did **not** fix CLRS 4e, whose font maps every "fi" to `û` (~4,700 words). So (D-048): a
+    **repair** — `û` inside an otherwise-ASCII word becomes `fi` — runs **only when the substitution
+    is systematic across the document** (≥ 20 such words), so a French "sûr" quoted in an English
+    book survives; and a **garbled-text probe** runs after every extraction — words that are ASCII
+    but for one stray Latin letter (Greek, i.e. mathematics, excluded), reported under "Check these
+    extractions" when ≥ 20 and ≥ 0.5% of the words: "~N words look garbled (e.g. "eÿcient") — a
+    font-encoding problem". It flags real French or German text too; the message says so. Formula
+    layout in PDFs remains unreliable; known.
+  - **A DOCX with no heading styles** (an institution's form of bold labels) gets anchors: a
+    paragraph that is entirely bold, at most 80 characters and ends with ":" is a heading (D-048).
   - **Low yield is reported, never silent.** Per material, the run summary flags an extraction far
     smaller than its source (e.g. a few characters from a 45 KB document) and counts empty slides
     and pages ("20 of 37 slides have no text"), so thin extraction is not mistaken for thin teaching.
@@ -1620,7 +1668,10 @@ never in a separate progress file, which would duplicate state and drift (a dele
 - **`classkit status`** — read-only — assembles the overview from the records: the syllabus
   (approved / approved, edited since / draft), the unit map with each unit's state (not started /
   drafted / planned / designed, or "edited since"), the materials
-  (ingested, outstanding). Every command shows it first (§5.2). It reads committed files only, so it
+  (ingested, outstanding), and **what is still placeholder** (D-048) — derived from the
+  scaffold's `TODO` markers, e.g. "U01: plan done, 4 sessions TODO; course.yaml: code not set". A
+  placeholder is unfinished work, not a defect, so it is reported here and not by `validate`
+  (consistency vs completeness, D-033, D-043). Every command shows it first (§5.2). It reads committed files only, so it
   gives the same answer on every clone (§2.2).
 
 ---
