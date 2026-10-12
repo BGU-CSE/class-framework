@@ -178,8 +178,9 @@ unchanged; these are additional.
 
 - **Design:** `dev/homework/HOMEWORK-SPEC.md` — the target, written as if it exists.
 - **Status:** `dev/homework/ROADMAP.md` — its ledger is authoritative for what exists. The agents,
-  commands, skills, schemas and templates are written; **the Python side (loaders, the 21 validator
-  rules, `scaffold homework`, tests) is not built yet.**
+  commands, skills, schemas and templates are written and use the existing `classkit` write, log
+  and validation services. **Homework-specific Python support (loaders, the 21 validator rules,
+  `scaffold homework`, `classkit bank`, rendering and tests) is not built yet.**
 - **History:** `dev/homework/_devlog/` — decisions `HW-Dnn`, open questions `HW-Qnn`; plain `D-` and
   `Q-` numbers remain this framework's own.
 

@@ -142,7 +142,11 @@ separate approval. This is how this command applies the framework's
    references, not copies. Include the Gate-1-approved `due_date` when one was
    supplied. Never copy `focus_notes` into the manifest.
 
-10. **Validate.** Run `classkit validate`. Errors are broken data — a
+10. **Validate.** Run `classkit validate`. Today this checks the generated
+    Assessment Item files and the existing course structure; it does **not**
+    yet load or validate the homework manifest, homework defaults or Item
+    Class configuration. Do not tell the teacher that the whole homework
+    passed validation. Errors are broken data — a
     reference to something that does not exist, or a Coding item set to
     `execute` without its reference solution or tests — and must be fixed
     before Gate 2. Warnings and alerts are advice (framework D-037): fix the

@@ -7,9 +7,12 @@ what is built) with the how.
 ## State at handoff
 
 - Design: complete and reviewed across five audit rounds.
-- Python runtime: unchanged. `classkit` does not load homework manifests,
-  item classes, or the new templates. Scaffolding creates the homework
-  directory but no files in it.
+- Shared Python services: available. The homework agents use
+  `classkit write`, `classkit log` and the existing framework validation.
+- Homework-specific Python support: not built. `classkit` does not load
+  homework manifests or configuration, run the 21 homework rules, provide
+  `scaffold homework` or `classkit bank`, or render homework documents.
+  Course scaffolding creates the homework directory but no files in it.
 - Validator: unchanged. None of the 21 rules exist in `validate.py`.
 - Tests: no homework-specific tests exist.
 - All content files (agents, commands, skills, schemas, templates) ship

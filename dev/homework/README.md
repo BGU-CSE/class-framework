@@ -90,11 +90,15 @@ ledger are in `ROADMAP.md`, the implementer's notes in `_devlog/04-handoff.md`.
 
 - Design: **complete and reviewed**. Thirty-four decisions recorded, eight open
   questions logged as future work.
-- Implementation: **not started**. The Python runtime (`classkit`) does
-  not yet load homework manifests, item classes, or the new templates.
-  Scaffolding does not create the homework files. The 21 validator rules
-  are specified but unimplemented.
-- Tests: **not started**. No homework-specific tests exist.
+- Agent workflow: **written, not yet exercised on a real course**. It uses
+  the existing `classkit write`, `classkit log` and framework validation
+  services.
+- Homework-specific Python implementation: **not started**. `classkit` does
+  not yet load homework manifests or configuration, run the 21 homework
+  rules, provide `scaffold homework` or `classkit bank`, or render the
+  student and teacher documents.
+- Homework-specific tests: **not started**. Existing framework tests cover
+  the shared `classkit` services, not the homework behavior above.
 
 See `ROADMAP.md` for the implementation plan and what is built, and
 `_devlog/04-handoff.md` for the implementer's notes.

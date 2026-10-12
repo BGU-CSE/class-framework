@@ -667,10 +667,13 @@ Each question has a full entry in `_devlog/03-open-questions.md`.
 
 ## 10. Known weaknesses and open risks
 
-- **The Python runtime does not implement any of this yet.** The design is
-  coherent enough to build against, but until `classkit` loads homework
-  manifests and item classes and the 21 rules are implemented, homework is
-  a specification only. See `ROADMAP.md`.
+- **Homework-specific Python support is not implemented yet.** The agent
+  workflow already uses the framework's `classkit write`, `classkit log`
+  and existing validation services. What remains is loading homework
+  manifests and configuration, implementing the 21 homework rules,
+  `scaffold homework`, `classkit bank`, document rendering and their tests.
+  Until then the workflow cannot claim that a whole homework has been
+  validated. See `ROADMAP.md`.
 - **Draft-aware validation is unimplemented.** The `status: draft`
   convention is documentary today; the validator does not exclude drafts
   from shipped-homework checks. HW-Q03 tracks the target behavior.

@@ -101,8 +101,10 @@ M0007#slide-18   a place inside it: slide-N, page-N, or a heading's slug
 | `/new-hw-type` | Add an Item Class to this course *(homework module)* |
 
 <!-- homework-module:start -->
-`/write-items N homework` hands off to `/create-homework`. `classkit validate` does not check
-homework manifests yet.
+`/write-items N homework` hands off to `/create-homework`. The homework pipeline uses
+`classkit write`, `classkit log` and the existing framework validation. `classkit validate` does not yet
+load homework manifests or homework configuration, so do not describe the whole homework as
+validated.
 <!-- homework-module:end -->
 
 **Every command starts with `classkit status`** — the syllabus (approved / approved, edited since /

@@ -315,8 +315,10 @@ bad unit 1 propagates.
 <!-- homework-module:start -->
 ## 6. Create homework
 
-*Homework module — the commands and agents exist; `classkit validate` does not check homework
-manifests yet.*
+*Homework module — the commands and agents use `classkit write`, `classkit log` and the existing
+framework validation. Homework-specific `classkit` support is not built yet: `classkit validate`
+does not load homework manifests or configuration, and `classkit scaffold homework` and
+`classkit bank` do not exist yet.*
 
 Homework is at-home work *in addition to* the study sessions. It can span several units, it is not
 every week, and it tests what students have already learned. It references items from the same
